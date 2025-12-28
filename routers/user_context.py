@@ -62,8 +62,6 @@ async def create_user_context(request: UserContextSchema, db_client: AsyncMongoC
         )
     except UserContextAlreadyExistsError as e:
         raise HTTPException(status_code=http.HTTPStatus.CONFLICT, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail=str(e))
     
     return UserContextSchema(
         user_id=created_user_context.userid,
@@ -83,10 +81,7 @@ async def get_user_context(user_id: str, db_client: AsyncMongoClient = Depends(g
         db_name=settings.MONGO_DB_NAME,
         collection_name=settings.USER_CONTEXT_COLLECTION_NAME,
     )
-    try:
-        user_context = await user_context_service.get_user_context(user_id)
-    except Exception as e:
-        raise HTTPException(status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail=str(e))
+    user_context = await user_context_service.get_user_context(user_id)
     
     if not user_context:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User context not found")
@@ -125,8 +120,6 @@ async def update_user_context(request: UserContextSchema, db_client: AsyncMongoC
         )
     except UserContextNotFoundError as e:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail=str(e))
     
     return UserContextSchema(
         user_id=user_context.userid,

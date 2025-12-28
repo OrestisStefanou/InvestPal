@@ -57,7 +57,6 @@ async def chat(
         )
     except SessionNotFoundError:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Session not found")
-    except Exception as e:
-        raise HTTPException(status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail=str(e))
 
     return ChatResponse(response=response)
+
