@@ -59,4 +59,3 @@ async def chat(
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Session not found")
 
     return ChatResponse(response=response)
-

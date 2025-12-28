@@ -61,7 +61,7 @@ async def create_session(request: CreateSessionRequest, db_client: AsyncMongoCli
     return SessionSchema(
         session_id=session.sessionID,
         user_id=session.user_id,
-        messages=session.messages,
+        messages=[],
     )
 
 
