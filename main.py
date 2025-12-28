@@ -13,12 +13,14 @@ from routers import (
 )
 from config import settings
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,14 +33,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-
-    response = await call_next(request)
-    duration = time.time() - start_time
-    logger.info(f"{request.method} {request.url.path} - Status: {response.status_code} - Duration: {duration:.3f}s")
-    return response
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
