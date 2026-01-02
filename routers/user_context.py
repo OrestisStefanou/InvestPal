@@ -15,7 +15,6 @@ from services.user_context import (
     UserContextAlreadyExistsError,
     UserContextNotFoundError,
 )
-from config import settings
 from dependencies import get_db_client
 
 router = APIRouter()
@@ -37,8 +36,6 @@ class UserContextSchema(BaseModel):
 async def create_user_context(request: UserContextSchema, db_client: AsyncMongoClient = Depends(get_db_client)):
     user_context_service = MongoDBUserContextService(
         mongo_client=db_client,
-        db_name=settings.MONGO_DB_NAME,
-        collection_name=settings.USER_CONTEXT_COLLECTION_NAME,
     )
 
     # Convert UserContextSchema to UserContext
@@ -78,8 +75,6 @@ async def create_user_context(request: UserContextSchema, db_client: AsyncMongoC
 async def get_user_context(user_id: str, db_client: AsyncMongoClient = Depends(get_db_client)):
     user_context_service = MongoDBUserContextService(
         mongo_client=db_client,
-        db_name=settings.MONGO_DB_NAME,
-        collection_name=settings.USER_CONTEXT_COLLECTION_NAME,
     )
     user_context = await user_context_service.get_user_context(user_id)
     
@@ -101,8 +96,6 @@ async def get_user_context(user_id: str, db_client: AsyncMongoClient = Depends(g
 async def update_user_context(request: UserContextSchema, db_client: AsyncMongoClient = Depends(get_db_client)):
     user_context_service = MongoDBUserContextService(
         mongo_client=db_client,
-        db_name=settings.MONGO_DB_NAME,
-        collection_name=settings.USER_CONTEXT_COLLECTION_NAME,
     )
     try:
         user_context = await user_context_service.update_user_context(

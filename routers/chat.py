@@ -43,8 +43,6 @@ async def chat(
 ):
     session_service = MongoDBSessionService(
         mongo_client=db_client,
-        db_name=settings.MONGO_DB_NAME,
-        collection_name=settings.SESSION_COLLECTION_NAME,
     )
     agent_service = AgentServiceWithMCP(
         mcp_client=mcp_client,

@@ -5,6 +5,9 @@ import uuid
 from pydantic import BaseModel
 from pymongo import AsyncMongoClient
 
+from config import settings
+from services.user_context import UserContextNotFoundError
+
 class MessageRole(str, Enum):
     USER = "user"
     AGENT = "agent"
@@ -44,9 +47,8 @@ class SessionAlreadyExistsError(Exception):
 
 
 class MongoDBSessionService(SessionService):
-    def __init__(self, mongo_client: AsyncMongoClient, db_name: str, collection_name: str):
-        self.db = mongo_client[db_name]
-        self.collection = self.db[collection_name]
+    def __init__(self, mongo_client: AsyncMongoClient):
+        self.db = mongo_client[settings.MONGO_DB_NAME]
 
     async def create_session(self, user_id: str, session_id: str | None = None) -> Session:
         """
@@ -62,28 +64,41 @@ class MongoDBSessionService(SessionService):
         Raises:
             SessionAlreadyExistsError: If the session already exists.
         """
-        session_id = session_id or str(uuid.uuid4())
-        # Check if session already exists
-        session = await self.get_session(session_id)
-        if session:
-            raise SessionAlreadyExistsError(f"Session {session_id} already exists")
-    
+        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
+        user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
+
+        if session_id:
+            # Check if session already exists for the given id
+            session = await self.get_session(session_id)
+            if session:
+                raise SessionAlreadyExistsError(f"Session {session_id} already exists")
+        else:
+            session_id = str(uuid.uuid4())
+
+        # Check if user_id is valid
+        user_context = await user_context_collection.find_one({"userid": user_id})
+        if not user_context:
+            raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
+
         session = Session(sessionID=session_id, user_id=user_id, messages=[])
-        await self.collection.insert_one(session.model_dump())
+        await session_collection.insert_one(session.model_dump())
         return session
     
     async def get_session(self, session_id: str) -> Session | None:
-        doc = await self.collection.find_one({"sessionID": session_id})
+        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
+        doc = await session_collection.find_one({"sessionID": session_id})
         if doc:
             return Session(**doc)
 
         return None
 
     async def add_message(self, session_id: str, message: Message) -> Session | None:
+        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
+
         session = await self.get_session(session_id)
         if not session:
             raise SessionNotFoundError("Session not found")
 
         session.messages.append(message)
-        await self.collection.update_one({"sessionID": session_id}, {"$set": session.model_dump()})
+        await session_collection.update_one({"sessionID": session_id}, {"$set": session.model_dump()})
         return session

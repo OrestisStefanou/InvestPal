@@ -13,7 +13,7 @@ from services.session import (
     MongoDBSessionService, 
     SessionAlreadyExistsError,
 )
-from config import settings
+from services.user_context import  UserContextNotFoundError
 from dependencies import get_db_client
 
 router = APIRouter()
@@ -50,13 +50,13 @@ class SessionSchema(BaseModel):
 async def create_session(request: CreateSessionRequest, db_client: AsyncMongoClient = Depends(get_db_client)):
     session_service = MongoDBSessionService(
         mongo_client=db_client,
-        db_name=settings.MONGO_DB_NAME,
-        collection_name=settings.SESSION_COLLECTION_NAME,
     )
     try:
         session = await session_service.create_session(request.user_id, request.session_id)
     except SessionAlreadyExistsError as e:
         raise HTTPException(status_code=http.HTTPStatus.CONFLICT, detail=str(e))
+    except UserContextNotFoundError as e:
+        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail=str(e))
     
     return SessionSchema(
         session_id=session.sessionID,
@@ -69,8 +69,6 @@ async def create_session(request: CreateSessionRequest, db_client: AsyncMongoCli
 async def get_session(session_id: str, db_client: AsyncMongoClient = Depends(get_db_client)):
     session_service = MongoDBSessionService(
         mongo_client=db_client,
-        db_name=settings.MONGO_DB_NAME,
-        collection_name=settings.SESSION_COLLECTION_NAME,
     )
     session = await session_service.get_session(session_id)
     
