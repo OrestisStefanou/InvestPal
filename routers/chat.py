@@ -15,7 +15,7 @@ from services.session import (
 )
 from services.chat import AgenticChatService
 from services.agent import (
-    AgentService,
+    AgentServiceWithMCP,
 )
 from config import settings
 from dependencies import (
@@ -46,7 +46,7 @@ async def chat(
         db_name=settings.MONGO_DB_NAME,
         collection_name=settings.SESSION_COLLECTION_NAME,
     )
-    agent_service = AgentService(
+    agent_service = AgentServiceWithMCP(
         mcp_client=mcp_client,
     )
     chat_service = AgenticChatService(session_service, agent_service)

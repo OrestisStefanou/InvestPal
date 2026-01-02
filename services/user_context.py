@@ -36,6 +36,13 @@ class UserContextService(ABC):
     ) -> UserContext | None:
         pass
 
+    @abstractmethod
+    async def get_user_context(self, user_id: str) -> UserContext | None:
+        pass
+
+    @abstractmethod
+    async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext | None:
+        pass
 
 class MongoDBUserContextService(UserContextService):
     def __init__(self, mongo_client: AsyncMongoClient, db_name: str, collection_name: str):
