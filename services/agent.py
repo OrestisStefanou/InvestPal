@@ -1,3 +1,8 @@
+from abc import (
+    ABC,
+    abstractmethod,
+)
+
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
@@ -67,7 +72,19 @@ class Agent:
         return response["structured_response"].response
 
 
-class AgentService:
+
+class AgentService(ABC):
+    @abstractmethod
+    async def generate_response(
+        self,
+        user_id: str, 
+        conversation: list[Message],
+        response_format: BaseModel,
+    ) -> str:
+        pass
+
+
+class AgentServiceWithMCP(AgentService):
     def __init__(
         self, 
         mcp_client: MultiServerMCPClient, 
