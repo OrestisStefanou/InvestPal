@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import datetime as dt
 
 from services.session import (
     SessionService,
@@ -36,7 +37,21 @@ class AgenticChatService(ChatService):
         agent_response = await self._agent_service.generate_response(user_id, conversation, TextResponseFormat)
 
         # Store the message and response in the session
-        await self._session_service.add_message(session_id, Message(role=MessageRole.USER, content=message))
-        await self._session_service.add_message(session_id, Message(role=MessageRole.AGENT, content=agent_response))
+        await self._session_service.add_message(
+            session_id,
+            Message(
+                role=MessageRole.USER,
+                content=message,
+                created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+            ),
+        )
+        await self._session_service.add_message(
+            session_id,
+            Message(
+                role=MessageRole.AGENT,
+                content=agent_response,
+                created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+            ),
+        )
         # Return the response
         return agent_response

@@ -38,6 +38,7 @@ class RoleSchema(str, Enum):
 class MessageSchema(BaseModel):
     role: RoleSchema
     content: str
+    created_at: str | None
 
 
 class SessionSchema(BaseModel):
@@ -76,7 +77,14 @@ async def get_session(session_id: str, db_client: AsyncMongoClient = Depends(get
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Session not found")
     
     # Convert Message objects to MessageSchema objects
-    messages = [MessageSchema(role=RoleSchema(message.role), content=message.content) for message in session.messages]
+    messages = [
+        MessageSchema(
+            role=RoleSchema(message.role),
+            content=message.content,
+            created_at=message.created_at,
+        )
+        for message in session.messages
+    ]
 
     return SessionSchema(
         session_id=session.sessionID,

@@ -16,6 +16,7 @@ class MessageRole(str, Enum):
 class Message(BaseModel):
     role: MessageRole
     content: str
+    created_at: str | None = None
 
 
 class Session(BaseModel):

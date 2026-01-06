@@ -79,7 +79,7 @@ class AgentService(ABC):
         self,
         user_id: str, 
         conversation: list[Message],
-        response_format: BaseModel,
+        response_format: type[BaseModel],
     ) -> str:
         pass
 
