@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import datetime as dt
 
 from pydantic import BaseModel
 from pymongo import (
@@ -19,6 +20,8 @@ class UserContext(BaseModel):
     userid: str
     userprofile: dict
     userportfolio: list[UserPortfolioHolding]
+    createdat: str | None = None
+    updatedat: str | None = None
 
 
 class UserContextAlreadyExistsError(Exception):
@@ -79,7 +82,8 @@ class MongoDBUserContextService(UserContextService):
         user_context = UserContext(
             userid=user_id,
             userprofile=user_profile if user_profile is not None else {},
-            userportfolio=user_portfolio if user_portfolio is not None else []
+            userportfolio=user_portfolio if user_portfolio is not None else [],
+            createdat=dt.datetime.now(dt.timezone.utc).isoformat(),
         )
         await user_context_collection.insert_one(user_context.model_dump())
         return user_context
@@ -101,14 +105,14 @@ class MongoDBUserContextService(UserContextService):
 
         return UserContext(**user_context)
 
-    async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext | None:
+    async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext:
         """
         Update the user context for the given user_id.
 
         Args:
             user_id: The user_id for which to update the user context.
             user_context: The user context to be updated.
-        
+
         Raises:
             UserContextNotFoundError: If no user context exists for the given user_id.
 
@@ -116,12 +120,27 @@ class MongoDBUserContextService(UserContextService):
             The updated user context.
         """
         user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
+
+        now = dt.datetime.now(dt.timezone.utc).isoformat()
+
+        update_data = user_context.model_dump(
+            exclude={"createdat", "updatedat", "userid"}
+        )
+
         updated_user_context = await user_context_collection.find_one_and_update(
-            {"userid": user_id}, 
-            {"$set": user_context.model_dump()},
+            {"userid": user_id},
+            {
+                "$set": {
+                    **update_data,
+                    "updatedat": now,
+                }
+            },
             return_document=ReturnDocument.AFTER,
         )
+
         if not updated_user_context:
-            raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
-        
+            raise UserContextNotFoundError(
+                f"User context not found for user_id: {user_id}"
+            )
+
         return UserContext(**updated_user_context)
