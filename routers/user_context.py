@@ -47,12 +47,13 @@ async def create_user_context(request: UserContextSchema, db_client: AsyncMongoC
     user_context = UserContext(
         userid=request.user_id,
         userprofile=request.user_profile or {},
-        userportfolio=[UserPortfolioHolding(
-            assetclass=holding.asset_class,
-            symbol=holding.symbol,
-            name=holding.name,
-            quantity=holding.quantity,
-        ) for holding in request.user_portfolio or []
+        userportfolio=[
+            UserPortfolioHolding(
+                assetclass=holding.asset_class,
+                symbol=holding.symbol,
+                name=holding.name,
+                quantity=holding.quantity,
+            ) for holding in request.user_portfolio or []
         ],
     )
 
@@ -107,21 +108,20 @@ async def update_user_context(request: UserContextSchema, db_client: AsyncMongoC
         mongo_client=db_client,
     )
 
-    if not request.user_portfolio:
-        request.user_portfolio = []
-
     try:
         user_context = await user_context_service.update_user_context(
             user_id=request.user_id,
             user_context=UserContext(
                 userid=request.user_id,
                 userprofile=request.user_profile,
-                userportfolio=[UserPortfolioHolding(
-                    assetclass=holding.asset_class,
-                    symbol=holding.symbol,
-                    name=holding.name,
-                    quantity=holding.quantity,
-                ) for holding in request.user_portfolio],
+                userportfolio=[
+                    UserPortfolioHolding(
+                        assetclass=holding.asset_class,
+                        symbol=holding.symbol,
+                        name=holding.name,
+                        quantity=holding.quantity,
+                    ) for holding in request.user_portfolio or []
+                ],
             ),
         )
     except UserContextNotFoundError as e:
