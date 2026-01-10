@@ -56,7 +56,7 @@ class Agent:
             middleware=middleware,
         )
     
-    async def generate_response(self, conversation: list[Message]) -> str:
+    async def generate_response(self, conversation: list[Message]) -> BaseModel:
         messages = []
         # Keep the last settings.CONVERSATION_MESSAGES_LIMIT messages
         if len(conversation) > settings.CONVERSATION_MESSAGES_LIMIT:
@@ -69,7 +69,7 @@ class Agent:
                 messages.append({"role": "assistant", "content": message.content})
         
         response = await self._agent.ainvoke({"messages": messages})
-        return response["structured_response"].response
+        return response["structured_response"]
 
 
 
@@ -80,7 +80,7 @@ class AgentService(ABC):
         user_id: str, 
         conversation: list[Message],
         response_format: type[BaseModel],
-    ) -> str:
+    ) -> BaseModel:
         pass
 
 
@@ -96,7 +96,7 @@ class AgentServiceWithMCP(AgentService):
         user_id: str, 
         conversation: list[Message],
         response_format: BaseModel,
-    ) -> str:
+    ) -> BaseModel:
         system_prompt = await self._get_system_prompt(user_id)
         agent = await self._create_agent(system_prompt, response_format)
         response = await agent.generate_response(conversation)
