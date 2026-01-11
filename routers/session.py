@@ -11,12 +11,14 @@ from pymongo import AsyncMongoClient
 
 from services.session import (
     MongoDBSessionService, 
-    SessionAlreadyExistsError,
 )
-from services.user_context import  UserContextNotFoundError
+from errors.session import SessionAlreadyExistsError
+from errors.user_context import  UserContextNotFoundError
 from dependencies import get_db_client
 
+
 router = APIRouter()
+
 
 class CreateSessionRequest(BaseModel):
     """
@@ -60,7 +62,7 @@ async def create_session(request: CreateSessionRequest, db_client: AsyncMongoCli
         raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail=str(e))
     
     return SessionSchema(
-        session_id=session.sessionID,
+        session_id=session.session_id,
         user_id=session.user_id,
         messages=[],
     )
@@ -87,7 +89,7 @@ async def get_session(session_id: str, db_client: AsyncMongoClient = Depends(get
     ]
 
     return SessionSchema(
-        session_id=session.sessionID,
+        session_id=session.session_id,
         user_id=session.user_id,
         messages=messages,
     )

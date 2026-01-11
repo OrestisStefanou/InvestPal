@@ -1,28 +1,19 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 import uuid
 
 from pydantic import BaseModel
 from pymongo import AsyncMongoClient
 
 from config import settings
-from services.user_context import UserContextNotFoundError
-
-class MessageRole(str, Enum):
-    USER = "user"
-    AGENT = "agent"
-
-
-class Message(BaseModel):
-    role: MessageRole
-    content: str
-    created_at: str | None = None
-
-
-class Session(BaseModel):
-    sessionID: str
-    user_id: str
-    messages: list[Message]
+from models.session import (
+    Session,
+    Message,
+)
+from errors.user_context import UserContextNotFoundError
+from errors.session import (
+    SessionAlreadyExistsError,
+    SessionNotFoundError,
+)
 
 
 class SessionService(ABC):
@@ -39,12 +30,14 @@ class SessionService(ABC):
         pass
 
 
-class SessionNotFoundError(Exception):
+class MessageMongoDoc(Message):
     pass
 
 
-class SessionAlreadyExistsError(Exception):
-    pass
+class SessionMongoDoc(BaseModel):
+    sessionID: str
+    user_id: str
+    messages: list[MessageMongoDoc]
 
 
 class MongoDBSessionService(SessionService):
@@ -81,17 +74,35 @@ class MongoDBSessionService(SessionService):
         if not user_context:
             raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
 
-        session = Session(sessionID=session_id, user_id=user_id, messages=[])
-        await session_collection.insert_one(session.model_dump())
-        return session
+        session_doc = SessionMongoDoc(sessionID=session_id, user_id=user_id, messages=[])
+        await session_collection.insert_one(session_doc.model_dump())
+
+        return Session(
+            session_id=session_doc.sessionID,
+            user_id=session_doc.user_id,
+            messages=[],
+        )
     
     async def get_session(self, session_id: str) -> Session | None:
         session_collection = self.db[settings.SESSION_COLLECTION_NAME]
         doc = await session_collection.find_one({"sessionID": session_id})
-        if doc:
-            return Session(**doc)
+        if not doc:
+            return None
 
-        return None
+        mongo_doc = SessionMongoDoc.model_validate(doc)
+
+        return Session(
+            session_id=mongo_doc.sessionID,
+            user_id=mongo_doc.user_id,
+            messages=[
+                Message(
+                    role=msg.role,
+                    content=msg.content,
+                    created_at=msg.created_at,
+                )
+                for msg in mongo_doc.messages
+            ],
+        )
 
     async def add_message(self, session_id: str, message: Message) -> Session | None:
         session_collection = self.db[settings.SESSION_COLLECTION_NAME]
@@ -100,6 +111,18 @@ class MongoDBSessionService(SessionService):
         if not session:
             raise SessionNotFoundError("Session not found")
 
+        # Map Message to MessageMongoDoc
+        message_doc = MessageMongoDoc(
+            role=message.role,
+            content=message.content,
+            created_at=message.created_at,
+        )
+
+        await session_collection.update_one(
+            {"sessionID": session_id},
+            {"$push": {"messages": message_doc.model_dump()}}
+        )
+
         session.messages.append(message)
-        await session_collection.update_one({"sessionID": session_id}, {"$set": session.model_dump()})
+
         return session

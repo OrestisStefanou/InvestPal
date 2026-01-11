@@ -9,9 +9,9 @@ from pydantic import BaseModel
 from pymongo import AsyncMongoClient
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+from errors.session import SessionNotFoundError
 from services.session import (
     MongoDBSessionService,
-    SessionNotFoundError,
 )
 from services.chat import AgenticChatService
 from services.agent import (

@@ -15,7 +15,7 @@ from langchain.messages import ToolMessage
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
 
-from services.session import (
+from models.session import (
     MessageRole,
     Message,
 )
