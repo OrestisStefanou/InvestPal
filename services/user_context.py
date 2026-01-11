@@ -8,28 +8,15 @@ from pymongo import (
 )
 
 from config import settings
+from errors.user_context import (
+    UserContextAlreadyExistsError,
+    UserContextNotFoundError,
+)
+from models.user_context import (
+    UserContext,
+    UserPortfolioHolding,
+)
 
-# The naming of the fields is done to match mcp server schema
-class UserPortfolioHolding(BaseModel):
-    assetclass: str
-    symbol: str
-    name: str
-    quantity: float
-
-class UserContext(BaseModel):
-    userid: str
-    userprofile: dict
-    userportfolio: list[UserPortfolioHolding]
-    createdat: str | None = None
-    updatedat: str | None = None
-
-
-class UserContextAlreadyExistsError(Exception):
-    pass
-
-
-class UserContextNotFoundError(Exception):
-    pass
 
 class UserContextService(ABC):
     @abstractmethod
@@ -48,6 +35,23 @@ class UserContextService(ABC):
     @abstractmethod
     async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext | None:
         pass
+
+
+# The naming of the fields is done to match mcp server schema
+class UserPortfolioHoldingMongoDoc(BaseModel):
+    assetclass: str
+    symbol: str
+    name: str
+    quantity: float
+
+
+class UserContextMongoDoc(BaseModel):
+    userid: str
+    userprofile: dict
+    userportfolio: list[UserPortfolioHoldingMongoDoc]
+    createdat: str | None = None
+    updatedat: str | None = None
+
 
 class MongoDBUserContextService(UserContextService):
     def __init__(self, mongo_client: AsyncMongoClient):
@@ -79,14 +83,28 @@ class MongoDBUserContextService(UserContextService):
         if existing_user_context:
             raise UserContextAlreadyExistsError(f"User context already exists for user_id: {user_id}")
 
-        user_context = UserContext(
+        user_context = UserContextMongoDoc(
             userid=user_id,
             userprofile=user_profile if user_profile is not None else {},
-            userportfolio=user_portfolio if user_portfolio is not None else [],
+            userportfolio=[
+                UserPortfolioHoldingMongoDoc(
+                    assetclass=holding.asset_class,
+                    symbol=holding.symbol,
+                    name=holding.name,
+                    quantity=holding.quantity,
+                )
+                for holding in user_portfolio or []
+            ],
             createdat=dt.datetime.now(dt.timezone.utc).isoformat(),
         )
         await user_context_collection.insert_one(user_context.model_dump())
-        return user_context
+
+        return UserContext(
+            user_id=user_id,
+            user_profile=user_profile if user_profile is not None else {},
+            user_portfolio=user_portfolio if user_portfolio is not None else [],
+            created_at=dt.datetime.now(dt.timezone.utc).isoformat(),
+        )
 
     async def get_user_context(self, user_id: str) -> UserContext | None:
         """
@@ -99,11 +117,27 @@ class MongoDBUserContextService(UserContextService):
             The user context for the given user_id. None if no user context exists for the given user_id.
         """
         user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
-        user_context = await user_context_collection.find_one({"userid": user_id})
-        if not user_context:
+        user_context_doc = await user_context_collection.find_one({"userid": user_id})
+        if not user_context_doc:
             return None
 
-        return UserContext(**user_context)
+        mongo_doc = UserContextMongoDoc.model_validate(user_context_doc)
+
+        return UserContext(
+            user_id=mongo_doc.userid,
+            user_profile=mongo_doc.userprofile,
+            user_portfolio=[
+                UserPortfolioHolding(
+                    asset_class=holding.assetclass,
+                    symbol=holding.symbol,
+                    name=holding.name,
+                    quantity=holding.quantity,
+                )
+                for holding in mongo_doc.userportfolio
+            ],
+            created_at=mongo_doc.createdat,
+            updated_at=mongo_doc.updatedat,
+        )
 
     async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext:
         """
@@ -123,24 +157,55 @@ class MongoDBUserContextService(UserContextService):
 
         now = dt.datetime.now(dt.timezone.utc).isoformat()
 
-        update_data = user_context.model_dump(
-            exclude={"createdat", "updatedat", "userid"}
+        # Map to Mongo doc for update
+        mongo_doc = UserContextMongoDoc(
+            userid=user_id,
+            userprofile=user_context.user_profile,
+            userportfolio=[
+                UserPortfolioHoldingMongoDoc(
+                    assetclass=holding.asset_class,
+                    symbol=holding.symbol,
+                    name=holding.name,
+                    quantity=holding.quantity,
+                )
+                for holding in user_context.user_portfolio
+            ],
+            updatedat=now,
         )
 
-        updated_user_context = await user_context_collection.find_one_and_update(
+        update_data = mongo_doc.model_dump(
+            exclude={"userid", "createdat"}
+        )
+
+        updated_doc = await user_context_collection.find_one_and_update(
             {"userid": user_id},
             {
                 "$set": {
                     **update_data,
-                    "updatedat": now,
                 }
             },
             return_document=ReturnDocument.AFTER,
         )
 
-        if not updated_user_context:
+        if not updated_doc:
             raise UserContextNotFoundError(
                 f"User context not found for user_id: {user_id}"
             )
 
-        return UserContext(**updated_user_context)
+        mongo_result = UserContextMongoDoc.model_validate(updated_doc)
+
+        return UserContext(
+            user_id=mongo_result.userid,
+            user_profile=mongo_result.userprofile,
+            user_portfolio=[
+                UserPortfolioHolding(
+                    asset_class=holding.assetclass,
+                    symbol=holding.symbol,
+                    name=holding.name,
+                    quantity=holding.quantity,
+                )
+                for holding in mongo_result.userportfolio
+            ],
+            created_at=mongo_result.createdat,
+            updated_at=mongo_result.updatedat,
+        )

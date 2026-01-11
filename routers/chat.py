@@ -21,7 +21,7 @@ from dependencies import (
     get_db_client,
     get_mcp_client,
 )
-from services.gen_ui_models import GenerativeUIResponse
+from models.gen_ui_models import GenerativeUIResponse
 
 router = APIRouter()
 

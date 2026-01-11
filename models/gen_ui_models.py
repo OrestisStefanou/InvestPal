@@ -64,7 +64,6 @@ class MetricCardComponent(UIComponent):
     label: str
     value: str | float
     change: Optional[float] = None
-    change_direction: Optional[str] = None  # "up", "down", "neutral"
 
 
 class StockCardComponent(UIComponent):

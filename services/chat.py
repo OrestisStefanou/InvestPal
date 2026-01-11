@@ -12,7 +12,7 @@ from services.agent import (
     AgentService,
     TextResponseFormat,
 )
-from services.gen_ui_models import GenerativeUIResponse
+from models.gen_ui_models import GenerativeUIResponse
 
 
 class ChatService(ABC):
