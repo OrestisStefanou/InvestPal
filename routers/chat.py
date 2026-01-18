@@ -1,11 +1,19 @@
 import http
+from typing import (
+    Any,
+    Dict,
+    Optional,
+)
 
 from fastapi import (
     APIRouter, 
     Depends,
     HTTPException,
 )
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+)
 from pymongo import AsyncMongoClient
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
@@ -21,7 +29,7 @@ from dependencies import (
     get_db_client,
     get_mcp_client,
 )
-from models.gen_ui_models import GenerativeUIResponse
+from models.gen_ui_models import GenerativeUIResponseFormat
 
 router = APIRouter()
 
@@ -64,7 +72,14 @@ class GenUIRequest(BaseModel):
     message: str
 
 
-@router.post("/chat/gen-ui", response_model=GenerativeUIResponse)
+class GenUIResponse(GenerativeUIResponseFormat):
+    metadata: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Response-level metadata"
+    )
+
+
+@router.post("/chat/gen-ui", response_model=GenerativeUIResponseFormat)
 async def chat_gen_ui(
     request: GenUIRequest,
     db_client: AsyncMongoClient = Depends(get_db_client), 
@@ -85,4 +100,7 @@ async def chat_gen_ui(
     except SessionNotFoundError:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Session not found")
 
-    return response
+    return GenUIResponse(
+        components=response.components,
+        metadata={},
+    )

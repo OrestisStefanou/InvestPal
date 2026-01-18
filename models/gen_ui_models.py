@@ -1,124 +1,711 @@
 from enum import Enum
 from typing import List, Union, Optional, Any, Dict
 from pydantic import BaseModel, Field
+import uuid
 
+
+# ============================================================================
+# ENUMS
+# ============================================================================
 
 class ComponentType(str, Enum):
+    """Available UI component types for the investment advisor interface."""
     TEXT = "text"
-    CHART = "chart"
-    TABLE = "table"
-    METRIC_CARD = "metric_card"
-    STOCK_CARD = "stock_card"
+    SECURITY_CARD = "security_card"
+    METRICS_GRID = "metrics_grid"
+    PORTFOLIO_HOLDINGS = "portfolio_holdings"
+    SECTOR_PERFORMANCE = "sector_performance"
+    TIME_SERIES_CHART = "time_series_chart"
+    NEWS_FEED = "news_feed"
+    COMPARISON_TABLE = "comparison_table"
+    FINANCIAL_STATEMENT = "financial_statement"
+    INVESTMENT_CALCULATOR = "investment_calculator"
+    SUPER_INVESTOR_CARD = "super_investor_card"
+    ALLOCATION_CHART = "allocation_chart"
+    ECONOMIC_INDICATOR = "economic_indicator"
+    CRYPTO_CARD = "crypto_card"
     ALERT = "alert"
-    COMPARISON = "comparison"
-    TIMELINE = "timeline"
+    INSIGHTS = "insights"
+    ACTION_SUGGESTIONS = "action_suggestions"
 
 
-class UIComponent(BaseModel):
-    type: ComponentType
-    title: Optional[str] = None
+class TextFormat(str, Enum):
+    """Text formatting options."""
+    PLAIN = "plain"
+    MARKDOWN = "markdown"
 
 
-class TextComponent(UIComponent):
-    type: ComponentType = ComponentType.TEXT
-    content: str
+class AssetType(str, Enum):
+    """Types of financial assets/securities."""
+    STOCK = "stock"
+    ETF = "etf"
+    CRYPTO = "crypto"
+    COMMODITY = "commodity"
+    INDEX = "index"
+
+
+class MetricFormat(str, Enum):
+    """Formatting options for displaying metric values."""
+    CURRENCY = "currency"
+    PERCENTAGE = "percentage"
+    NUMBER = "number"
+    RATIO = "ratio"
+    DATE = "date"
 
 
 class ChartType(str, Enum):
-    PIE = "pie"
+    """Chart visualization types."""
     LINE = "line"
+    AREA = "area"
     BAR = "bar"
+    CANDLESTICK = "candlestick"
+    PIE = "pie"
+    DONUT = "donut"
+    TREEMAP = "treemap"
+    HEATMAP = "heatmap"
 
 
-class ChartDataPoint(BaseModel):
-    label: str
-    value: float
-    metadata: Optional[Dict[str, Any]] = None
+class SectorVisualization(str, Enum):
+    """Visualization options for sector performance."""
+    HEATMAP = "heatmap"
+    BAR = "bar"
+    TABLE = "table"
 
 
-class ChartComponent(UIComponent):
-    type: ComponentType = ComponentType.CHART
-    chart_type: ChartType
-    data: List[ChartDataPoint]
-    x_axis_label: Optional[str] = None
-    y_axis_label: Optional[str] = None
+class ComparisonType(str, Enum):
+    """Types of entity comparisons."""
+    STOCKS = "stocks"
+    ETFS = "etfs"
+    SECTORS = "sectors"
+    CRYPTOS = "cryptos"
+    INVESTORS = "investors"
 
 
-class TableRow(BaseModel):
-    values: Dict[str, Any]  # Maps column key to value
+class FinancialStatementType(str, Enum):
+    """Types of financial statements."""
+    INCOME_STATEMENT = "income_statement"
+    BALANCE_SHEET = "balance_sheet"
+    CASH_FLOW = "cash_flow"
 
 
-class TableColumn(BaseModel):
-    key: str
-    label: str
-
-
-class TableComponent(UIComponent):
-    type: ComponentType = ComponentType.TABLE
-    columns: List[TableColumn]
-    rows: List[TableRow]
-
-
-class MetricCardComponent(UIComponent):
-    type: ComponentType = ComponentType.METRIC_CARD
-    label: str
-    value: str | float
-    change: Optional[float] = None
-
-
-class StockCardComponent(UIComponent):
-    type: ComponentType = ComponentType.STOCK_CARD
-    symbol: str
-    name: str
-    price: float
-    change: float
-    change_percent: float
+class AllocationType(str, Enum):
+    """Types of portfolio/asset allocations."""
+    SECTOR = "sector"
+    ASSET_CLASS = "asset_class"
+    GEOGRAPHY = "geography"
+    HOLDINGS = "holdings"
+    MARKET_CAP = "market_cap"
 
 
 class AlertSeverity(str, Enum):
+    """Alert severity levels."""
     INFO = "info"
     WARNING = "warning"
-    CRITICAL = "critical"
     SUCCESS = "success"
+    ERROR = "error"
+
+
+class TrendDirection(str, Enum):
+    """Trend direction indicators."""
+    UP = "up"
+    DOWN = "down"
+    STABLE = "stable"
+
+
+class SentimentType(str, Enum):
+    """Sentiment classification for news and analysis."""
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+    NEUTRAL = "neutral"
+
+
+# ============================================================================
+# BASE COMPONENT
+# ============================================================================
+
+class UIComponent(BaseModel):
+    """Base class for all UI components."""
+    type: ComponentType
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        description="Unique identifier for the component"
+    )
+    title: Optional[str] = Field(
+        None,
+        description="Optional title to display above the component"
+    )
+    loading: bool = Field(
+        False,
+        description="Indicates if the component is in a loading state"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Additional metadata for extensibility"
+    )
+
+
+# ============================================================================
+# TEXT COMPONENTS
+# ============================================================================
+
+class TextComponent(UIComponent):
+    """Simple text/message component for explanations and narratives."""
+    type: ComponentType = ComponentType.TEXT
+    content: str = Field(
+        ...,
+        description="The text content to display"
+    )
+    format: TextFormat = Field(
+        TextFormat.PLAIN,
+        description="Text formatting type"
+    )
+
+
+class InsightComponent(UIComponent):
+    """Component for displaying key insights and summary information."""
+    type: ComponentType = ComponentType.INSIGHTS
+    headline: str = Field(
+        ...,
+        description="Main headline or summary statement"
+    )
+    insights: List[str] = Field(
+        ...,
+        description="List of key insight bullet points"
+    )
+    context: Optional[str] = Field(
+        None,
+        description="Additional context or explanation"
+    )
 
 
 class AlertComponent(UIComponent):
+    """Alert/notification banner for important information."""
     type: ComponentType = ComponentType.ALERT
-    message: str
-    severity: AlertSeverity = AlertSeverity.INFO
+    message: str = Field(
+        ...,
+        description="Alert message content"
+    )
+    severity: AlertSeverity = Field(
+        AlertSeverity.INFO,
+        description="Severity level of the alert"
+    )
+    actionable: bool = Field(
+        False,
+        description="Whether the alert has an associated action"
+    )
+    action_label: Optional[str] = Field(
+        None,
+        description="Label for the action button"
+    )
+    action_payload: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Data payload for the action"
+    )
 
 
-class ComparisonItem(BaseModel):
-    name: str
-    metrics: Dict[str, Any]
+# ============================================================================
+# SECURITY/ASSET CARDS
+# ============================================================================
+
+class SecurityCardComponent(UIComponent):
+    """Card displaying key information about a security (stock, ETF, etc.)."""
+    type: ComponentType = ComponentType.SECURITY_CARD
+    symbol: str = Field(
+        ...,
+        description="Trading symbol/ticker"
+    )
+    name: str = Field(
+        ...,
+        description="Full name of the security"
+    )
+    description: Optional[str] = Field(
+        None,
+        description="Description of the security"
+    )
+    price: float = Field(
+        ...,
+        description="Current price"
+    )
+    market_cap: Optional[float] = Field(
+        None,
+        description="Market capitalization"
+    )
+    sector: Optional[str] = Field(
+        None,
+        description="Sector the security belongs to"
+    )
+    industry: Optional[str] = Field(
+        None,
+        description="Industry the security belongs to"
+    )
+    asset_type: AssetType = Field(
+        AssetType.STOCK,
+        description="Type of asset"
+    )
 
 
-class ComparisonComponent(UIComponent):
-    type: ComponentType = ComponentType.COMPARISON
-    items: List[ComparisonItem]
+# ============================================================================
+# METRICS & GRIDS
+# ============================================================================
+
+class MetricItem(BaseModel):
+    """Individual metric item for display in a grid."""
+    label: str = Field(
+        ...,
+        description="Display label for the metric"
+    )
+    value: Union[str, float] = Field(
+        ...,
+        description="The metric value"
+    )
+    change: Optional[float] = Field(
+        None,
+        description="Change value (can represent delta or percentage)"
+    )
+    format: Optional[MetricFormat] = Field(
+        None,
+        description="Formatting hint for displaying the value"
+    )
 
 
-class TimelineEvent(BaseModel):
-    date: str
-    title: str
-    description: Optional[str] = None
+class MetricsGridComponent(UIComponent):
+    """Grid layout for displaying multiple financial metrics."""
+    type: ComponentType = ComponentType.METRICS_GRID
+    metrics: List[MetricItem] = Field(
+        ...,
+        description="List of metrics to display"
+    )
+    columns: int = Field(
+        2,
+        description="Number of columns in the grid layout",
+        ge=1,
+        le=4
+    )
 
 
-class TimelineComponent(UIComponent):
-    type: ComponentType = ComponentType.TIMELINE
-    events: List[TimelineEvent]
+class EconomicIndicatorComponent(UIComponent):
+    """Component for displaying economic indicator data."""
+    type: ComponentType = ComponentType.ECONOMIC_INDICATOR
+    indicator_name: str = Field(
+        ...,
+        description="Name of the economic indicator (e.g., GDP, CPI)"
+    )
+    current_value: float = Field(
+        ...,
+        description="Current/latest value of the indicator"
+    )
+    previous_value: Optional[float] = Field(
+        None,
+        description="Previous period value for comparison"
+    )
+    change: Optional[float] = Field(
+        None,
+        description="Change from previous value"
+    )
+    as_of_date: str = Field(
+        ...,
+        description="Date of the current value (ISO format)"
+    )
+    trend: Optional[TrendDirection] = Field(
+        None,
+        description="Overall trend direction"
+    )
+    chart_data: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="Historical time series data for visualization"
+    )
 
 
-class GenerativeUIResponse(BaseModel):
+# ============================================================================
+# TABLES & HOLDINGS
+# ============================================================================
+
+class HoldingRow(BaseModel):
+    """Individual holding/position in a portfolio."""
+    symbol: str = Field(
+        ...,
+        description="Security symbol"
+    )
+    name: str = Field(
+        ...,
+        description="Security name"
+    )
+    shares: Optional[float] = Field(
+        None,
+        description="Number of shares held"
+    )
+    weight: float = Field(
+        ...,
+        description="Portfolio weight as a percentage"
+    )
+    value: Optional[float] = Field(
+        None,
+        description="Total value of the holding"
+    )
+    sector: Optional[str] = Field(
+        None,
+        description="Sector classification"
+    )
+
+
+class PortfolioHoldingsComponent(UIComponent):
+    """Table displaying portfolio holdings."""
+    type: ComponentType = ComponentType.PORTFOLIO_HOLDINGS
+    holdings: List[HoldingRow] = Field(
+        ...,
+        description="List of portfolio holdings"
+    )
+    total_value: Optional[float] = Field(
+        None,
+        description="Total portfolio value"
+    )
+    as_of_date: Optional[str] = Field(
+        None,
+        description="Date the holdings data is from (ISO format)"
+    )
+
+
+class ComparisonRow(BaseModel):
+    """Row in a comparison table showing a metric across entities."""
+    metric: str = Field(
+        ...,
+        description="Name of the metric being compared"
+    )
+    values: Dict[str, Any] = Field(
+        ...,
+        description="Map of entity name/symbol to metric value"
+    )
+    format: Optional[MetricFormat] = Field(
+        None,
+        description="Formatting hint for the values"
+    )
+
+
+class ComparisonTableComponent(UIComponent):
+    """Table for comparing multiple entities side-by-side."""
+    type: ComponentType = ComponentType.COMPARISON_TABLE
+    entities: List[str] = Field(
+        ...,
+        description="List of entity names/symbols being compared (column headers)"
+    )
+    rows: List[ComparisonRow] = Field(
+        ...,
+        description="Comparison metrics rows"
+    )
+    comparison_type: ComparisonType = Field(
+        ComparisonType.STOCKS,
+        description="Type of comparison being performed"
+    )
+
+
+class SectorPerformanceItem(BaseModel):
+    """Performance data for a market sector."""
+    sector: str = Field(
+        ...,
+        description="Sector name"
+    )
+    return_1d: Optional[float] = Field(
+        None,
+        description="1-day return percentage"
+    )
+    return_1w: Optional[float] = Field(
+        None,
+        description="1-week return percentage"
+    )
+    return_1m: Optional[float] = Field(
+        None,
+        description="1-month return percentage"
+    )
+    return_ytd: Optional[float] = Field(
+        None,
+        description="Year-to-date return percentage"
+    )
+
+
+class SectorPerformanceComponent(UIComponent):
+    """Component displaying sector performance data."""
+    type: ComponentType = ComponentType.SECTOR_PERFORMANCE
+    sectors: List[SectorPerformanceItem] = Field(
+        ...,
+        description="List of sectors with performance data"
+    )
+    visualization: SectorVisualization = Field(
+        SectorVisualization.HEATMAP,
+        description="Preferred visualization type"
+    )
+
+
+# ============================================================================
+# FINANCIAL STATEMENTS
+# ============================================================================
+
+class FinancialStatementRow(BaseModel):
+    """Row in a financial statement."""
+    line_item: str = Field(
+        ...,
+        description="Name of the line item (e.g., 'Revenue', 'Net Income')"
+    )
+    values: Dict[str, float] = Field(
+        ...,
+        description="Map of period (e.g., '2024', '2023') to value"
+    )
+    category: Optional[str] = Field(
+        None,
+        description="Category for grouping rows (e.g., 'Operating Expenses')"
+    )
+
+
+class FinancialStatementComponent(UIComponent):
+    """Component for displaying financial statements."""
+    type: ComponentType = ComponentType.FINANCIAL_STATEMENT
+    statement_type: FinancialStatementType = Field(
+        ...,
+        description="Type of financial statement"
+    )
+    periods: List[str] = Field(
+        ...,
+        description="List of time periods (e.g., ['2024', '2023', '2022'])"
+    )
+    rows: List[FinancialStatementRow] = Field(
+        ...,
+        description="Financial statement line items"
+    )
+    currency: str = Field(
+        "USD",
+        description="Currency code for the values"
+    )
+
+
+# ============================================================================
+# CHARTS & VISUALIZATIONS
+# ============================================================================
+
+class TimeSeriesChartComponent(UIComponent):
+    """Chart component for time series data (prices, indicators, etc.)."""
+    type: ComponentType = ComponentType.TIME_SERIES_CHART
+    series: List[Dict[str, Any]] = Field(
+        ...,
+        description="List of data series. Each series is a dict with 'name', 'data' (list of {timestamp, value}), and optional 'color'"
+    )
+    x_axis_label: Optional[str] = Field(
+        None,
+        description="Label for the x-axis"
+    )
+    y_axis_label: Optional[str] = Field(
+        None,
+        description="Label for the y-axis"
+    )
+    chart_type: ChartType = Field(
+        ChartType.LINE,
+        description="Type of chart visualization"
+    )
+    date_range: Optional[str] = Field(
+        None,
+        description="Description of the date range (e.g., '1Y', '5Y', 'YTD')"
+    )
+    format: MetricFormat = Field(
+        MetricFormat.NUMBER,
+        description="Format for y-axis values"
+    )
+
+
+class AllocationItem(BaseModel):
+    """Item in an allocation breakdown."""
+    label: str = Field(
+        ...,
+        description="Label for the allocation category"
+    )
+    value: float = Field(
+        ...,
+        description="Absolute value of the allocation"
+    )
+    percentage: float = Field(
+        ...,
+        description="Percentage of total"
+    )
+    color: Optional[str] = Field(
+        None,
+        description="Hex color code for visualization"
+    )
+
+
+class AllocationChartComponent(UIComponent):
+    """Chart showing allocation/distribution breakdown."""
+    type: ComponentType = ComponentType.ALLOCATION_CHART
+    allocations: List[AllocationItem] = Field(
+        ...,
+        description="List of allocation items"
+    )
+    chart_type: ChartType = Field(
+        ChartType.PIE,
+        description="Type of chart (pie, donut, treemap)"
+    )
+    allocation_type: AllocationType = Field(
+        ...,
+        description="What type of allocation is being shown"
+    )
+    total_value: Optional[float] = Field(
+        None,
+        description="Total value being allocated"
+    )
+
+
+# ============================================================================
+# NEWS & CONTENT
+# ============================================================================
+
+class NewsItem(BaseModel):
+    """Individual news article/item."""
+    title: str = Field(
+        ...,
+        description="Article headline"
+    )
+    source: str = Field(
+        ...,
+        description="News source/publisher"
+    )
+    published_at: str = Field(
+        ...,
+        description="Publication date/time (ISO format)"
+    )
+    url: Optional[str] = Field(
+        None,
+        description="URL to the full article"
+    )
+    summary: Optional[str] = Field(
+        None,
+        description="Brief summary or excerpt"
+    )
+    sentiment: Optional[SentimentType] = Field(
+        None,
+        description="Sentiment classification of the article"
+    )
+    image_url: Optional[str] = Field(
+        None,
+        description="URL to article thumbnail/image"
+    )
+
+
+class NewsFeedComponent(UIComponent):
+    """Feed of news articles."""
+    type: ComponentType = ComponentType.NEWS_FEED
+    articles: List[NewsItem] = Field(
+        ...,
+        description="List of news articles"
+    )
+
+
+# ============================================================================
+# INVESTMENT CALCULATOR
+# ============================================================================
+
+class InvestmentProjection(BaseModel):
+    """Yearly projection for an investment."""
+    year: int = Field(
+        ...,
+        description="Year number in the projection"
+    )
+    value: float = Field(
+        ...,
+        description="Projected portfolio value"
+    )
+    contributions: float = Field(
+        ...,
+        description="Total contributions up to this year"
+    )
+    returns: float = Field(
+        ...,
+        description="Total returns/gains up to this year"
+    )
+
+
+class InvestmentCalculatorComponent(UIComponent):
+    """Component showing investment growth calculations."""
+    type: ComponentType = ComponentType.INVESTMENT_CALCULATOR
+    initial_investment: float = Field(
+        ...,
+        description="Starting investment amount"
+    )
+    annual_return: float = Field(
+        ...,
+        description="Expected annual return rate (as percentage)"
+    )
+    years: int = Field(
+        ...,
+        description="Investment time horizon in years"
+    )
+    final_value: float = Field(
+        ...,
+        description="Projected final value"
+    )
+    total_return: float = Field(
+        ...,
+        description="Total dollar return/gain"
+    )
+    total_return_percent: float = Field(
+        ...,
+        description="Total percentage return"
+    )
+    projections: List[InvestmentProjection] = Field(
+        ...,
+        description="Year-by-year projections"
+    )
+
+
+# ============================================================================
+# ACTION SUGGESTIONS
+# ============================================================================
+
+class SuggestedAction(BaseModel):
+    """Suggested follow-up action or question."""
+    label: str = Field(
+        ...,
+        description="Display text for the suggestion"
+    )
+    query: str = Field(
+        ...,
+        description="The actual query/action to execute when selected"
+    )
+    icon: Optional[str] = Field(
+        None,
+        description="Icon identifier for UI rendering"
+    )
+
+
+class ActionSuggestionsComponent(UIComponent):
+    """Component showing suggested next actions/questions."""
+    type: ComponentType = ComponentType.ACTION_SUGGESTIONS
+    suggestions: List[SuggestedAction] = Field(
+        ...,
+        description="List of suggested actions"
+    )
+
+
+# ============================================================================
+# API RESPONSE
+# ============================================================================
+
+class GenerativeUIResponseFormat(BaseModel):
+    """Top-level response from the AI investment advisor."""
     components: List[
         Union[
             TextComponent,
-            ChartComponent,
-            TableComponent,
-            MetricCardComponent,
-            StockCardComponent,
+            InsightComponent,
             AlertComponent,
-            ComparisonComponent,
-            TimelineComponent,
+            SecurityCardComponent,
+            MetricsGridComponent,
+            EconomicIndicatorComponent,
+            PortfolioHoldingsComponent,
+            ComparisonTableComponent,
+            SectorPerformanceComponent,
+            FinancialStatementComponent,
+            TimeSeriesChartComponent,
+            AllocationChartComponent,
+            NewsFeedComponent,
+            InvestmentCalculatorComponent,
+            ActionSuggestionsComponent,
         ]
-    ] = Field(..., description="A list of UI components to render on the client side.")
+    ] = Field(
+        ...,
+        description="Ordered list of UI components to render"
+    )
