@@ -14,21 +14,10 @@ from pydantic import (
     BaseModel,
     Field,
 )
-from pymongo import AsyncMongoClient
-from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from errors.session import SessionNotFoundError
-from services.session import (
-    MongoDBSessionService,
-)
-from services.chat import AgenticChatService
-from services.agent import (
-    AgentServiceWithMCP,
-)
-from dependencies import (
-    get_db_client,
-    get_mcp_client,
-)
+from services.chat import ChatService
+from dependencies import get_chat_service
 from models.gen_ui_models import GenerativeUIResponseFormat
 
 router = APIRouter()
@@ -46,16 +35,8 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    db_client: AsyncMongoClient = Depends(get_db_client), 
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+    chat_service: ChatService = Depends(get_chat_service),
 ):
-    session_service = MongoDBSessionService(
-        mongo_client=db_client,
-    )
-    agent_service = AgentServiceWithMCP(
-        mcp_client=mcp_client,
-    )
-    chat_service = AgenticChatService(session_service, agent_service)
     try:
         response = await chat_service.generate_text_response(
             request.session_id,
@@ -82,16 +63,8 @@ class GenUIResponse(GenerativeUIResponseFormat):
 @router.post("/chat/gen-ui", response_model=GenerativeUIResponseFormat)
 async def chat_gen_ui(
     request: GenUIRequest,
-    db_client: AsyncMongoClient = Depends(get_db_client), 
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+    chat_service: ChatService = Depends(get_chat_service),
 ):
-    session_service = MongoDBSessionService(
-        mongo_client=db_client,
-    )
-    agent_service = AgentServiceWithMCP(
-        mcp_client=mcp_client,
-    )
-    chat_service = AgenticChatService(session_service, agent_service)
     try:
         response = await chat_service.generate_gen_ui_response(
             request.session_id,

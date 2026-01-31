@@ -6,12 +6,9 @@ from fastapi import (
     HTTPException
 )
 from pydantic import BaseModel
-from pymongo import AsyncMongoClient
 
-from services.user_context import (
-    MongoDBUserContextService,
-)
-from dependencies import get_db_client
+from services.user_context import UserContextService
+from dependencies import get_user_context_service
 from errors.user_context import (
     UserContextAlreadyExistsError,
     UserContextNotFoundError,
@@ -20,7 +17,10 @@ from models.user_context import (
     UserContext,
     UserPortfolioHolding,
 )
+
+
 router = APIRouter()
+
 
 class UserPortfolioHoldingSchema(BaseModel):
     asset_class: str
@@ -41,11 +41,7 @@ class UserContextResponseSchema(UserContextSchema):
 
 
 @router.post("/user_context", response_model=UserContextResponseSchema, status_code=http.HTTPStatus.CREATED)
-async def create_user_context(request: UserContextSchema, db_client: AsyncMongoClient = Depends(get_db_client)):
-    user_context_service = MongoDBUserContextService(
-        mongo_client=db_client,
-    )
-
+async def create_user_context(request: UserContextSchema, user_context_service: UserContextService = Depends(get_user_context_service)):
     # Convert UserContextSchema to UserContext
     user_context = UserContext(
         user_id=request.user_id,
@@ -83,10 +79,7 @@ async def create_user_context(request: UserContextSchema, db_client: AsyncMongoC
     )
 
 @router.get("/user_context/{user_id}", response_model=UserContextResponseSchema)
-async def get_user_context(user_id: str, db_client: AsyncMongoClient = Depends(get_db_client)):
-    user_context_service = MongoDBUserContextService(
-        mongo_client=db_client,
-    )
+async def get_user_context(user_id: str, user_context_service: UserContextService = Depends(get_user_context_service)):
     user_context = await user_context_service.get_user_context(user_id)
     
     if not user_context:
@@ -106,11 +99,7 @@ async def get_user_context(user_id: str, db_client: AsyncMongoClient = Depends(g
     )
 
 @router.put("/user_context", response_model=UserContextResponseSchema)
-async def update_user_context(request: UserContextSchema, db_client: AsyncMongoClient = Depends(get_db_client)):
-    user_context_service = MongoDBUserContextService(
-        mongo_client=db_client,
-    )
-
+async def update_user_context(request: UserContextSchema, user_context_service: UserContextService = Depends(get_user_context_service)):
     try:
         user_context = await user_context_service.update_user_context(
             user_id=request.user_id,
