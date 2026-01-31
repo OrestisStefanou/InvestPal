@@ -110,9 +110,9 @@ A grid of key financial metrics.
 Macroeconomic data points.
 - `indicator_name` (string): Name (e.g., GDP).
 - `current_value` (float): Latest value.
-- `previous_value` (float): Previous period value.
+- `previous_value` (float): Previous period value (optional).
 - `change` (float): Change from previous value (optional).
-- `trend` (string): `up`, `down`, `stable`.
+- `trend` (string): `up`, `down`, `stable` (optional).
 - `as_of_date` (string): Date of data.
 - `chart_data` (array of objects): Historical time series data (optional).
 
@@ -123,9 +123,9 @@ Table of portfolio positions.
     - `name` (string): Security name.
     - `weight` (float): Portfolio weight percentage.
     - `value` (float): Total value of holding (optional).
-    - `shares` (float): Number of shares (optional).
+    - `shares` (float): Number of shares held (optional).
     - `sector` (string): Sector classification (optional).
-- `total_value` (float): Total portfolio value.
+- `total_value` (float): Total portfolio value (optional).
 - `as_of_date` (string): Date the holdings data is from (optional).
 
 **8. Comparison Table (`comparison_table`)**
@@ -260,7 +260,8 @@ Retrieve the details and message history of a specific session.
   "messages": [
     {
       "role": "user | agent",
-      "content": "string"
+      "content": "string",
+      "created_at": "string"
     }
   ]
 }
@@ -285,7 +286,7 @@ Create initial context and portfolio for a user.
   "user_id": "string",
   "user_profile": {
     "key": "value"
-  },
+  }, // (optional)
   "user_portfolio": [
     {
       "asset_class": "string",
@@ -293,12 +294,20 @@ Create initial context and portfolio for a user.
       "name": "string",
       "quantity": 0.0
     }
-  ]
+  ] // (optional)
 }
 ```
 
 #### Response Body
-Same as request body.
+```json
+{
+  "user_id": "string",
+  "user_profile": { ... },
+  "user_portfolio": [ ... ],
+  "created_at": "string",
+  "updated_at": "string"
+}
+```
 
 #### Errors
 - `409 Conflict`: User context already exists.
@@ -317,7 +326,9 @@ Retrieve the context and portfolio for a specific user.
 {
   "user_id": "string",
   "user_profile": { ... },
-  "user_portfolio": [ ... ]
+  "user_portfolio": [ ... ],
+  "created_at": "string",
+  "updated_at": "string"
 }
 ```
 
