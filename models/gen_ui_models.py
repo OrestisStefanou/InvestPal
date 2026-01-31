@@ -15,7 +15,7 @@ class ComponentType(str, Enum):
     METRICS_GRID = "metrics_grid"
     PORTFOLIO_HOLDINGS = "portfolio_holdings"
     SECTOR_PERFORMANCE = "sector_performance"
-    TIME_SERIES_CHART = "time_series_chart"
+    ASSET_PERFORMANCE = "asset_performance"
     NEWS_FEED = "news_feed"
     COMPARISON_TABLE = "comparison_table"
     FINANCIAL_STATEMENT = "financial_statement"
@@ -266,6 +266,18 @@ class MetricItem(BaseModel):
     )
 
 
+class AssetPerformanceItem(BaseModel):
+    """Performance data for an asset over a specific period."""
+    period: str = Field(
+        ...,
+        description="Time period (e.g., '1D', '1M', '1Y', 'YTD')"
+    )
+    performance: float = Field(
+        ...,
+        description="Percentage return for the period"
+    )
+
+
 class MetricsGridComponent(UIComponent):
     """Grid layout for displaying multiple financial metrics."""
     type: ComponentType = ComponentType.METRICS_GRID
@@ -402,21 +414,9 @@ class SectorPerformanceItem(BaseModel):
         ...,
         description="Sector name"
     )
-    return_1d: Optional[float] = Field(
-        None,
-        description="1-day return percentage"
-    )
-    return_1w: Optional[float] = Field(
-        None,
-        description="1-week return percentage"
-    )
-    return_1m: Optional[float] = Field(
-        None,
-        description="1-month return percentage"
-    )
-    return_ytd: Optional[float] = Field(
-        None,
-        description="Year-to-date return percentage"
+    performance_data: List[AssetPerformanceItem] = Field(
+        ...,
+        description="List of performance returns for different periods"
     )
 
 
@@ -478,32 +478,31 @@ class FinancialStatementComponent(UIComponent):
 # CHARTS & VISUALIZATIONS
 # ============================================================================
 
-class TimeSeriesChartComponent(UIComponent):
-    """Chart component for time series data (prices, indicators, etc.)."""
-    type: ComponentType = ComponentType.TIME_SERIES_CHART
-    series: List[Dict[str, Any]] = Field(
+
+
+
+class AssetPerformanceComponent(UIComponent):
+    """Component for displaying asset performance across different time periods."""
+    type: ComponentType = ComponentType.ASSET_PERFORMANCE
+    symbol: str = Field(
         ...,
-        description="List of data series. Each series is a dict with 'name', 'data' (list of {timestamp, value}), and optional 'color'"
+        description="Asset symbol"
     )
-    x_axis_label: Optional[str] = Field(
-        None,
-        description="Label for the x-axis"
+    name: str = Field(
+        ...,
+        description="Asset name"
     )
-    y_axis_label: Optional[str] = Field(
-        None,
-        description="Label for the y-axis"
+    current_price: float = Field(
+        ...,
+        description="Current price of the asset"
     )
-    chart_type: ChartType = Field(
-        ChartType.LINE,
-        description="Type of chart visualization"
+    performance_data: List[AssetPerformanceItem] = Field(
+        ...,
+        description="List of performance returns for different periods"
     )
-    date_range: Optional[str] = Field(
-        None,
-        description="Description of the date range (e.g., '1Y', '5Y', 'YTD')"
-    )
-    format: MetricFormat = Field(
-        MetricFormat.NUMBER,
-        description="Format for y-axis values"
+    last_updated: str = Field(
+        ...,
+        description="Timestamp of the last data update"
     )
 
 
@@ -697,7 +696,7 @@ class GenerativeUIResponseFormat(BaseModel):
             ComparisonTableComponent,
             SectorPerformanceComponent,
             FinancialStatementComponent,
-            TimeSeriesChartComponent,
+            AssetPerformanceComponent,
             AllocationChartComponent,
             NewsFeedComponent,
             InvestmentCalculatorComponent,

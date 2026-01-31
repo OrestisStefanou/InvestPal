@@ -141,10 +141,9 @@ Side-by-side comparison of entities.
 Performance data across sectors.
 - `sectors` (array of objects):
     - `sector` (string): Sector name.
-    - `return_1d` (float): 1-day return % (optional).
-    - `return_1w` (float): 1-week return % (optional).
-    - `return_1m` (float): 1-month return % (optional).
-    - `return_ytd` (float): YTD return % (optional).
+    - `performance_data` (array of objects):
+        - `period` (string): e.g., '1D', '1W', '1M', 'YTD', '1Y'.
+        - `performance` (float): Percentage return.
 - `visualization` (string): `heatmap`, `bar`, `table`.
 
 **10. Financial Statement (`financial_statement`)**
@@ -157,17 +156,15 @@ Income statement, balance sheet, or cash flow.
     - `category` (string): Grouping category (optional).
 - `currency` (string): Currency code, default `USD`.
 
-**11. Time Series Chart (`time_series_chart`)**
-Historical data visualization.
-- `series` (array of objects):
-    - `name` (string): Series name.
-    - `data` (array of objects): List of `{ "timestamp": "ISO_DATE", "value": float }`.
-    - `color` (string): Hex color code (optional).
-- `chart_type` (string): `line`, `area`, `bar`, `candlestick`.
-- `x_axis_label` (string): Label for the x-axis (optional).
-- `y_axis_label` (string): Label for the y-axis (optional).
-- `date_range` (string): Description of the date range (e.g., '1Y', '5Y', 'YTD') (optional).
-- `format` (string): Format for y-axis values (optional).
+**11. Asset Performance (`asset_performance`)**
+Asset performance returns across different time periods.
+- `symbol` (string): Asset symbol.
+- `name` (string): Asset name.
+- `current_price` (float): Current price.
+- `performance_data` (array of objects):
+    - `period` (string): e.g., '1D', '1W', '1M', 'YTD', '1Y', '5Y'.
+    - `performance` (float): Percentage return.
+- `last_updated` (string): ISO timestamp of the data.
 
 **12. Allocation Chart (`allocation_chart`)**
 Distribution breakdown.
