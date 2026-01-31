@@ -110,9 +110,9 @@ A grid of key financial metrics.
 Macroeconomic data points.
 - `indicator_name` (string): Name (e.g., GDP).
 - `current_value` (float): Latest value.
-- `previous_value` (float): Previous period value.
+- `previous_value` (float): Previous period value (optional).
 - `change` (float): Change from previous value (optional).
-- `trend` (string): `up`, `down`, `stable`.
+- `trend` (string): `up`, `down`, `stable` (optional).
 - `as_of_date` (string): Date of data.
 - `chart_data` (array of objects): Historical time series data (optional).
 
@@ -123,9 +123,9 @@ Table of portfolio positions.
     - `name` (string): Security name.
     - `weight` (float): Portfolio weight percentage.
     - `value` (float): Total value of holding (optional).
-    - `shares` (float): Number of shares (optional).
+    - `shares` (float): Number of shares held (optional).
     - `sector` (string): Sector classification (optional).
-- `total_value` (float): Total portfolio value.
+- `total_value` (float): Total portfolio value (optional).
 - `as_of_date` (string): Date the holdings data is from (optional).
 
 **8. Comparison Table (`comparison_table`)**
@@ -141,10 +141,9 @@ Side-by-side comparison of entities.
 Performance data across sectors.
 - `sectors` (array of objects):
     - `sector` (string): Sector name.
-    - `return_1d` (float): 1-day return % (optional).
-    - `return_1w` (float): 1-week return % (optional).
-    - `return_1m` (float): 1-month return % (optional).
-    - `return_ytd` (float): YTD return % (optional).
+    - `performance_data` (array of objects):
+        - `period` (string): e.g., '1D', '1W', '1M', 'YTD', '1Y'.
+        - `performance` (float): Percentage return.
 - `visualization` (string): `heatmap`, `bar`, `table`.
 
 **10. Financial Statement (`financial_statement`)**
@@ -157,17 +156,15 @@ Income statement, balance sheet, or cash flow.
     - `category` (string): Grouping category (optional).
 - `currency` (string): Currency code, default `USD`.
 
-**11. Time Series Chart (`time_series_chart`)**
-Historical data visualization.
-- `series` (array of objects):
-    - `name` (string): Series name.
-    - `data` (array of objects): List of `{ "timestamp": "ISO_DATE", "value": float }`.
-    - `color` (string): Hex color code (optional).
-- `chart_type` (string): `line`, `area`, `bar`, `candlestick`.
-- `x_axis_label` (string): Label for the x-axis (optional).
-- `y_axis_label` (string): Label for the y-axis (optional).
-- `date_range` (string): Description of the date range (e.g., '1Y', '5Y', 'YTD') (optional).
-- `format` (string): Format for y-axis values (optional).
+**11. Asset Performance (`asset_performance`)**
+Asset performance returns across different time periods.
+- `symbol` (string): Asset symbol.
+- `name` (string): Asset name.
+- `current_price` (float): Current price.
+- `performance_data` (array of objects):
+    - `period` (string): e.g., '1D', '1W', '1M', 'YTD', '1Y', '5Y'.
+    - `performance` (float): Percentage return.
+- `last_updated` (string): ISO timestamp of the data.
 
 **12. Allocation Chart (`allocation_chart`)**
 Distribution breakdown.
@@ -263,7 +260,8 @@ Retrieve the details and message history of a specific session.
   "messages": [
     {
       "role": "user | agent",
-      "content": "string"
+      "content": "string",
+      "created_at": "string"
     }
   ]
 }
@@ -288,7 +286,7 @@ Create initial context and portfolio for a user.
   "user_id": "string",
   "user_profile": {
     "key": "value"
-  },
+  }, // (optional)
   "user_portfolio": [
     {
       "asset_class": "string",
@@ -296,12 +294,20 @@ Create initial context and portfolio for a user.
       "name": "string",
       "quantity": 0.0
     }
-  ]
+  ] // (optional)
 }
 ```
 
 #### Response Body
-Same as request body.
+```json
+{
+  "user_id": "string",
+  "user_profile": { ... },
+  "user_portfolio": [ ... ],
+  "created_at": "string",
+  "updated_at": "string"
+}
+```
 
 #### Errors
 - `409 Conflict`: User context already exists.
@@ -320,7 +326,9 @@ Retrieve the context and portfolio for a specific user.
 {
   "user_id": "string",
   "user_profile": { ... },
-  "user_portfolio": [ ... ]
+  "user_portfolio": [ ... ],
+  "created_at": "string",
+  "updated_at": "string"
 }
 ```
 
