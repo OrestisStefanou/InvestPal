@@ -7,14 +7,13 @@ from fastapi import (
     HTTPException,
 )
 from pydantic import BaseModel
-from pymongo import AsyncMongoClient
 
 from services.session import (
-    MongoDBSessionService, 
+    SessionService, 
 )
 from errors.session import SessionAlreadyExistsError
 from errors.user_context import  UserContextNotFoundError
-from dependencies import get_db_client
+from dependencies import get_session_service
 
 
 router = APIRouter()
@@ -50,10 +49,7 @@ class SessionSchema(BaseModel):
 
 
 @router.post("/session", response_model=SessionSchema, status_code=http.HTTPStatus.CREATED)
-async def create_session(request: CreateSessionRequest, db_client: AsyncMongoClient = Depends(get_db_client)):
-    session_service = MongoDBSessionService(
-        mongo_client=db_client,
-    )
+async def create_session(request: CreateSessionRequest, session_service: SessionService = Depends(get_session_service)):
     try:
         session = await session_service.create_session(request.user_id, request.session_id)
     except SessionAlreadyExistsError as e:
@@ -69,10 +65,7 @@ async def create_session(request: CreateSessionRequest, db_client: AsyncMongoCli
 
 
 @router.get("/session/{session_id}", response_model=SessionSchema)
-async def get_session(session_id: str, db_client: AsyncMongoClient = Depends(get_db_client)):
-    session_service = MongoDBSessionService(
-        mongo_client=db_client,
-    )
+async def get_session(session_id: str, session_service: SessionService = Depends(get_session_service)):
     session = await session_service.get_session(session_id)
     
     if not session:
