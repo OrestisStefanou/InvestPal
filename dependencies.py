@@ -7,7 +7,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
 
 from config import settings
-from services.agent import AgentServiceWithMCP
+from services.agent import InvestmentAdvisorAgentService
 from services.session import (
     MongoDBSessionService, 
     SessionService,
@@ -56,5 +56,6 @@ def get_chat_service(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
 ) -> ChatService:
     session_service = get_session_service(db_client)
-    agent_service = AgentServiceWithMCP(mcp_client=mcp_client)
+    user_context_service = get_user_context_service(db_client)
+    agent_service = InvestmentAdvisorAgentService(mcp_client=mcp_client, user_context_service=user_context_service)
     return AgenticChatService(session_service, agent_service)
