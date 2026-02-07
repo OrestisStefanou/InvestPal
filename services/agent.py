@@ -66,6 +66,11 @@ class ToolLoggingMiddleware(AgentMiddleware):
         return result
 
 
+@dataclass
+class ToolRuntimeContext:
+    user_context_service: UserContextService
+
+
 class TextResponseFormat(BaseModel):
     response: str
 
@@ -139,7 +144,7 @@ class InvestmentAdvisorAgentService(AgentService):
         conversation: list[Message],
         response_format: BaseModel,
     ) -> BaseModel:
-        system_prompt = await self._get_system_prompt(user_id)
+        system_prompt = self._get_system_prompt(user_id)
         agent = await self._create_agent(system_prompt, response_format)
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
@@ -147,15 +152,28 @@ class InvestmentAdvisorAgentService(AgentService):
         response = await agent.generate_response(conversation, runtime_context)
         return response
 
-    async def _get_system_prompt(self, user_id: str) -> str:
-        result = await self._mcp_client.get_prompt(
-            server_name=settings.MCP_SERVER_NAME,
-            prompt_name="investment_advisor_prompt", 
-            arguments={
-                'user_id': user_id,
-            }
-        )
-        return result[0].content
+    def _get_system_prompt(self, user_id: str) -> str:
+        return f"""
+            You are a professional investment advisor of a client with user_id = {user_id}. Your job is to answer to any investing related questions and ask anything that you think would be useful to know  about your client to give the best personalised investing advice. 
+            ALWAYS follow the instructions below:
+            # INSTRUCTIONS
+            - ALWAYS use getUserContext tool to get your user's context in order to make your responses as personalised  as possible (Do this in the background, don't let the user know that you are fetching their information to make it look like you already know it)
+            - Use the updateUserContext tool to store any information about the user(your client) that you think will be useful to have for the future(don't ask the user for permission to do this, think about this as your personal notes about the user to help you give more personalised answers).
+            - Since the updateUserContext tool will completely replace the existing user context with the provided one, ALWAYS call getUserContext tool first to make sure you are not overwriting any existing information.
+            - You should try to obtain the following information(one question at a time to keep the conversation natural) about the user(and anything else that you think would be useful):
+                - The user's age
+                - The user's investing knowledge level (beginner, intermediate, advanced)
+                - The user's investment goals
+                - The user's risk tolerance
+                - The user's investment time horizon
+                - The user's current investment portfolio
+            - You should use your existing tools to provide your answers if possible.
+            - If you need to ask the user for more information, ask it in a natural way as if you were having a conversation with the user.
+            - Your tone must be professional.
+            - Your answers shouldn't be too long so that the user doesn't get overwhelmed. Try to stick to the point and keep it conversational.
+            - Avoid any math calculations unless you have a tool to do it.
+            - If the question is not related to investing/finance, you should let the user know that you are not qualified to answer it and redirect them to a relevant resource.
+        """
 
     async def _create_agent(self, system_prompt: str, response_format: BaseModel) -> Agent:
         mcp_tools = await self._mcp_client.get_tools()
@@ -194,11 +212,6 @@ class InvestmentAdvisorAgentService(AgentService):
             middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
             runtime_context_schema=ToolRuntimeContext,
         )
-
-
-@dataclass
-class ToolRuntimeContext:
-    user_context_service: UserContextService
 
 
 ## User context tools
