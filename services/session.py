@@ -70,7 +70,7 @@ class MongoDBSessionService(SessionService):
             session_id = str(uuid.uuid4())
 
         # Check if user_id is valid
-        user_context = await user_context_collection.find_one({"userid": user_id})
+        user_context = await user_context_collection.find_one({"user_id": user_id})
         if not user_context:
             raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
 
