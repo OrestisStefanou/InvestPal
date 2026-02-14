@@ -70,11 +70,8 @@ async def update_user_context(
 ) -> UserContext:
     updated_user_context = await user_context_service.update_user_context(
         user_id=user_id,
-        user_context=UserContext(
-            user_id=user_id,
-            user_profile=user_profile,
-            user_portfolio=user_portfolio,
-        )
+        user_profile=user_profile,
+        user_portfolio=user_portfolio,
     )
 
     return updated_user_context

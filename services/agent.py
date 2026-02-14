@@ -233,14 +233,10 @@ async def update_user_context(
     user_portfolio: list[UserPortfolioHolding]
 ) -> UserContext:
     user_context_service = runtime.context.user_context_service
-    user_context = UserContext(
+    updated_user_context = await user_context_service.update_user_context(
         user_id=user_id,
         user_profile=user_profile,
         user_portfolio=user_portfolio,
-    )
-    updated_user_context = await user_context_service.update_user_context(
-        user_id=user_id,
-        user_context=user_context,
     )
 
     return updated_user_context

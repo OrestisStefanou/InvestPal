@@ -103,18 +103,15 @@ async def update_user_context(request: UserContextSchema, user_context_service: 
     try:
         user_context = await user_context_service.update_user_context(
             user_id=request.user_id,
-            user_context=UserContext(
-                user_id=request.user_id,
-                user_profile=request.user_profile,
-                user_portfolio=[
-                    UserPortfolioHolding(
-                        asset_class=holding.asset_class,
-                        symbol=holding.symbol,
-                        name=holding.name,
-                        quantity=holding.quantity,
-                    ) for holding in request.user_portfolio or []
-                ],
-            ),
+            user_profile=request.user_profile,
+            user_portfolio=[
+                UserPortfolioHolding(
+                    asset_class=holding.asset_class,
+                    symbol=holding.symbol,
+                    name=holding.name,
+                    quantity=holding.quantity,
+                ) for holding in request.user_portfolio or []
+            ],
         )
     except UserContextNotFoundError as e:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail=str(e))

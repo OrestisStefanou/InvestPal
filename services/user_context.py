@@ -33,7 +33,12 @@ class UserContextService(ABC):
         pass
 
     @abstractmethod
-    async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext | None:
+    async def update_user_context(
+        self, 
+        user_id: str,
+        user_profile: dict | None = None,
+        user_portfolio: list[UserPortfolioHolding] | None = None,
+    ) -> UserContext:
         pass
 
 
@@ -138,13 +143,19 @@ class MongoDBUserContextService(UserContextService):
             updated_at=mongo_doc.updated_at,
         )
 
-    async def update_user_context(self, user_id: str, user_context: UserContext) -> UserContext:
+    async def update_user_context(
+        self, 
+        user_id: str,
+        user_profile: dict | None = None,
+        user_portfolio: list[UserPortfolioHolding] | None = None,
+    ) -> UserContext:
         """
         Update the user context for the given user_id.
 
         Args:
             user_id: The user_id for which to update the user context.
-            user_context: The user context to be updated.
+            user_profile: The user profile to be updated.
+            user_portfolio: The user portfolio to be updated.
 
         Raises:
             UserContextNotFoundError: If no user context exists for the given user_id.
@@ -159,7 +170,7 @@ class MongoDBUserContextService(UserContextService):
         # Map to Mongo doc for update
         mongo_doc = UserContextMongoDoc(
             user_id=user_id,
-            user_profile=user_context.user_profile,
+            user_profile=user_profile if user_profile is not None else {},
             user_portfolio=[
                 UserPortfolioHoldingMongoDoc(
                     asset_class=holding.asset_class,
@@ -167,7 +178,7 @@ class MongoDBUserContextService(UserContextService):
                     name=holding.name,
                     quantity=holding.quantity,
                 )
-                for holding in user_context.user_portfolio
+                for holding in user_portfolio or []
             ],
             updated_at=now,
         )
