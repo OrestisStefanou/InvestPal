@@ -8,6 +8,7 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 - **Session Management**: Persistent chat history stored in MongoDB.
 - **Context Awareness**: Remembers user preferences and context for more relevant advice.
 - **MCP Integration**: Extensible tool system to fetch market data, stock profiles, and forecasts.
+- **Internal MCP Server**: Manages user context, portfolio holdings, and provides specialized advisor prompts.
 - **Multi-LLM Support**: Choose between OpenAI, Google, or Anthropic providers.
 
 ## Tech Stack
@@ -16,6 +17,7 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 - **Database**: [MongoDB](https://www.mongodb.com/)
 - **AI Framework**: [LangChain](https://www.langchain.com/)
 - **Protocol**: [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+- **MCP Framework**: [FastMCP](https://github.com/jlowin/fastmcp)
 - **MCP Server**: [MarketDataMcpServer](https://github.com/OrestisStefanou/MarketDataMcpServer)
 - **Dependency Management**: [uv](https://github.com/astral-sh/uv)
 
@@ -74,6 +76,27 @@ uv run fastapi dev main.py
 
 The API will be available at `http://localhost:8000`. You can access the Interactive API docs at `http://localhost:8000/docs`.
 
+### Internal MCP Server
+
+InvestPal includes an internal MCP server to manage user-specific context and provide personalized prompts.
+
+Start the internal MCP server:
+
+```bash
+uv run python mcp_app/app.py
+```
+
+The server will be available at `http://localhost:9000`.
+
+#### Tools Provided
+
+- `getUserContext(user_id: str)`: Retrieves the user's profile and portfolio details.
+- `updateUserContext(user_id: str, user_profile: dict, user_portfolio: list)`: Updates/Replaces the user's profile and portfolio.
+
+#### Prompts Provided
+
+- `get_invstment_advisor_prompt(user_id: str)`: Returns a professional investment advisor prompt tailored to the user's specific context.
+
 ## API Endpoints
 
 ### User Context
@@ -95,3 +118,4 @@ The API will be available at `http://localhost:8000`. You can access the Interac
 - `services/`: Core business logic (agent orchestration, chat service, database interactions).
 - `config.py`: Pydantic settings management.
 - `dependencies.py`: Dependency injection for DB and MCP clients.
+- `mcp_app/`: Internal MCP server implementation.
