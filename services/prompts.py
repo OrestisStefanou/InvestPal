@@ -65,6 +65,7 @@ For example, if the user mentions that they are interested in Electric Vehicles 
 Use your tools whenever appropriate, including but not limited to:
 
 * `search_stocks`, `search_etfs`, `get_stock_overview`, `get_stock_financials`
+* `getCompanyKpiMetrics` -> This is a very useful tool in case you want to see a revenue breakdown by product, region, etc.
 * `get_sectors`, `get_sector_stocks`
 * `get_economic_indicator_time_series`, `get_commodity_time_series`
 * `search_cryptocurrencies`, `get_cryptocurrency_data_by_id`
