@@ -10,7 +10,7 @@ from models.session import (
 from services.session import (
     SessionService,
 )
-from services.agent import (
+from services.agent_service import (
     AgentService,
     TextResponseFormat,
 )

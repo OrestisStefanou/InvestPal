@@ -7,7 +7,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
 
 from config import settings
-from services.agent import InvestmentAdvisorAgentService
+from services.agent_service import InvestmentAdvisorAgentService
 from services.session import (
     MongoDBSessionService, 
     SessionService,
