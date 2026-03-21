@@ -21,8 +21,13 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str | None = None
     TEMPERATURE: float = 0.1
     # MCP
-    MCP_SERVER_URL: str
-    MCP_SERVER_NAME: str = "investing_data_tools"
+    MARKET_DATA_MCP_SERVER_URL: str
+    MARKET_DATA_MCP_SERVER_NAME: str = "market_data_tools"
+    ALPACA_MCP_SERVER_URL: str | None = None
+    ALPACA_MCP_SERVER_NAME: str = "alpaca_markets_tools"
+    COINBASE_MCP_SERVER_URL: str | None = None
+    COINBASE_MCP_SERVER_NAME: str = "coinbase_markets_tools"
+
     # APP
     CONVERSATION_MESSAGES_LIMIT: int = 15
 

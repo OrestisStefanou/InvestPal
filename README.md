@@ -59,8 +59,8 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
    TEMPERATURE=0.1
 
    # MCP
-   MCP_SERVER_URL=http://localhost:8000
-   MCP_SERVER_NAME=investing_data_tools
+   MARKET_DATA_MCP_SERVER_URL=http://localhost:8000
+   MARKET_DATA_MCP_SERVER_NAME=market_data_tools
 
    # APP
    CONVERSATION_MESSAGES_LIMIT=15

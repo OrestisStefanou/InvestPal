@@ -28,14 +28,27 @@ def get_db_client(request: Request):
 
 
 def get_mcp_client():
-    mcp_server_client = MultiServerMCPClient(
-        {
-            settings.MCP_SERVER_NAME: {
-                "transport": "streamable_http",  # HTTP-based remote server
-                "url": settings.MCP_SERVER_URL,
-            }
+    connections = {
+        settings.MARKET_DATA_MCP_SERVER_NAME: {
+            "transport": "streamable_http",
+            "url": settings.MARKET_DATA_MCP_SERVER_URL,
         }
-    )    
+    }
+
+    if settings.ALPACA_MCP_SERVER_URL:
+        connections[settings.ALPACA_MCP_SERVER_NAME] = {
+            "transport": "streamable_http",
+            "url": settings.ALPACA_MCP_SERVER_URL,
+        }
+    
+    if settings.COINBASE_MCP_SERVER_URL:
+        connections[settings.COINBASE_MCP_SERVER_NAME] = {
+            "transport": "streamable_http",
+            "url": settings.COINBASE_MCP_SERVER_URL,
+        }
+
+    mcp_server_client = MultiServerMCPClient(connections)
+
     return mcp_server_client
 
 
