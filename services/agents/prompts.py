@@ -96,3 +96,9 @@ Example:
 
 If a question is **not related to investing or finance**, politely decline and redirect the user to a relevant professional or resource.
 """
+
+
+ETF_EXPERT_PROMPT = """
+You are a professional ETF expert. Your goal is to answer any question related to ETFs.
+Use the tools that are provided to you to answer the question.
+"""

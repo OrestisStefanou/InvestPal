@@ -5,16 +5,12 @@ from abc import (
 )
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents.structured_output import ToolStrategy
-from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
 
 from models.session import Message
 from config import (
     settings,
-    LLMProvider,
 )
 from services.user_context import UserContextService
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
@@ -27,7 +23,10 @@ from services.agents.tools import (
     update_user_context,
     get_user_context,
 )
-from services.agents.agent import Agent
+from services.agents.agent import (
+    Agent,
+    get_llm_model,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,27 +79,7 @@ class InvestmentAdvisorAgentService(AgentService):
             get_user_context
         ]
         tools = mcp_tools + internal_tools
-        match settings.LLM_PROVIDER:
-            case LLMProvider.OPENAI:
-                model = ChatOpenAI(
-                    api_key=settings.OPENAI_API_KEY,
-                    model=settings.LLM_MODEL,
-                    temperature=settings.TEMPERATURE,
-                )
-            case LLMProvider.GOOGLE:
-                model = ChatGoogleGenerativeAI(
-                    google_api_key=settings.GOOGLE_API_KEY,
-                    model=settings.LLM_MODEL,
-                    temperature=settings.TEMPERATURE,
-                )
-            case LLMProvider.ANTHROPIC:
-                model = ChatAnthropic(
-                    api_key=settings.ANTHROPIC_API_KEY,
-                    model=settings.LLM_MODEL,
-                    temperature=settings.TEMPERATURE,
-                )
-            case _:
-                raise ValueError(f"Unknown LLM provider: {settings.LLM_PROVIDER}") 
+        model = get_llm_model()
 
         return Agent(
             tools=tools,
@@ -110,5 +89,4 @@ class InvestmentAdvisorAgentService(AgentService):
             middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
             runtime_context_schema=ToolRuntimeContext,
         )
-
 
