@@ -39,7 +39,9 @@ from config import (
 @dataclass
 class ToolRuntimeContext:
     user_context_service: UserContextService
-    mcp_client: MultiServerMCPClient | None = None  # TODO: MAKE THIS NON OPTIONAL
+    etf_expert_agent: Agent
+    crypto_expert_agent: Agent
+    #mcp_client: MultiServerMCPClient | None = None  # TODO: Remove this since we will add the agents here
 
 
 class UpdateUserContextToolInput(BaseModel):
@@ -94,26 +96,12 @@ async def etf_expert(runtime: ToolRuntime[ToolRuntimeContext], question: str) ->
     Args:
         question: The question to ask the ETF expert
     """
-    market_data_tools = await runtime.context.mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    etf_tool_names = [
-        "etfSearch",
-        "getETF",
-        "getMarketNews",
-        "getStockOverview",
-        "calculateInvestmentFutureValue",
-        "stockSearch",
-    ]
-    etf_tools = [tool for tool in market_data_tools if tool.name in etf_tool_names]
-
-    agent = Agent(
-        tools=etf_tools,
-        response_format=ToolStrategy(ExpertResponse),
-        system_prompt=ETF_EXPERT_PROMPT,
-        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
-    )
+    agent = runtime.context.etf_expert_agent
+    if not agent:
+        raise ValueError("ETF expert agent is not initialized in the runtime context.")
 
     conversation = [Message(role=MessageRole.USER, content=question)]
-    response: ETFExpertResponse = await agent.generate_response(
+    response: ExpertResponse = await agent.generate_response(
         conversation, 
     )
 
@@ -129,22 +117,9 @@ async def crypto_expert(runtime: ToolRuntime[ToolRuntimeContext], question: str)
     Args:
         question: The question to ask the crypto expert
     """
-    market_data_tools = await runtime.context.mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    crypto_tool_names = [
-        "getMarketNews",
-        "searchCryptocurrencies",
-        "getCryptocurrencyDataById",
-        "getCryptocurrencyNews",
-        "calculateInvestmentFutureValue",
-    ]
-    crypto_tools = [tool for tool in market_data_tools if tool.name in crypto_tool_names]
-
-    agent = Agent(
-        tools=crypto_tools,
-        response_format=ToolStrategy(ExpertResponse),
-        system_prompt=CRYPTO_EXPERT_PROMPT,
-        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
-    )
+    agent = runtime.context.crypto_expert_agent
+    if not agent:
+        raise ValueError("Crypto expert agent is not initialized in the runtime context.")
 
     conversation = [Message(role=MessageRole.USER, content=question)]
     response: ExpertResponse = await agent.generate_response(

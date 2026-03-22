@@ -91,14 +91,20 @@ class InvestmentAdvisorAgentService(AgentService):
         )
 
 
+# TODO: Pass the sub agents in the constructor
+# TODO: Pass the subagents in runtime context
 class InvestmentManagerMultiAgentService(AgentService):
     def __init__(
         self, 
-        mcp_client: MultiServerMCPClient,
+        #mcp_client: MultiServerMCPClient,
         user_context_service: UserContextService,
+        etf_expert_agent: Agent,
+        crypto_expert_agent: Agent,
     ):
-        self._mcp_client = mcp_client
-        self._user_context_service = user_context_service
+        #self._mcp_client = mcp_client
+        self._user_context_service = user_context_service   # todo: probably not needed
+        self._etf_expert_agent = etf_expert_agent
+        self._crypto_expert_agent = crypto_expert_agent
 
     async def generate_response(
         self,
@@ -114,7 +120,9 @@ class InvestmentManagerMultiAgentService(AgentService):
         agent = await self._create_agent(system_prompt, response_format)
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
-            mcp_client=self._mcp_client,
+            #mcp_client=self._mcp_client,
+            etf_expert_agent=self._etf_expert_agent,
+            crypto_expert_agent=self._crypto_expert_agent,
         )
         response = await agent.generate_response(conversation, runtime_context)
         return response

@@ -16,7 +16,11 @@ logging.basicConfig(
 sys.path.append(os.getcwd())
 
 from config import settings
-from dependencies import get_mcp_client
+from dependencies import (
+    get_mcp_client,
+    get_etf_expert_agent,
+    get_crypto_expert_agent,
+)
 from services.user_context import MongoDBUserContextService
 from services.agent_service import InvestmentManagerMultiAgentService
 from models.session import Message, MessageRole
@@ -41,8 +45,10 @@ async def test_investment_manager_actual_behavior():
 
         # 3. Instantiate the service with REAL dependencies
         service = InvestmentManagerMultiAgentService(
-            mcp_client=mcp_client,
-            user_context_service=user_context_service
+            #mcp_client=mcp_client,
+            user_context_service=user_context_service,
+            etf_expert_agent=await get_etf_expert_agent(mcp_client=mcp_client),
+            crypto_expert_agent=await get_crypto_expert_agent(mcp_client=mcp_client),
         )
 
         # 4. Prepare test data

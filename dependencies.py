@@ -3,10 +3,23 @@ from fastapi import (
     Request,
     HTTPException,
 )
+from langchain.agents.structured_output import ToolStrategy
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
 
 from config import settings
+from services.agents.agent import Agent
+from services.agents.prompts import (
+    ETF_EXPERT_PROMPT,
+    CRYPTO_EXPERT_PROMPT,
+)
+from services.agents.middleware import (
+    ToolErrorMiddleware,
+    ToolLoggingMiddleware,
+)
+from services.agents.tools import (
+    ExpertResponse,
+)
 from services.agent_service import InvestmentAdvisorAgentService
 from services.session import (
     MongoDBSessionService, 
@@ -72,3 +85,46 @@ def get_chat_service(
     user_context_service = get_user_context_service(db_client)
     agent_service = InvestmentAdvisorAgentService(mcp_client=mcp_client, user_context_service=user_context_service)
     return AgenticChatService(session_service, agent_service)
+
+
+async def get_etf_expert_agent(
+    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+) -> Agent:
+    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+    etf_tool_names = [
+        "etfSearch",
+        "getETF",
+        "getMarketNews",
+        "getStockOverview",
+        "calculateInvestmentFutureValue",
+        "stockSearch",
+    ]
+    etf_tools = [tool for tool in market_data_tools if tool.name in etf_tool_names]
+
+    return Agent(
+        tools=etf_tools,
+        response_format=ToolStrategy(ExpertResponse),
+        system_prompt=ETF_EXPERT_PROMPT,
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
+
+
+async def get_crypto_expert_agent(
+    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+) -> Agent:
+    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+    crypto_tool_names = [
+        "getMarketNews",
+        "searchCryptocurrencies",
+        "getCryptocurrencyDataById",
+        "getCryptocurrencyNews",
+        "calculateInvestmentFutureValue",
+    ]
+    crypto_tools = [tool for tool in market_data_tools if tool.name in crypto_tool_names]
+
+    return Agent(
+        tools=crypto_tools,
+        response_format=ToolStrategy(ExpertResponse),
+        system_prompt=CRYPTO_EXPERT_PROMPT,
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
