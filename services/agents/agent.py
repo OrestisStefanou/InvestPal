@@ -24,12 +24,13 @@ class Agent:
     def __init__(
             self,
             tools: list[BaseTool],
-            model: BaseChatModel,
             response_format: Type[ToolStrategy],
             system_prompt: str,
             middleware: list[AgentMiddleware],
             runtime_context_schema: Type[BaseModel] | None = None,
+            provider: LLMProvider = LLMProvider.ANTHROPIC,
     ):
+        model = self._setup_llm_model(provider)
         self._agent= create_agent(
             model,
             tools=tools,
@@ -42,7 +43,7 @@ class Agent:
     async def generate_response(
             self,
             conversation: list[Message],
-            runtime_context: BaseModel,
+            runtime_context: Type[BaseModel] | None = None,
     ) -> BaseModel:
         messages = []
         # Keep the last settings.CONVERSATION_MESSAGES_LIMIT messages
@@ -61,28 +62,25 @@ class Agent:
         )
         return response["structured_response"]
 
-# TODO: Instead of this, define the model provider of each agent in the config?
-# TODO: Or maybe the following function should take as parameter the llm provider and return the model?
-# TODO: Update the constructor of the agent class to accept the provider there and make the below function a private method there
-def get_llm_model() -> BaseChatModel:
-    match settings.LLM_PROVIDER:
-        case LLMProvider.OPENAI:
-            return ChatOpenAI(
-                api_key=settings.OPENAI_API_KEY,
-                model=settings.LLM_MODEL,
-                temperature=settings.TEMPERATURE,
-            )
-        case LLMProvider.GOOGLE:
-            return ChatGoogleGenerativeAI(
-                google_api_key=settings.GOOGLE_API_KEY,
-                model=settings.LLM_MODEL,
-                temperature=settings.TEMPERATURE,
-            )
-        case LLMProvider.ANTHROPIC:
-            return ChatAnthropic(
-                api_key=settings.ANTHROPIC_API_KEY,
-                model=settings.LLM_MODEL,
-                temperature=settings.TEMPERATURE,
-            )
-        case _:
-            raise ValueError(f"Unknown LLM provider: {settings.LLM_PROVIDER}")
+    def _setup_llm_model(self, provider: LLMProvider) -> BaseChatModel:
+        match provider:
+            case LLMProvider.OPENAI:
+                return ChatOpenAI(
+                    api_key=settings.OPENAI_API_KEY,
+                    model=settings.LLM_MODEL,
+                    temperature=settings.TEMPERATURE,
+                )
+            case LLMProvider.GOOGLE:
+                return ChatGoogleGenerativeAI(
+                    google_api_key=settings.GOOGLE_API_KEY,
+                    model=settings.LLM_MODEL,
+                    temperature=settings.TEMPERATURE,
+                )
+            case LLMProvider.ANTHROPIC:
+                return ChatAnthropic(
+                    api_key=settings.ANTHROPIC_API_KEY,
+                    model=settings.LLM_MODEL,
+                    temperature=settings.TEMPERATURE,
+                )
+            case _:
+                raise ValueError(f"Unknown LLM provider: {provider}")
