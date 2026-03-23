@@ -8,7 +8,6 @@ from langchain.tools import (
     tool,
     ToolRuntime,
 )
-from langchain.agents.structured_output import ToolStrategy
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.user_context import (
@@ -22,24 +21,16 @@ from models.session import (
 from services.user_context import UserContextService
 from services.agents.agent import (
     Agent,
-)
-from services.agents.prompts import (
-    ETF_EXPERT_PROMPT,
-    CRYPTO_EXPERT_PROMPT,
-)
-from services.agents.middleware import (
-    ToolErrorMiddleware,
-    ToolLoggingMiddleware,
-)
-from config import (
-    settings,
+    EtfExpertAgent,
+    ExpertResponse,
 )
 
 
+# TODO: Create separate runtime context for each agent service
 @dataclass
 class ToolRuntimeContext:
     user_context_service: UserContextService
-    etf_expert_agent: Agent
+    etf_expert_agent: EtfExpertAgent
     crypto_expert_agent: Agent
     #mcp_client: MultiServerMCPClient | None = None  # TODO: Remove this since we will add the agents here
 
@@ -81,10 +72,6 @@ async def get_user_context(runtime: ToolRuntime[ToolRuntimeContext], user_id: st
     user_context_service = runtime.context.user_context_service
     user_context = await user_context_service.get_user_context(user_id)
     return user_context
-
-
-class ExpertResponse(BaseModel):
-    answer: str = Field(description="The answer to the user's question.")
 
 
 @tool("etfExpert")

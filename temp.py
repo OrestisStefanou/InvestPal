@@ -54,7 +54,7 @@ async def test_investment_manager_actual_behavior():
         # 4. Prepare test data
         user_id = "test_user_actual"
         conversation = [
-            Message(role=MessageRole.USER, content="Are there any cryptocurrency ETFs?")
+            Message(role=MessageRole.USER, content="What are the latest crypto news?")
         ]
 
         response = await service.generate_response(

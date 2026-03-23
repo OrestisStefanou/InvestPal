@@ -8,10 +8,10 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
 
 from config import settings
-from services.agents.agent import Agent
-from services.agents.prompts import (
-    ETF_EXPERT_PROMPT,
-    CRYPTO_EXPERT_PROMPT,
+from services.agents.agent import (
+    Agent,
+    EtfExpertAgent,
+    CryptoExpertAgent,
 )
 from services.agents.middleware import (
     ToolErrorMiddleware,
@@ -89,42 +89,21 @@ def get_chat_service(
 
 async def get_etf_expert_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> Agent:
+) -> EtfExpertAgent:
     market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    etf_tool_names = [
-        "etfSearch",
-        "getETF",
-        "getMarketNews",
-        "getStockOverview",
-        "calculateInvestmentFutureValue",
-        "stockSearch",
-    ]
-    etf_tools = [tool for tool in market_data_tools if tool.name in etf_tool_names]
-
-    return Agent(
-        tools=etf_tools,
-        response_format=ToolStrategy(ExpertResponse),
-        system_prompt=ETF_EXPERT_PROMPT,
+    
+    return EtfExpertAgent(
+        market_data_tools=market_data_tools,
         middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
     )
 
 
 async def get_crypto_expert_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> Agent:
+) -> CryptoExpertAgent:
     market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    crypto_tool_names = [
-        "getMarketNews",
-        "searchCryptocurrencies",
-        "getCryptocurrencyDataById",
-        "getCryptocurrencyNews",
-        "calculateInvestmentFutureValue",
-    ]
-    crypto_tools = [tool for tool in market_data_tools if tool.name in crypto_tool_names]
 
-    return Agent(
-        tools=crypto_tools,
-        response_format=ToolStrategy(ExpertResponse),
-        system_prompt=CRYPTO_EXPERT_PROMPT,
+    return CryptoExpertAgent(
+        market_data_tools=market_data_tools,
         middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
     )

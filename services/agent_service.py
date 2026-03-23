@@ -28,6 +28,8 @@ from services.agents.tools import (
 )
 from services.agents.agent import (
     Agent,
+    EtfExpertAgent,
+    CryptoExpertAgent,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,6 +69,8 @@ class InvestmentAdvisorAgentService(AgentService):
         agent = await self._create_agent(system_prompt, response_format)
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
+            etf_expert_agent=None,
+            crypto_expert_agent=None,
         )
         response = await agent.generate_response(conversation, runtime_context)
         return response
@@ -93,15 +97,16 @@ class InvestmentAdvisorAgentService(AgentService):
 
 # TODO: Pass the sub agents in the constructor
 # TODO: Pass the subagents in runtime context
+# TODO: Update the constructor since the current setup is shit 
+# -> erf expert agent crypto expert agent are just agents which is very generic
+# Create expert classes?
 class InvestmentManagerMultiAgentService(AgentService):
     def __init__(
         self, 
-        #mcp_client: MultiServerMCPClient,
         user_context_service: UserContextService,
-        etf_expert_agent: Agent,
-        crypto_expert_agent: Agent,
+        etf_expert_agent: EtfExpertAgent,
+        crypto_expert_agent: CryptoExpertAgent,
     ):
-        #self._mcp_client = mcp_client
         self._user_context_service = user_context_service   # todo: probably not needed
         self._etf_expert_agent = etf_expert_agent
         self._crypto_expert_agent = crypto_expert_agent
@@ -120,7 +125,6 @@ class InvestmentManagerMultiAgentService(AgentService):
         agent = await self._create_agent(system_prompt, response_format)
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
-            #mcp_client=self._mcp_client,
             etf_expert_agent=self._etf_expert_agent,
             crypto_expert_agent=self._crypto_expert_agent,
         )
