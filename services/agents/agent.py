@@ -236,3 +236,19 @@ class PortfolioManagerAgent(Agent):
             middleware=middleware,
             provider=provider,
         )
+
+
+class UserContextMemoryManagerAgent(Agent):
+    def __init__(
+        self,
+        user_context_tools: list[BaseTool],
+        middleware: list[AgentMiddleware],
+        provider: LLMProvider = LLMProvider.ANTHROPIC,
+    ):
+        super().__init__(
+            tools=user_context_tools,
+            response_format=ToolStrategy(ExpertResponse),
+            system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
+            middleware=middleware,
+            provider=provider,
+        )

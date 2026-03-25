@@ -38,6 +38,8 @@ class ToolRuntimeContext:
     crypto_expert_agent: CryptoExpertAgent
     stock_analyst_expert_agent: StockAnalystExpertAgent
     market_analyst_expert_agent: MarketAnalystExpertAgent
+    portfolio_manager_agent: PortfolioManagerAgent
+    
     #mcp_client: MultiServerMCPClient | None = None  # TODO: Remove this since we will add the agents here
 
 
@@ -181,9 +183,9 @@ async def market_analyst_expert(runtime: ToolRuntime[ToolRuntimeContext], questi
     Args:
         question: The question to ask the financial markets analyst expert
     """
-    agent = runtime.context.financial_markets_analyst_expert_agent
+    agent = runtime.context.market_analyst_expert_agent
     if not agent:
-        raise ValueError("Financial markets analyst expert agent is not initialized in the runtime context.")
+        raise ValueError("Market analyst expert agent is not initialized in the runtime context.")
 
     conversation = [Message(role=MessageRole.USER, content=question)]
     response: ExpertResponse = await agent.generate_response(

@@ -74,6 +74,9 @@ class InvestmentAdvisorAgentService(AgentService):
             user_context_service=self._user_context_service,
             etf_expert_agent=None,
             crypto_expert_agent=None,
+            stock_analyst_expert_agent=None,
+            market_analyst_expert_agent=None,
+            portfolio_manager_agent=None,
         )
         response = await agent.generate_response(conversation, runtime_context)
         return response
