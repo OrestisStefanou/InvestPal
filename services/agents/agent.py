@@ -237,19 +237,3 @@ class PortfolioManagerAgent(Agent):
             provider=settings.PORTFOLIO_MANAGER_LLM_PROVIDER,
             model_name=settings.PORTFOLIO_MANAGER_LLM_MODEL,
         )
-
-
-class UserContextMemoryManagerAgent(Agent):
-    def __init__(
-        self,
-        user_context_tools: list[BaseTool],
-        middleware: list[AgentMiddleware],
-    ):
-        super().__init__(
-            tools=user_context_tools,
-            response_format=ToolStrategy(ExpertResponse),
-            system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
-            middleware=middleware,
-            provider=settings.USER_CONTEXT_AGENT_LLM_PROVIDER,
-            model_name=settings.USER_CONTEXT_AGENT_LLM_MODEL,
-        )

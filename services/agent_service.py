@@ -17,6 +17,7 @@ from services.user_context import UserContextService
 from services.agents.prompts import (
     INVESTMENT_ADVISOR_PROMPT,
     INVESTMENT_MANAGER_PROMPT,
+    USER_CONTEXT_MEMORY_MANAGER_PROMPT,
 )
 from services.agents.middleware import (
     ToolErrorMiddleware,
@@ -107,6 +108,7 @@ class InvestmentAdvisorAgentService(AgentService):
         )
 
 
+# TODO: Pass the memory manager agent in the constructor as well
 class InvestmentManagerMultiAgentService(AgentService):
     def __init__(
         self,
@@ -117,7 +119,7 @@ class InvestmentManagerMultiAgentService(AgentService):
         market_analyst_expert_agent: MarketAnalystExpertAgent,
         portfolio_manager_agent: PortfolioManagerAgent,
     ):
-        self._user_context_service = user_context_service   # todo: probably not needed
+        self._user_context_service = user_context_service
         self._etf_expert_agent = etf_expert_agent
         self._crypto_expert_agent = crypto_expert_agent
         self._stock_analyst_expert_agent = stock_analyst_expert_agent
@@ -130,8 +132,10 @@ class InvestmentManagerMultiAgentService(AgentService):
         conversation: list[Message],
         response_format: Type[BaseModel],
     ) -> BaseModel:
-        system_prompt = INVESTMENT_MANAGER_PROMPT.format(client_profile={"name": "Orestis"})
+        user_context = await self._user_context_service.get_user_context(user_id)
+        system_prompt = INVESTMENT_MANAGER_PROMPT.format(client_profile=user_context.model_dump_json())
         agent = await self._create_agent(system_prompt, response_format)
+        
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
             etf_expert_agent=self._etf_expert_agent,
@@ -141,6 +145,9 @@ class InvestmentManagerMultiAgentService(AgentService):
             portfolio_manager_agent=self._portfolio_manager_agent,
         )
         response = await agent.generate_response(conversation, runtime_context)
+
+        await self._update_user_context_memory(user_id, conversation, runtime_context)
+
         return response
 
     async def _create_agent(self, system_prompt: str, response_format: BaseModel) -> Agent:
@@ -157,3 +164,24 @@ class InvestmentManagerMultiAgentService(AgentService):
             middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
             runtime_context_schema=ToolRuntimeContext,
         )
+
+    async def _update_user_context_memory(
+        self, 
+        user_id: str, 
+        conversation: list[Message],
+        runtime_context: ToolRuntimeContext,
+    ):
+        user_context_memory_manager_agent = Agent(
+            tools=[
+                update_user_context,
+                get_user_context
+            ],
+            response_format=ToolStrategy(TextResponseFormat),
+            system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT.format(user_id=user_id),
+            middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+            provider=settings.USER_CONTEXT_AGENT_LLM_PROVIDER,
+            model_name=settings.USER_CONTEXT_AGENT_LLM_MODEL,
+            runtime_context_schema=ToolRuntimeContext,
+        )
+        # Keep only the last 5 messages
+        await user_context_memory_manager_agent.generate_response(conversation[-5:], runtime_context)

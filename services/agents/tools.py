@@ -213,7 +213,7 @@ async def portfolio_manager(runtime: ToolRuntime[ToolRuntimeContext], question: 
     IMPORTANT: The portfolio manager is stateless so you have to provide all the neccessary information in the question.
     
     Args:
-        question: The question to ask the portfolio manager
+        question: The question to ask the portfolio manager on behalf of the client (e.g. "What is the current Coinbase portfolio of the client?", "Buy 10 shares of Apple on behalf of the client", etc.)
     """
     agent = runtime.context.portfolio_manager_agent
     if not agent:

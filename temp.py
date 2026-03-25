@@ -58,9 +58,9 @@ async def test_investment_manager_actual_behavior():
         )
 
         # 4. Prepare test data
-        user_id = "test_user_actual"
+        user_id = "orestis_user_id"
         conversation = [
-            Message(role=MessageRole.USER, content="What are the latest market news?")
+            Message(role=MessageRole.USER, content="I am thinking to add some gold exposure to my portfolio, what do you think?")
         ]
 
         response = await service.generate_response(
