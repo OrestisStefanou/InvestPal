@@ -7,6 +7,8 @@ class LLMProvider(str, Enum):
     GOOGLE = "google"
     ANTHROPIC = "anthropic"
 
+
+# TODO: Add a config value for each agent we have
 class Settings(BaseSettings):
     # MongoDB
     MONGO_URI: str

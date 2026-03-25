@@ -147,6 +147,6 @@ async def get_portfolio_manager_agent(
         agent_tools.extend(coinbase_tools)
     
     return PortfolioManagerAgent(
-        agent_tools=agent_tools,
+        portfolio_management_tools=agent_tools,
         middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
     )

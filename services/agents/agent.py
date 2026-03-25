@@ -51,8 +51,9 @@ class Agent:
         middleware: list[AgentMiddleware],
         runtime_context_schema: Type[BaseModel] | None = None,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
-        model = self._setup_llm_model(provider)
+        model = self._setup_llm_model(provider, model_name)
         self._agent= create_agent(
             model,
             tools=tools + [get_current_datetime],
@@ -84,24 +85,24 @@ class Agent:
         )
         return response["structured_response"]
 
-    def _setup_llm_model(self, provider: LLMProvider) -> BaseChatModel:
+    def _setup_llm_model(self, provider: LLMProvider, model_name: str) -> BaseChatModel:
         match provider:
             case LLMProvider.OPENAI:
                 return ChatOpenAI(
                     api_key=settings.OPENAI_API_KEY,
-                    model=settings.LLM_MODEL,
+                    model=model_name,
                     temperature=settings.TEMPERATURE,
                 )
             case LLMProvider.GOOGLE:
                 return ChatGoogleGenerativeAI(
                     google_api_key=settings.GOOGLE_API_KEY,
-                    model=settings.LLM_MODEL,
+                    model=model_name,
                     temperature=settings.TEMPERATURE,
                 )
             case LLMProvider.ANTHROPIC:
                 return ChatAnthropic(
                     api_key=settings.ANTHROPIC_API_KEY,
-                    model=settings.LLM_MODEL,
+                    model=model_name,
                     temperature=settings.TEMPERATURE,
                 )
             case _:
@@ -118,6 +119,7 @@ class EtfExpertAgent(Agent):
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
         etf_tool_names = [
             "etfSearch",
@@ -135,6 +137,7 @@ class EtfExpertAgent(Agent):
             system_prompt=ETF_EXPERT_PROMPT,
             middleware=middleware,
             provider=provider,
+            model_name=model_name,
         )
 
 
@@ -144,6 +147,7 @@ class CryptoExpertAgent(Agent):
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
         crypto_tool_names = [
             "getMarketNews",
@@ -160,6 +164,7 @@ class CryptoExpertAgent(Agent):
             system_prompt=CRYPTO_EXPERT_PROMPT,
             middleware=middleware,
             provider=provider,
+            model_name=model_name,
         )
 
 
@@ -169,6 +174,7 @@ class StockAnalystExpertAgent(Agent):
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
         stock_analyst_tool_names = [
             "stockSearch",
@@ -188,6 +194,7 @@ class StockAnalystExpertAgent(Agent):
             system_prompt=STOCK_ANALYST_EXPERT_PROMPT,
             middleware=middleware,
             provider=provider,
+            model_name=model_name,
         )
 
 
@@ -197,6 +204,7 @@ class MarketAnalystExpertAgent(Agent):
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
         market_analyst_tool_names = [
             "stockSearch",
@@ -219,6 +227,7 @@ class MarketAnalystExpertAgent(Agent):
             system_prompt=MARKET_ANALYST_EXPERT_PROMPT,
             middleware=middleware,
             provider=provider,
+            model_name=model_name,
         )
 
 
@@ -228,6 +237,7 @@ class PortfolioManagerAgent(Agent):
         portfolio_management_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
         super().__init__(
             tools=portfolio_management_tools,
@@ -235,6 +245,7 @@ class PortfolioManagerAgent(Agent):
             system_prompt=PORTFOLIO_MANAGER_PROMPT,
             middleware=middleware,
             provider=provider,
+            model_name=model_name,
         )
 
 
@@ -244,6 +255,7 @@ class UserContextMemoryManagerAgent(Agent):
         user_context_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
         provider: LLMProvider = LLMProvider.ANTHROPIC,
+        model_name: str = settings.LLM_MODEL,
     ):
         super().__init__(
             tools=user_context_tools,
@@ -251,4 +263,5 @@ class UserContextMemoryManagerAgent(Agent):
             system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
             middleware=middleware,
             provider=provider,
+            model_name=model_name,
         )

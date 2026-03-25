@@ -28,11 +28,17 @@ from services.agents.tools import (
     get_user_context,
     etf_expert,
     crypto_expert,
+    stock_analyst_expert,
+    market_analyst_expert,
+    portfolio_manager,
 )
 from services.agents.agent import (
     Agent,
     EtfExpertAgent,
     CryptoExpertAgent,
+    StockAnalystExpertAgent,
+    MarketAnalystExpertAgent,
+    PortfolioManagerAgent,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,21 +107,22 @@ class InvestmentAdvisorAgentService(AgentService):
         )
 
 
-# TODO: Pass the sub agents in the constructor
-# TODO: Pass the subagents in runtime context
-# TODO: Update the constructor since the current setup is shit 
-# -> erf expert agent crypto expert agent are just agents which is very generic
-# Create expert classes?
 class InvestmentManagerMultiAgentService(AgentService):
     def __init__(
-        self, 
+        self,
         user_context_service: UserContextService,
         etf_expert_agent: EtfExpertAgent,
         crypto_expert_agent: CryptoExpertAgent,
+        stock_analyst_expert_agent: StockAnalystExpertAgent,
+        market_analyst_expert_agent: MarketAnalystExpertAgent,
+        portfolio_manager_agent: PortfolioManagerAgent,
     ):
         self._user_context_service = user_context_service   # todo: probably not needed
         self._etf_expert_agent = etf_expert_agent
         self._crypto_expert_agent = crypto_expert_agent
+        self._stock_analyst_expert_agent = stock_analyst_expert_agent
+        self._market_analyst_expert_agent = market_analyst_expert_agent
+        self._portfolio_manager_agent = portfolio_manager_agent
 
     async def generate_response(
         self,
@@ -123,18 +130,28 @@ class InvestmentManagerMultiAgentService(AgentService):
         conversation: list[Message],
         response_format: Type[BaseModel],
     ) -> BaseModel:
-        agent = await self._create_agent(INVESTMENT_MANAGER_PROMPT, response_format)
+        system_prompt = INVESTMENT_MANAGER_PROMPT.format(client_profile={"name": "Orestis"})
+        agent = await self._create_agent(system_prompt, response_format)
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
             etf_expert_agent=self._etf_expert_agent,
             crypto_expert_agent=self._crypto_expert_agent,
+            stock_analyst_expert_agent=self._stock_analyst_expert_agent,
+            market_analyst_expert_agent=self._market_analyst_expert_agent,
+            portfolio_manager_agent=self._portfolio_manager_agent,
         )
         response = await agent.generate_response(conversation, runtime_context)
         return response
 
     async def _create_agent(self, system_prompt: str, response_format: BaseModel) -> Agent:
         return Agent(
-            tools=[etf_expert, crypto_expert],
+            tools=[
+                etf_expert,
+                crypto_expert,
+                stock_analyst_expert,
+                market_analyst_expert,
+                portfolio_manager
+            ],
             response_format=ToolStrategy(response_format),
             system_prompt=system_prompt,
             middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],

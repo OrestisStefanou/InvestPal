@@ -20,6 +20,9 @@ from dependencies import (
     get_mcp_client,
     get_etf_expert_agent,
     get_crypto_expert_agent,
+    get_stock_analyst_expert_agent,
+    get_market_analyst_expert_agent,
+    get_portfolio_manager_agent,
 )
 from services.user_context import MongoDBUserContextService
 from services.agent_service import InvestmentManagerMultiAgentService
@@ -49,12 +52,15 @@ async def test_investment_manager_actual_behavior():
             user_context_service=user_context_service,
             etf_expert_agent=await get_etf_expert_agent(mcp_client=mcp_client),
             crypto_expert_agent=await get_crypto_expert_agent(mcp_client=mcp_client),
+            stock_analyst_expert_agent=await get_stock_analyst_expert_agent(mcp_client=mcp_client),
+            market_analyst_expert_agent=await get_market_analyst_expert_agent(mcp_client=mcp_client),
+            portfolio_manager_agent=await get_portfolio_manager_agent(mcp_client=mcp_client),
         )
 
         # 4. Prepare test data
         user_id = "test_user_actual"
         conversation = [
-            Message(role=MessageRole.USER, content="What are the latest crypto news?")
+            Message(role=MessageRole.USER, content="What are the latest market news?")
         ]
 
         response = await service.generate_response(
