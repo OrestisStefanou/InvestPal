@@ -14,7 +14,10 @@ from config import (
     settings,
 )
 from services.user_context import UserContextService
-from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
+from services.agents.prompts import (
+    INVESTMENT_ADVISOR_PROMPT,
+    INVESTMENT_MANAGER_PROMPT,
+)
 from services.agents.middleware import (
     ToolErrorMiddleware,
     ToolLoggingMiddleware,
@@ -117,12 +120,7 @@ class InvestmentManagerMultiAgentService(AgentService):
         conversation: list[Message],
         response_format: Type[BaseModel],
     ) -> BaseModel:
-        # todo: update the system prompt
-        system_prompt = """
-        You are an investment manager and you have various assistant experts at your disposal.
-        You should use them to answer the user's questions.
-        """
-        agent = await self._create_agent(system_prompt, response_format)
+        agent = await self._create_agent(INVESTMENT_MANAGER_PROMPT, response_format)
         runtime_context = ToolRuntimeContext(
             user_context_service=self._user_context_service,
             etf_expert_agent=self._etf_expert_agent,

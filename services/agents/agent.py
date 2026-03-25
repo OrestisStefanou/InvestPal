@@ -1,3 +1,4 @@
+import datetime as dt
 from typing import Type
 
 from langchain_openai import ChatOpenAI
@@ -5,7 +6,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
-from langchain.tools import BaseTool
+from langchain.tools import (
+    BaseTool,
+    tool,
+)
 from langchain.chat_models import BaseChatModel
 from langchain.agents.middleware import AgentMiddleware
 from pydantic import (
@@ -24,7 +28,18 @@ from config import (
 from services.agents.prompts import (
     ETF_EXPERT_PROMPT,
     CRYPTO_EXPERT_PROMPT,
+    STOCK_ANALYST_EXPERT_PROMPT,
+    MARKET_ANALYST_EXPERT_PROMPT,
+    PORTFOLIO_MANAGER_PROMPT,
 )
+
+
+@tool("getCurrentDatetime")
+async def get_current_datetime() -> str:
+    """
+    Get the current datetime.
+    """
+    return dt.datetime.now().isoformat()
 
 
 class Agent:
@@ -40,7 +55,7 @@ class Agent:
         model = self._setup_llm_model(provider)
         self._agent= create_agent(
             model,
-            tools=tools,
+            tools=tools + [get_current_datetime],
             response_format=response_format,
             system_prompt=system_prompt,
             middleware=middleware,
@@ -143,6 +158,81 @@ class CryptoExpertAgent(Agent):
             tools=crypto_tools,
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=CRYPTO_EXPERT_PROMPT,
+            middleware=middleware,
+            provider=provider,
+        )
+
+
+class StockAnalystExpertAgent(Agent):
+    def __init__(
+        self,
+        market_data_tools: list[BaseTool],
+        middleware: list[AgentMiddleware],
+        provider: LLMProvider = LLMProvider.ANTHROPIC,
+    ):
+        stock_analyst_tool_names = [
+            "stockSearch",
+            "getStockOverview",
+            "getMarketNews",
+            "getStockFinancials",
+            "calculateInvestmentFutureValue",
+            "getEarningsCallTranscript",
+            "getInsiderTransactions",
+            "getCompanyKpiMetrics",
+        ]
+        stock_analyst_tools = [tool for tool in market_data_tools if tool.name in stock_analyst_tool_names]
+        
+        super().__init__(
+            tools=stock_analyst_tools,
+            response_format=ToolStrategy(ExpertResponse),
+            system_prompt=STOCK_ANALYST_EXPERT_PROMPT,
+            middleware=middleware,
+            provider=provider,
+        )
+
+
+class MarketAnalystExpertAgent(Agent):
+    def __init__(
+        self,
+        market_data_tools: list[BaseTool],
+        middleware: list[AgentMiddleware],
+        provider: LLMProvider = LLMProvider.ANTHROPIC,
+    ):
+        market_analyst_tool_names = [
+            "stockSearch",
+            "getStockOverview",
+            "getMarketNews",
+            "getSectors",
+            "getSectorStocks",
+            "getEconomicIndicatorTimeSeries",
+            "getCommodityTimeSeries",
+            "getInvestingIdeas",
+            "getInvestingIdeaStocks",
+            "getSuperInvestors",
+            "getSuperInvestorPortfolio",
+        ]
+        market_analyst_tools = [tool for tool in market_data_tools if tool.name in market_analyst_tool_names]
+        
+        super().__init__(
+            tools=market_analyst_tools,
+            response_format=ToolStrategy(ExpertResponse),
+            system_prompt=MARKET_ANALYST_EXPERT_PROMPT,
+            middleware=middleware,
+            provider=provider,
+        )
+
+
+class PortfolioManagerAgent(Agent):
+    def __init__(
+        self,
+        portfolio_management_tools: list[BaseTool],
+        middleware: list[AgentMiddleware],
+        provider: LLMProvider = LLMProvider.ANTHROPIC,
+    ):
+        super().__init__(
+            tools=portfolio_management_tools,
+            response_format=ToolStrategy(ExpertResponse),
+            system_prompt=PORTFOLIO_MANAGER_PROMPT,
             middleware=middleware,
             provider=provider,
         )

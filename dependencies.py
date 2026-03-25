@@ -12,6 +12,9 @@ from services.agents.agent import (
     Agent,
     EtfExpertAgent,
     CryptoExpertAgent,
+    StockAnalystExpertAgent,
+    MarketAnalystExpertAgent,
+    PortfolioManagerAgent,
 )
 from services.agents.middleware import (
     ToolErrorMiddleware,
@@ -105,5 +108,45 @@ async def get_crypto_expert_agent(
 
     return CryptoExpertAgent(
         market_data_tools=market_data_tools,
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
+
+
+async def get_stock_analyst_expert_agent(
+    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+) -> StockAnalystExpertAgent:
+    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+    
+    return StockAnalystExpertAgent(
+        market_data_tools=market_data_tools,
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
+
+
+async def get_market_analyst_expert_agent(
+    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+) -> MarketAnalystExpertAgent:
+    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+    
+    return MarketAnalystExpertAgent(
+        market_data_tools=market_data_tools,
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
+
+
+async def get_portfolio_manager_agent(
+    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+) -> PortfolioManagerAgent:
+    agent_tools = []
+    if settings.ALPACA_MCP_SERVER_URL:
+        alpaca_tools = await mcp_client.get_tools(server_name=settings.ALPACA_MCP_SERVER_NAME)
+        agent_tools.extend(alpaca_tools)
+    
+    if settings.COINBASE_MCP_SERVER_URL:
+        coinbase_tools = await mcp_client.get_tools(server_name=settings.COINBASE_MCP_SERVER_NAME)
+        agent_tools.extend(coinbase_tools)
+    
+    return PortfolioManagerAgent(
+        agent_tools=agent_tools,
         middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
     )
