@@ -118,8 +118,6 @@ class EtfExpertAgent(Agent):
         self,
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
-        provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model_name: str = settings.LLM_MODEL,
     ):
         etf_tool_names = [
             "etfSearch",
@@ -136,8 +134,8 @@ class EtfExpertAgent(Agent):
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=ETF_EXPERT_PROMPT,
             middleware=middleware,
-            provider=provider,
-            model_name=model_name,
+            provider=settings.ETF_EXPERT_LLM_PROVIDER,
+            model_name=settings.ETF_EXPERT_LLM_MODEL,
         )
 
 
@@ -146,8 +144,6 @@ class CryptoExpertAgent(Agent):
         self,
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
-        provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model_name: str = settings.LLM_MODEL,
     ):
         crypto_tool_names = [
             "getMarketNews",
@@ -163,8 +159,8 @@ class CryptoExpertAgent(Agent):
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=CRYPTO_EXPERT_PROMPT,
             middleware=middleware,
-            provider=provider,
-            model_name=model_name,
+            provider=settings.CRYPTO_EXPERT_LLM_PROVIDER,
+            model_name=settings.CRYPTO_EXPERT_LLM_MODEL,
         )
 
 
@@ -173,8 +169,6 @@ class StockAnalystExpertAgent(Agent):
         self,
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
-        provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model_name: str = settings.LLM_MODEL,
     ):
         stock_analyst_tool_names = [
             "stockSearch",
@@ -193,8 +187,8 @@ class StockAnalystExpertAgent(Agent):
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=STOCK_ANALYST_EXPERT_PROMPT,
             middleware=middleware,
-            provider=provider,
-            model_name=model_name,
+            provider=settings.STOCK_ANALYST_EXPERT_LLM_PROVIDER,
+            model_name=settings.STOCK_ANALYST_EXPERT_LLM_MODEL,
         )
 
 
@@ -203,8 +197,6 @@ class MarketAnalystExpertAgent(Agent):
         self,
         market_data_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
-        provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model_name: str = settings.LLM_MODEL,
     ):
         market_analyst_tool_names = [
             "stockSearch",
@@ -226,8 +218,8 @@ class MarketAnalystExpertAgent(Agent):
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=MARKET_ANALYST_EXPERT_PROMPT,
             middleware=middleware,
-            provider=provider,
-            model_name=model_name,
+            provider=settings.MARKET_ANALYST_EXPERT_LLM_PROVIDER,
+            model_name=settings.MARKET_ANALYST_EXPERT_LLM_MODEL,
         )
 
 
@@ -236,16 +228,14 @@ class PortfolioManagerAgent(Agent):
         self,
         portfolio_management_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
-        provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model_name: str = settings.LLM_MODEL,
     ):
         super().__init__(
             tools=portfolio_management_tools,
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=PORTFOLIO_MANAGER_PROMPT,
             middleware=middleware,
-            provider=provider,
-            model_name=model_name,
+            provider=settings.PORTFOLIO_MANAGER_LLM_PROVIDER,
+            model_name=settings.PORTFOLIO_MANAGER_LLM_MODEL,
         )
 
 
@@ -254,14 +244,12 @@ class UserContextMemoryManagerAgent(Agent):
         self,
         user_context_tools: list[BaseTool],
         middleware: list[AgentMiddleware],
-        provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model_name: str = settings.LLM_MODEL,
     ):
         super().__init__(
             tools=user_context_tools,
             response_format=ToolStrategy(ExpertResponse),
             system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
             middleware=middleware,
-            provider=provider,
-            model_name=model_name,
+            provider=settings.USER_CONTEXT_AGENT_LLM_PROVIDER,
+            model_name=settings.USER_CONTEXT_AGENT_LLM_MODEL,
         )
