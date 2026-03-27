@@ -27,6 +27,7 @@ from services.agents.agent import (
     Agent,
     InvestmentManagerAgent,
     InvestmentManagerPromptVars,
+    InvestmentManagerAgentResponse,
     UserContextMemoryManagerAgent,
     UserContextMemoryManagerPromptVars,
     UserContextManagerRuntimeContext,
@@ -34,7 +35,7 @@ from services.agents.agent import (
 
 logger = logging.getLogger(__name__)
 
-
+# TODO: This should be removed
 class TextResponseFormat(BaseModel):
     response: str
 
@@ -94,6 +95,17 @@ class InvestmentAdvisorAgentService(AgentService):
         )
 
 
+# TODO: This should replace the existing one
+class AgentServiceV2(ABC):
+    @abstractmethod
+    async def generate_response(
+        self,
+        user_id: str, 
+        conversation: list[Message],
+    ) -> BaseModel:
+        pass
+
+
 class InvestmentManagerAgentService(AgentService):
     def __init__(
         self, 
@@ -104,3 +116,10 @@ class InvestmentManagerAgentService(AgentService):
         self._investment_manager_agent = investment_manager_agent
         self._user_context_memory_manager_agent = user_context_memory_manager_agent
         self._user_context_service = user_context_service
+    
+    async def generate_response(
+        self,
+        user_id: str, 
+        conversation: list[Message],
+    ) -> InvestmentManagerAgentResponse:
+        pass
