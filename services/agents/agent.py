@@ -36,6 +36,9 @@ from services.agents.prompts import (
 )
 from services.agents.tools import (
     UserContextToolsRuntimeContext,
+    update_user_context,
+    get_user_context,
+    get_current_datetime,
 )
 
 # TODO: Create Agent ABC clas 
@@ -213,9 +216,13 @@ class UserContextMemoryManagerAgent(Agent):
     """
     def __init__(
         self,
-        tools: list[BaseTool],
         middleware: list[AgentMiddleware],
     ):
+        tools = [
+            update_user_context,
+            get_user_context,
+            get_current_datetime,
+        ]
         super().__init__(
             tools=tools,
             response_format=ToolStrategy(UserContextMemoryManagerAgentResponse),

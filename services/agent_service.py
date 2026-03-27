@@ -23,7 +23,14 @@ from services.agents.tools import (
     get_user_context,
     get_current_datetime,
 )
-from services.agents.agent import Agent
+from services.agents.agent import (
+    Agent,
+    InvestmentManagerAgent,
+    InvestmentManagerPromptVars,
+    UserContextMemoryManagerAgent,
+    UserContextMemoryManagerPromptVars,
+    UserContextManagerRuntimeContext,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +92,15 @@ class InvestmentAdvisorAgentService(AgentService):
             middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
             runtime_context_schema=ToolRuntimeContext,
         )
+
+
+class InvestmentManagerAgentService(AgentService):
+    def __init__(
+        self, 
+        investment_manager_agent: InvestmentManagerAgent,
+        user_context_memory_manager_agent: UserContextMemoryManagerAgent,
+        user_context_service: UserContextService,
+    ):
+        self._investment_manager_agent = investment_manager_agent
+        self._user_context_memory_manager_agent = user_context_memory_manager_agent
+        self._user_context_service = user_context_service
