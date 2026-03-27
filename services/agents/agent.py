@@ -1,5 +1,9 @@
-import datetime as dt
-from typing import Type
+from typing import (
+    Any,
+    Type, 
+    TypedDict,
+)
+from dataclasses import dataclass
 
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -25,21 +29,16 @@ from config import (
     settings,
     LLMProvider,
 )
+from services.user_context import UserContextService
 from services.agents.prompts import (
-    ETF_EXPERT_PROMPT,
-    CRYPTO_EXPERT_PROMPT,
-    STOCK_ANALYST_EXPERT_PROMPT,
-    MARKET_ANALYST_EXPERT_PROMPT,
-    PORTFOLIO_MANAGER_PROMPT,
+    INVESTMENT_MANAGER_AGENT_PROMPT,
+    USER_CONTEXT_MEMORY_MANAGER_PROMPT,
+)
+from services.agents.tools import (
+    UserContextToolsRuntimeContext,
 )
 
-
-@tool("getCurrentDatetime")
-async def get_current_datetime() -> str:
-    """
-    Get the current datetime.
-    """
-    return dt.datetime.now().isoformat()
+# TODO: Create Agent ABC clas 
 
 
 class Agent:
@@ -52,22 +51,24 @@ class Agent:
         runtime_context_schema: Type[BaseModel] | None = None,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
         model_name: str = settings.LLM_MODEL,
+        temperature: float = settings.TEMPERATURE,
     ):
-        model = self._setup_llm_model(provider, model_name)
-        self._agent= create_agent(
-            model,
-            tools=tools + [get_current_datetime],
-            response_format=response_format,
-            system_prompt=system_prompt,
-            middleware=middleware,
-            context_schema=runtime_context_schema,
-        )
+        self.tools = tools
+        self.response_format = response_format
+        self.system_prompt = system_prompt
+        self.middleware = middleware
+        self.runtime_context_schema = runtime_context_schema
+        self.provider = provider
+        self.model_name = model_name
+        self.temperature = temperature
 
     async def generate_response(
         self,
         conversation: list[Message],
-        runtime_context: Type[BaseModel] | None = None,
+        runtime_context: BaseModel | None = None,
+        system_prompt_placeholder_values: TypedDict | None = None,
     ) -> BaseModel:
+        agent = self._setup_agent(system_prompt_placeholder_values)
         messages = []
         # Keep the last settings.CONVERSATION_MESSAGES_LIMIT messages
         if len(conversation) > settings.CONVERSATION_MESSAGES_LIMIT:
@@ -79,161 +80,161 @@ class Agent:
             elif message.role == MessageRole.AGENT:
                 messages.append({"role": "assistant", "content": message.content})
 
-        response = await self._agent.ainvoke(
+        response = await agent.ainvoke(
             {"messages": messages},
             context=runtime_context,
         )
+
         return response["structured_response"]
 
-    def _setup_llm_model(self, provider: LLMProvider, model_name: str) -> BaseChatModel:
+    def _setup_agent(self, system_prompt_placeholder_values: TypedDict | None = None):
+        model = self._setup_llm_model(self.provider, self.model_name, self.temperature)
+
+        if system_prompt_placeholder_values:
+            self.system_prompt = self.system_prompt.format(**system_prompt_placeholder_values)
+
+        return create_agent(
+            model=model,
+            tools=self.tools,
+            response_format=self.response_format,
+            system_prompt=self.system_prompt,
+            middleware=self.middleware,
+            context_schema=self.runtime_context_schema,
+        )
+
+    def _setup_llm_model(self, provider: LLMProvider, model_name: str, temperature: float) -> BaseChatModel:
         match provider:
             case LLMProvider.OPENAI:
                 return ChatOpenAI(
                     api_key=settings.OPENAI_API_KEY,
                     model=model_name,
-                    temperature=settings.TEMPERATURE,
+                    temperature=temperature,
                 )
             case LLMProvider.GOOGLE:
                 return ChatGoogleGenerativeAI(
                     google_api_key=settings.GOOGLE_API_KEY,
                     model=model_name,
-                    temperature=settings.TEMPERATURE,
+                    temperature=temperature,
                 )
             case LLMProvider.ANTHROPIC:
                 return ChatAnthropic(
                     api_key=settings.ANTHROPIC_API_KEY,
                     model=model_name,
-                    temperature=settings.TEMPERATURE,
+                    temperature=temperature,
                 )
             case _:
                 raise ValueError(f"Unknown LLM provider: {provider}")
 
 
-class ExpertResponse(BaseModel):
-    answer: str = Field(description="The answer to the user's question.")
+class InvestmentManagerAgentResponse(BaseModel):
+    """
+    Schema for the structured response from the Investment Manager Agent.
+    """
+    response: str
 
 
-class EtfExpertAgent(Agent):
+class InvestmentManagerPromptVars(TypedDict):
+    """
+    Schema for placeholder values required by the Investment Manager Agent's system prompt.
+
+    Attributes:
+        client_profile: A dictionary containing the user's investment profile and context.
+    """
+    client_profile: dict[str, Any]
+
+
+class InvestmentManagerAgent(Agent):
+    """
+    Agent responsible for providing personalized investment management guidance.
+    """
     def __init__(
         self,
-        market_data_tools: list[BaseTool],
+        tools: list[BaseTool],
         middleware: list[AgentMiddleware],
     ):
-        etf_tool_names = [
-            "etfSearch",
-            "getETF",
-            "getMarketNews",
-            "getStockOverview",
-            "calculateInvestmentFutureValue",
-            "stockSearch",
-        ]
-        etf_tools = [tool for tool in market_data_tools if tool.name in etf_tool_names]
-        
+        """
+        Initializes the Investment Manager Agent with the configured LLM settings.
+
+        Args:
+            tools: List of tools available to the agent.
+            middleware: List of middleware to process agent actions and responses.
+        """
         super().__init__(
-            tools=etf_tools,
-            response_format=ToolStrategy(ExpertResponse),
-            system_prompt=ETF_EXPERT_PROMPT,
+            tools=tools,
+            response_format=ToolStrategy(InvestmentManagerAgentResponse),
+            system_prompt=INVESTMENT_MANAGER_AGENT_PROMPT,
             middleware=middleware,
-            provider=settings.ETF_EXPERT_LLM_PROVIDER,
-            model_name=settings.ETF_EXPERT_LLM_MODEL,
+            provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
+            model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
+            temperature=settings.INVESTMENT_MANAGER_LLM_TEMPERATURE,
+        )
+
+    async def generate_response(
+        self,
+        conversation: list[Message],
+        system_prompt_placeholder_values: InvestmentManagerPromptVars,
+        runtime_context: BaseModel | None = None,
+    ) -> InvestmentManagerAgentResponse:
+        """
+        Generates a response using the Investment Manager's specific prompt requirements.
+        """
+        return await super().generate_response(
+            conversation=conversation,
+            runtime_context=runtime_context,
+            system_prompt_placeholder_values=system_prompt_placeholder_values,
         )
 
 
-class CryptoExpertAgent(Agent):
+@dataclass
+class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+    pass
+
+
+class UserContextMemoryManagerAgentResponse(BaseModel):
+    """
+    Schema for the structured response from the User Context Memory Manager Agent.
+    """
+    response: str
+
+
+class UserContextMemoryManagerPromptVars(TypedDict):
+    """
+    Schema for placeholder values required by the User Context Memory Manager Agent's system prompt.
+
+    Attributes:
+        user_id: A dictionary containing the user's investment profile and context.
+    """
+    user_id: str
+
+
+class UserContextMemoryManagerAgent(Agent):
+    """
+    Agent responsible for managing the user context memory.
+    """
     def __init__(
         self,
-        market_data_tools: list[BaseTool],
+        tools: list[BaseTool],
         middleware: list[AgentMiddleware],
     ):
-        crypto_tool_names = [
-            "getMarketNews",
-            "searchCryptocurrencies",
-            "getCryptocurrencyDataById",
-            "getCryptocurrencyNews",
-            "calculateInvestmentFutureValue",
-        ]
-        crypto_tools = [tool for tool in market_data_tools if tool.name in crypto_tool_names]
-        
         super().__init__(
-            tools=crypto_tools,
-            response_format=ToolStrategy(ExpertResponse),
-            system_prompt=CRYPTO_EXPERT_PROMPT,
+            tools=tools,
+            response_format=ToolStrategy(UserContextMemoryManagerAgentResponse),
+            system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
             middleware=middleware,
-            provider=settings.CRYPTO_EXPERT_LLM_PROVIDER,
-            model_name=settings.CRYPTO_EXPERT_LLM_MODEL,
+            runtime_context_schema=UserContextManagerRuntimeContext,
+            provider=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_PROVIDER,
+            model_name=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL,
+            temperature=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_TEMPERATURE,
         )
 
-
-class StockAnalystExpertAgent(Agent):
-    def __init__(
+    async def generate_response(
         self,
-        market_data_tools: list[BaseTool],
-        middleware: list[AgentMiddleware],
-    ):
-        stock_analyst_tool_names = [
-            "stockSearch",
-            "getStockOverview",
-            "getMarketNews",
-            "getStockFinancials",
-            "calculateInvestmentFutureValue",
-            "getEarningsCallTranscript",
-            "getInsiderTransactions",
-            "getCompanyKpiMetrics",
-        ]
-        stock_analyst_tools = [tool for tool in market_data_tools if tool.name in stock_analyst_tool_names]
-        
-        super().__init__(
-            tools=stock_analyst_tools,
-            response_format=ToolStrategy(ExpertResponse),
-            system_prompt=STOCK_ANALYST_EXPERT_PROMPT,
-            middleware=middleware,
-            provider=settings.STOCK_ANALYST_EXPERT_LLM_PROVIDER,
-            model_name=settings.STOCK_ANALYST_EXPERT_LLM_MODEL,
-        )
-
-
-class MarketAnalystExpertAgent(Agent):
-    def __init__(
-        self,
-        market_data_tools: list[BaseTool],
-        middleware: list[AgentMiddleware],
-    ):
-        market_analyst_tool_names = [
-            "stockSearch",
-            "getStockOverview",
-            "getMarketNews",
-            "getSectors",
-            "getSectorStocks",
-            "getEconomicIndicatorTimeSeries",
-            "getCommodityTimeSeries",
-            "getInvestingIdeas",
-            "getInvestingIdeaStocks",
-            "getSuperInvestors",
-            "getSuperInvestorPortfolio",
-        ]
-        market_analyst_tools = [tool for tool in market_data_tools if tool.name in market_analyst_tool_names]
-        
-        super().__init__(
-            tools=market_analyst_tools,
-            response_format=ToolStrategy(ExpertResponse),
-            system_prompt=MARKET_ANALYST_EXPERT_PROMPT,
-            middleware=middleware,
-            provider=settings.MARKET_ANALYST_EXPERT_LLM_PROVIDER,
-            model_name=settings.MARKET_ANALYST_EXPERT_LLM_MODEL,
-        )
-
-
-class PortfolioManagerAgent(Agent):
-    def __init__(
-        self,
-        portfolio_management_tools: list[BaseTool],
-        middleware: list[AgentMiddleware],
-    ):
-        super().__init__(
-            tools=portfolio_management_tools,
-            response_format=ToolStrategy(ExpertResponse),
-            system_prompt=PORTFOLIO_MANAGER_PROMPT,
-            middleware=middleware,
-            provider=settings.PORTFOLIO_MANAGER_LLM_PROVIDER,
-            model_name=settings.PORTFOLIO_MANAGER_LLM_MODEL,
+        conversation: list[Message],
+        system_prompt_placeholder_values: UserContextMemoryManagerPromptVars,
+        runtime_context: UserContextManagerRuntimeContext,
+    ) -> UserContextMemoryManagerAgentResponse:
+        return await super().generate_response(
+            conversation=conversation,
+            runtime_context=runtime_context,
+            system_prompt_placeholder_values=system_prompt_placeholder_values,
         )
