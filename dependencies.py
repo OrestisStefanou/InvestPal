@@ -3,7 +3,6 @@ from fastapi import (
     Request,
     HTTPException,
 )
-from langchain.agents.structured_output import ToolStrategy
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
 
@@ -17,19 +16,14 @@ from services.agents.middleware import (
     ToolErrorMiddleware,
     ToolLoggingMiddleware,
 )
-from services.agent_service import (
-    InvestmentAdvisorAgentService,
-    InvestmentManagerAgentService,
-)
+from services.agent_service import InvestmentManagerAgentService
 from services.session import (
     MongoDBSessionService, 
     SessionService,
 )
 from services.chat import (
     ChatService,
-    ChatServiceV2,
     AgenticChatService,
-    AgenticChatServiceV2,
 )
 from services.user_context import (
     MongoDBUserContextService, 
@@ -79,17 +73,6 @@ def get_user_context_service(
     return MongoDBUserContextService(mongo_client=db_client)
 
 
-# TODO: Remove this
-def get_chat_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> ChatService:
-    session_service = get_session_service(db_client)
-    user_context_service = get_user_context_service(db_client)
-    agent_service = InvestmentAdvisorAgentService(mcp_client=mcp_client, user_context_service=user_context_service)
-    return AgenticChatService(session_service, agent_service)
-
-
 async def get_investment_manager_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
 ) -> InvestmentManagerAgent:
@@ -106,7 +89,6 @@ async def get_user_context_memory_manager_agent() -> UserContextMemoryManagerAge
     )
 
 
-# TODO
 def get_investment_manager_agent_service(
     investment_manager_agent: InvestmentManagerAgent = Depends(get_investment_manager_agent),
     user_context_memory_manager_agent: UserContextMemoryManagerAgent = Depends(get_user_context_memory_manager_agent),
@@ -119,12 +101,11 @@ def get_investment_manager_agent_service(
     )
 
 
-# TODO: This should replace the existing get_chat_service
-def get_chat_service_v2(
+def get_chat_service(
     investment_manager_agent_service: InvestmentManagerAgentService = Depends(get_investment_manager_agent_service),
     session_service: SessionService = Depends(get_session_service),
-) -> ChatServiceV2:
-    return AgenticChatServiceV2(
+) -> ChatService:
+    return AgenticChatService(
         agent_service=investment_manager_agent_service,
         session_service=session_service,
     )

@@ -10,17 +10,10 @@ from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
-from langchain.tools import (
-    BaseTool,
-    tool,
-)
+from langchain.tools import BaseTool
 from langchain.chat_models import BaseChatModel
 from langchain.agents.middleware import AgentMiddleware
-from pydantic import (
-    BaseModel, 
-    Field,
-)
+from pydantic import BaseModel
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.session import (
@@ -31,7 +24,6 @@ from config import (
     settings,
     LLMProvider,
 )
-from services.user_context import UserContextService
 from services.agents.prompts import (
     INVESTMENT_MANAGER_AGENT_PROMPT,
     USER_CONTEXT_MEMORY_MANAGER_PROMPT,
@@ -50,7 +42,7 @@ class Agent:
     def __init__(
         self,
         tools: list[BaseTool],
-        response_format: Type[ToolStrategy],
+        response_format: Type[BaseModel],
         system_prompt: str,
         middleware: list[AgentMiddleware],
         runtime_context_schema: Type[Any] | None = None,
@@ -169,7 +161,7 @@ class InvestmentManagerAgent(Agent):
         """
         super().__init__(
             tools=tools,
-            response_format=ToolStrategy(InvestmentManagerAgentResponse),
+            response_format=InvestmentManagerAgentResponse,
             system_prompt=INVESTMENT_MANAGER_AGENT_PROMPT,
             middleware=middleware,
             provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
@@ -251,7 +243,7 @@ class UserContextMemoryManagerAgent(Agent):
         ]
         super().__init__(
             tools=tools,
-            response_format=ToolStrategy(UserContextMemoryManagerAgentResponse),
+            response_format=UserContextMemoryManagerAgentResponse,
             system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
             middleware=middleware,
             runtime_context_schema=UserContextManagerRuntimeContext,
