@@ -20,6 +20,7 @@ from pydantic import (
     BaseModel, 
     Field,
 )
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.session import (
     MessageRole,
@@ -146,9 +147,11 @@ class InvestmentManagerPromptVars(TypedDict):
     client_profile: dict[str, Any]
 
 
+
 class InvestmentManagerAgent(Agent):
     """
     Agent responsible for providing personalized investment management guidance.
+    Note: Callers should use the create method to create an instance of this agent.
     """
     def __init__(
         self,
@@ -186,6 +189,27 @@ class InvestmentManagerAgent(Agent):
             runtime_context=runtime_context,
             system_prompt_placeholder_values=system_prompt_placeholder_values,
         )
+
+    @classmethod
+    async def create(
+        cls,
+        mcp_client: MultiServerMCPClient,
+        middleware: list[AgentMiddleware],
+    ):
+        tools = [get_current_datetime, ]
+        if settings.MARKET_DATA_MCP_SERVER_URL:
+            market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+            tools.extend(market_data_tools)
+
+        if settings.ALPACA_MCP_SERVER_URL:
+            alpaca_tools = await mcp_client.get_tools(server_name=settings.ALPACA_MCP_SERVER_NAME)
+            tools.extend(alpaca_tools)
+        
+        if settings.COINBASE_MCP_SERVER_URL:
+            coinbase_tools = await mcp_client.get_tools(server_name=settings.COINBASE_MCP_SERVER_NAME)
+            tools.extend(coinbase_tools)
+
+        return cls(tools=tools, middleware=middleware)
 
 
 @dataclass

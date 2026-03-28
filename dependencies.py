@@ -10,11 +10,8 @@ from pymongo import AsyncMongoClient
 from config import settings
 from services.agents.agent import (
     Agent,
-    EtfExpertAgent,
-    CryptoExpertAgent,
-    StockAnalystExpertAgent,
-    MarketAnalystExpertAgent,
-    PortfolioManagerAgent,
+    InvestmentManagerAgent,
+    UserContextMemoryManagerAgent,
 )
 from services.agents.middleware import (
     ToolErrorMiddleware,
@@ -23,14 +20,19 @@ from services.agents.middleware import (
 from services.agents.tools import (
     ExpertResponse,
 )
-from services.agent_service import InvestmentAdvisorAgentService
+from services.agent_service import (
+    InvestmentAdvisorAgentService,
+    InvestmentManagerAgentService,
+)
 from services.session import (
     MongoDBSessionService, 
     SessionService,
 )
 from services.chat import (
     ChatService,
+    ChatServiceV2,
     AgenticChatService,
+    AgenticChatServiceV2,
 )
 from services.user_context import (
     MongoDBUserContextService, 
@@ -90,63 +92,26 @@ def get_chat_service(
     return AgenticChatService(session_service, agent_service)
 
 
-async def get_etf_expert_agent(
+async def get_investment_manager_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> EtfExpertAgent:
-    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    
-    return EtfExpertAgent(
-        market_data_tools=market_data_tools,
+) -> InvestmentManagerAgent:
+    return InvestmentManagerAgent.create(
+        mcp_client=mcp_client,
         middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
     )
 
 
-async def get_crypto_expert_agent(
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> CryptoExpertAgent:
-    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-
-    return CryptoExpertAgent(
-        market_data_tools=market_data_tools,
+async def get_user_context_memory_manager_agent() -> UserContextMemoryManagerAgent:
+    return UserContextMemoryManagerAgent(
         middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
     )
 
 
-async def get_stock_analyst_expert_agent(
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> StockAnalystExpertAgent:
-    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    
-    return StockAnalystExpertAgent(
-        market_data_tools=market_data_tools,
-        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
-    )
+# TODO
+def get_investment_manager_agent_service():
+    pass
 
 
-async def get_market_analyst_expert_agent(
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> MarketAnalystExpertAgent:
-    market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
-    
-    return MarketAnalystExpertAgent(
-        market_data_tools=market_data_tools,
-        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
-    )
-
-
-async def get_portfolio_manager_agent(
-    mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
-) -> PortfolioManagerAgent:
-    agent_tools = []
-    if settings.ALPACA_MCP_SERVER_URL:
-        alpaca_tools = await mcp_client.get_tools(server_name=settings.ALPACA_MCP_SERVER_NAME)
-        agent_tools.extend(alpaca_tools)
-    
-    if settings.COINBASE_MCP_SERVER_URL:
-        coinbase_tools = await mcp_client.get_tools(server_name=settings.COINBASE_MCP_SERVER_NAME)
-        agent_tools.extend(coinbase_tools)
-    
-    return PortfolioManagerAgent(
-        portfolio_management_tools=agent_tools,
-        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
-    )
+# TODO: This should replace the above
+def get_chat_service_v2() -> ChatServiceV2:
+    pass

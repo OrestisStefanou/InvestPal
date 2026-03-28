@@ -16,7 +16,7 @@ from pydantic import (
 )
 
 from errors.session import SessionNotFoundError
-from services.chat import ChatService
+from services.chat import ChatService, ChatServiceV2
 from dependencies import get_chat_service
 from models.gen_ui_models import GenerativeUIResponseFormat
 
@@ -48,6 +48,24 @@ async def chat(
     return ChatResponse(response=response)
 
 
+# TODO: this should replace the above endpoint
+@router.post("v2/chat", response_model=ChatResponse)
+async def chat_v2(
+    request: ChatRequest,
+    chat_service: ChatServiceV2 = Depends(get_chat_service),
+):
+    try:
+        response = await chat_service.generate_response(
+            request.session_id,
+            request.message,
+        )
+    except SessionNotFoundError:
+        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Session not found")
+
+    return ChatResponse(response=response)
+
+
+# TODO: DELETE EVERTHING BELOW HERE
 class GenUIRequest(BaseModel):
     session_id: str
     message: str

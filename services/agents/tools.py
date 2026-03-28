@@ -32,7 +32,7 @@ from services.agents.agent import (
 )
 
 
-# TODO: Create separate runtime context for each agent service
+# TODO: This should be removed after we deprecate the old InvestmentAdvisorAgentService
 @dataclass
 class ToolRuntimeContext:
     user_context_service: UserContextService
