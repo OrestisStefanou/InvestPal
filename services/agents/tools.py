@@ -19,12 +19,6 @@ from models.user_context import (
 from services.user_context import UserContextService
 
 
-# TODO: This should be removed after we deprecate the old InvestmentAdvisorAgentService
-@dataclass
-class ToolRuntimeContext:
-    user_context_service: UserContextService
-
-
 @dataclass
 class UserContextToolsRuntimeContext:
     user_context_service: UserContextService
