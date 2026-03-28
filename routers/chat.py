@@ -17,7 +17,7 @@ from pydantic import (
 
 from errors.session import SessionNotFoundError
 from services.chat import ChatService, ChatServiceV2
-from dependencies import get_chat_service
+from dependencies import get_chat_service, get_chat_service_v2
 from models.gen_ui_models import GenerativeUIResponseFormat
 
 router = APIRouter()
@@ -49,10 +49,10 @@ async def chat(
 
 
 # TODO: this should replace the above endpoint
-@router.post("v2/chat", response_model=ChatResponse)
+@router.post("/v2/chat", response_model=ChatResponse)
 async def chat_v2(
     request: ChatRequest,
-    chat_service: ChatServiceV2 = Depends(get_chat_service),
+    chat_service: ChatServiceV2 = Depends(get_chat_service_v2),
 ):
     try:
         response = await chat_service.generate_response(

@@ -16,20 +16,7 @@ from models.user_context import (
     UserContext,
     UserPortfolioHolding
 )
-from models.session import (
-    Message,
-    MessageRole,
-)
 from services.user_context import UserContextService
-from services.agents.agent import (
-    Agent,
-    CryptoExpertAgent,
-    EtfExpertAgent,
-    StockAnalystExpertAgent,
-    MarketAnalystExpertAgent,
-    PortfolioManagerAgent,
-    ExpertResponse,
-)
 
 
 # TODO: This should be removed after we deprecate the old InvestmentAdvisorAgentService

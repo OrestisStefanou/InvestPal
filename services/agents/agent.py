@@ -2,6 +2,7 @@ from typing import (
     Any,
     Type, 
     TypedDict,
+    Mapping,
 )
 from dataclasses import dataclass
 
@@ -52,7 +53,7 @@ class Agent:
         response_format: Type[ToolStrategy],
         system_prompt: str,
         middleware: list[AgentMiddleware],
-        runtime_context_schema: Type[BaseModel] | None = None,
+        runtime_context_schema: Type[Any] | None = None,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
         model_name: str = settings.LLM_MODEL,
         temperature: float = settings.TEMPERATURE,
@@ -69,8 +70,8 @@ class Agent:
     async def generate_response(
         self,
         conversation: list[Message],
-        runtime_context: BaseModel | None = None,
-        system_prompt_placeholder_values: TypedDict | None = None,
+        runtime_context: Any | None = None,
+        system_prompt_placeholder_values: Mapping[str, Any] | None = None,
     ) -> BaseModel:
         agent = self._setup_agent(system_prompt_placeholder_values)
         messages = []
@@ -91,17 +92,18 @@ class Agent:
 
         return response["structured_response"]
 
-    def _setup_agent(self, system_prompt_placeholder_values: TypedDict | None = None):
+    def _setup_agent(self, system_prompt_placeholder_values: Mapping[str, Any] | None = None):
         model = self._setup_llm_model(self.provider, self.model_name, self.temperature)
 
+        system_prompt = self.system_prompt
         if system_prompt_placeholder_values:
-            self.system_prompt = self.system_prompt.format(**system_prompt_placeholder_values)
+            system_prompt = system_prompt.format(**system_prompt_placeholder_values)
 
         return create_agent(
             model=model,
             tools=self.tools,
             response_format=self.response_format,
-            system_prompt=self.system_prompt,
+            system_prompt=system_prompt,
             middleware=self.middleware,
             context_schema=self.runtime_context_schema,
         )
@@ -172,14 +174,14 @@ class InvestmentManagerAgent(Agent):
             middleware=middleware,
             provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
             model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
-            temperature=settings.INVESTMENT_MANAGER_LLM_TEMPERATURE,
+            temperature=settings.INVESTMENT_MANAGER_TEMPERATURE,
         )
 
     async def generate_response(
         self,
         conversation: list[Message],
-        system_prompt_placeholder_values: InvestmentManagerPromptVars,
-        runtime_context: BaseModel | None = None,
+        runtime_context: Any | None = None,
+        system_prompt_placeholder_values: InvestmentManagerPromptVars | None = None,
     ) -> InvestmentManagerAgentResponse:
         """
         Generates a response using the Investment Manager's specific prompt requirements.
@@ -229,7 +231,7 @@ class UserContextMemoryManagerPromptVars(TypedDict):
     Schema for placeholder values required by the User Context Memory Manager Agent's system prompt.
 
     Attributes:
-        user_id: A dictionary containing the user's investment profile and context.
+        user_id: The ID of the user to manage context for.
     """
     user_id: str
 
@@ -255,14 +257,14 @@ class UserContextMemoryManagerAgent(Agent):
             runtime_context_schema=UserContextManagerRuntimeContext,
             provider=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_PROVIDER,
             model_name=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL,
-            temperature=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_TEMPERATURE,
+            temperature=settings.USER_CONTEXT_MEMORY_MANAGER_TEMPERATURE,
         )
 
     async def generate_response(
         self,
         conversation: list[Message],
-        system_prompt_placeholder_values: UserContextMemoryManagerPromptVars,
-        runtime_context: UserContextManagerRuntimeContext,
+        runtime_context: UserContextManagerRuntimeContext | None = None,
+        system_prompt_placeholder_values: UserContextMemoryManagerPromptVars | None = None,
     ) -> UserContextMemoryManagerAgentResponse:
         return await super().generate_response(
             conversation=conversation,
