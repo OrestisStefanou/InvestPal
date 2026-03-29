@@ -9,11 +9,15 @@ from models.session import (
     Session,
     Message,
 )
-from errors.user_context import UserContextNotFoundError
-from errors.session import (
-    SessionAlreadyExistsError,
-    SessionNotFoundError,
-)
+from services.user_context import UserContextNotFoundError
+
+
+class SessionNotFoundError(Exception):
+    pass
+
+
+class SessionAlreadyExistsError(Exception):
+    pass
 
 
 class SessionService(ABC):

@@ -15,7 +15,7 @@ from pydantic import (
     Field,
 )
 
-from errors.session import SessionNotFoundError
+from services.session import SessionNotFoundError
 from services.chat import ChatService
 from dependencies import get_chat_service
 

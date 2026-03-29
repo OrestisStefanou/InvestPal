@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from services.user_context import UserContextService
 from dependencies import get_user_context_service
-from errors.user_context import (
+from services.user_context import (
     UserContextAlreadyExistsError,
     UserContextNotFoundError,
 )

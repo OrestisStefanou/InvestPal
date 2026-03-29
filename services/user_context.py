@@ -8,10 +8,12 @@ from pymongo import (
 )
 
 from config import settings
-from errors.user_context import (
-    UserContextAlreadyExistsError,
-    UserContextNotFoundError,
-)
+class UserContextAlreadyExistsError(Exception):
+    pass
+
+
+class UserContextNotFoundError(Exception):
+    pass
 from models.user_context import (
     UserContext,
     UserPortfolioHolding,
