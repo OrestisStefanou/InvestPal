@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from abc import (
     ABC,
@@ -94,15 +95,35 @@ class InvestmentManagerAgentService(TextAgentService):
             )
         )
 
-        # Update the user context memory
-        await self._user_context_memory_manager_agent.generate_response(
-            conversation=conversation,
-            system_prompt_placeholder_values=UserContextMemoryManagerPromptVars(
+        # Update the user context memory in the background safely
+        asyncio.create_task(
+            self._update_context_memory_safely(
                 user_id=user_id,
-            ),
-            runtime_context=UserContextManagerRuntimeContext(
-                user_context_service=self._user_context_service,
-            ),
+                conversation=conversation,
+            )
         )
 
         return agent_response.response
+
+    async def _update_context_memory_safely(
+        self,
+        user_id: str,
+        conversation: list[Message],
+    ) -> None:
+        """
+        Helper method to run the user context memory update in the background.
+        Includes a try-except block to gracefully handle and log any exceptions
+        without crashing the background task runner.
+        """
+        try:
+            await self._user_context_memory_manager_agent.generate_response(
+                conversation=conversation,
+                system_prompt_placeholder_values=UserContextMemoryManagerPromptVars(
+                    user_id=user_id,
+                ),
+                runtime_context=UserContextManagerRuntimeContext(
+                    user_context_service=self._user_context_service,
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Failed to update user context memory in background: {e}", exc_info=True)
