@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pymongo import AsyncMongoClient
 
-from routers import (
+from apps.rest_api import (
     session,
     user_context,
     chat,

@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from services.session import (
     SessionService, 
 )
-from errors.session import SessionAlreadyExistsError
-from errors.user_context import  UserContextNotFoundError
+from services.session import SessionAlreadyExistsError
+from services.user_context import  UserContextNotFoundError
 from dependencies import get_session_service
 
 

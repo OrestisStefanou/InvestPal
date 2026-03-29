@@ -83,7 +83,7 @@ InvestPal includes an internal MCP server to manage user-specific context and pr
 Start the internal MCP server:
 
 ```bash
-uv run python mcp_app/app.py
+uv run python -m apps.mcp_api.app
 ```
 
 The server will be available at `http://localhost:9000`.
@@ -114,8 +114,9 @@ The server will be available at `http://localhost:9000`.
 
 ## Project Structure
 - `main.py`: Entry point and FastAPI app configuration.
-- `routers/`: API route definitions (chat, session, user_context).
+- `apps/rest_api/`: API route definitions (chat, session, user_context).
 - `services/`: Core business logic (agent orchestration, chat service, database interactions).
 - `config.py`: Pydantic settings management.
 - `dependencies.py`: Dependency injection for DB and MCP clients.
-- `mcp_app/`: Internal MCP server implementation.
+- `apps/mcp_api/`: Internal MCP server implementation.
+- `models/`: Internal data models.

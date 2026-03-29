@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import datetime as dt
 
-from errors.session import SessionNotFoundError
+from services.session import SessionNotFoundError
 from models.session import (
     Message,
     MessageRole,
