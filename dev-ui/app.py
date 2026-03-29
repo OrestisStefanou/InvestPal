@@ -3,9 +3,13 @@ import requests
 import uuid
 import time
 
+# How to run this
+# 1. Activate the virtual environment
+# 2. streamlit run app.py
+
 # ── Config ──────────────────────────────────────────────────────────────────
 BASE_URL = "http://localhost:8000"
-USER_ID = "orestis_user_id"
+USER_ID = "test_user_2"
 
 st.set_page_config(
     page_title="InvestPal · Dev Console",
