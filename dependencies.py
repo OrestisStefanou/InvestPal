@@ -7,7 +7,16 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
 
 from config import settings
-from services.agent import InvestmentAdvisorAgentService
+from services.agents.agent import (
+    Agent,
+    InvestmentManagerAgent,
+    UserContextMemoryManagerAgent,
+)
+from services.agents.middleware import (
+    ToolErrorMiddleware,
+    ToolLoggingMiddleware,
+)
+from services.agent_service import InvestmentManagerAgentService
 from services.session import (
     MongoDBSessionService, 
     SessionService,
@@ -28,14 +37,27 @@ def get_db_client(request: Request):
 
 
 def get_mcp_client():
-    mcp_server_client = MultiServerMCPClient(
-        {
-            settings.MCP_SERVER_NAME: {
-                "transport": "streamable_http",  # HTTP-based remote server
-                "url": settings.MCP_SERVER_URL,
-            }
+    connections = {
+        settings.MARKET_DATA_MCP_SERVER_NAME: {
+            "transport": "streamable_http",
+            "url": settings.MARKET_DATA_MCP_SERVER_URL,
         }
-    )    
+    }
+
+    if settings.ALPACA_MCP_SERVER_URL:
+        connections[settings.ALPACA_MCP_SERVER_NAME] = {
+            "transport": "streamable_http",
+            "url": settings.ALPACA_MCP_SERVER_URL,
+        }
+    
+    if settings.COINBASE_MCP_SERVER_URL:
+        connections[settings.COINBASE_MCP_SERVER_NAME] = {
+            "transport": "streamable_http",
+            "url": settings.COINBASE_MCP_SERVER_URL,
+        }
+
+    mcp_server_client = MultiServerMCPClient(connections)
+
     return mcp_server_client
 
 
@@ -51,11 +73,39 @@ def get_user_context_service(
     return MongoDBUserContextService(mongo_client=db_client)
 
 
-def get_chat_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
+async def get_investment_manager_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
+) -> InvestmentManagerAgent:
+    agent = await InvestmentManagerAgent.create(
+        mcp_client=mcp_client,
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
+    return agent
+
+
+async def get_user_context_memory_manager_agent() -> UserContextMemoryManagerAgent:
+    return UserContextMemoryManagerAgent(
+        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+    )
+
+
+def get_investment_manager_agent_service(
+    investment_manager_agent: InvestmentManagerAgent = Depends(get_investment_manager_agent),
+    user_context_memory_manager_agent: UserContextMemoryManagerAgent = Depends(get_user_context_memory_manager_agent),
+    user_context_service: UserContextService = Depends(get_user_context_service),
+) -> InvestmentManagerAgentService:
+    return InvestmentManagerAgentService(
+        investment_manager_agent=investment_manager_agent,
+        user_context_memory_manager_agent=user_context_memory_manager_agent,
+        user_context_service=user_context_service,
+    )
+
+
+def get_chat_service(
+    investment_manager_agent_service: InvestmentManagerAgentService = Depends(get_investment_manager_agent_service),
+    session_service: SessionService = Depends(get_session_service),
 ) -> ChatService:
-    session_service = get_session_service(db_client)
-    user_context_service = get_user_context_service(db_client)
-    agent_service = InvestmentAdvisorAgentService(mcp_client=mcp_client, user_context_service=user_context_service)
-    return AgenticChatService(session_service, agent_service)
+    return AgenticChatService(
+        agent_service=investment_manager_agent_service,
+        session_service=session_service,
+    )

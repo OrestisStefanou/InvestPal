@@ -19,7 +19,7 @@ from services.user_context import (
     MongoDBUserContextService,
     UserContextService,
 )
-from services.prompts import INVESTMENT_ADVISOR_PROMPT
+from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from models.user_context import (
     UserContext,
     UserPortfolioHolding
