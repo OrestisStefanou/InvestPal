@@ -40,6 +40,8 @@ def get_db_client(request: Request):
 def get_mcp_client(
     alpaca_api_key: str | None = Header(None, alias="X-Alpaca-Api-Key"),
     alpaca_api_secret: str | None = Header(None, alias="X-Alpaca-Api-Secret"),
+    coinbase_api_key: str | None = Header(None, alias="X-Coinbase-Api-Key"),
+    coinbase_api_secret: str | None = Header(None, alias="X-Coinbase-Api-Secret"),  # base64 encoded
 ):
     connections = {
         settings.MARKET_DATA_MCP_SERVER_NAME: {
@@ -62,6 +64,10 @@ def get_mcp_client(
         connections[settings.COINBASE_MCP_SERVER_NAME] = {
             "transport": "streamable_http",
             "url": settings.COINBASE_MCP_SERVER_URL,
+            "headers": {
+                "X-Coinbase-Api-Key": coinbase_api_key or "",
+                "X-Coinbase-Api-Secret": coinbase_api_secret or "",
+            }
         }
 
     mcp_server_client = MultiServerMCPClient(connections)

@@ -16,6 +16,8 @@ Send a message to the AI investment advisor for a specific session.
 #### Headers (Optional)
 - `X-Alpaca-Api-Key`: Alpaca API Key ID (required for Alpaca-related tools).
 - `X-Alpaca-Api-Secret`: Alpaca API Secret Key (required for Alpaca-related tools).
+- `X-Coinbase-Api-Key`: Coinbase API Key (required for Coinbase-related tools).
+- `X-Coinbase-Api-Secret`: Coinbase API Secret (required for Coinbase-related tools). **Must be the base64-encoded version of the raw secret key.**
 
 #### Request Body
 ```json
