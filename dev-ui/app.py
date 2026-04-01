@@ -1,3 +1,4 @@
+import base64
 import os
 import streamlit as st
 import requests
@@ -18,6 +19,11 @@ USER_ID = "orestis_user_id"
 
 alpaca_api_key = os.getenv("ALPACA_MCP_SERVER_API_KEY", "")
 alpaca_api_secret = os.getenv("ALPACA_MCP_SERVER_API_SECRET", "")
+coinbase_api_key = os.getenv("COINBASE_MCP_SERVER_API_KEY", "")
+coinbase_api_secret = os.getenv("COINBASE_MCP_SERVER_API_SECRET", "")
+encoded_coinbase_secret = base64.b64encode(
+    coinbase_api_secret.encode()
+).decode()
 
 st.set_page_config(
     page_title="InvestPal · Dev Console",
@@ -257,8 +263,10 @@ def send_message(session_id: str, message: str) -> str | None:
             json={"session_id": session_id, "message": message},
             timeout=600,
             headers={
-                # "X-Alpaca-Api-Key": alpaca_api_key,
-                # "X-Alpaca-Api-Secret": alpaca_api_secret,
+                "X-Alpaca-Api-Key": alpaca_api_key,
+                "X-Alpaca-Api-Secret": alpaca_api_secret,
+                "X-Coinbase-Api-Key": coinbase_api_key,
+                "X-Coinbase-Api-Secret": encoded_coinbase_secret,
             }
         )
         if r.status_code == 200:

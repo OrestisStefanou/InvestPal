@@ -9,6 +9,7 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 - **Context Awareness**: Remembers user preferences and context for more relevant advice.
 - **MCP Integration**: Extensible tool system to fetch market data, stock profiles, and forecasts.
 - **Alpaca Markets Integration**: Execute orders, read portfolio holdings, and manage positions via Alpaca.
+- **Coinbase Integration**: Manage crypto portfolios and execute trades via Coinbase.
 - **Internal MCP Server**: Manages user context and provides specialized advisor prompts.
 - **Multi-LLM Support**: Choose between OpenAI, Google, or Anthropic providers.
 
@@ -21,6 +22,7 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 - **MCP Framework**: [FastMCP](https://github.com/jlowin/fastmcp)
 - **Market Data MCP**: [MarketDataMcpServer](https://github.com/OrestisStefanou/MarketDataMcpServer)
 - **Alpaca MCP**: Integration with Alpaca Markets for trading and portfolio access.
+- **Coinbase MCP**: Integration with Coinbase for crypto trading and portfolio management.
 - **Dependency Management**: [uv](https://github.com/astral-sh/uv)
 
 ## Prerequisites
@@ -66,6 +68,9 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 
    ALPACA_MCP_SERVER_URL=http://localhost:8001
    ALPACA_MCP_SERVER_NAME=alpaca_markets_tools
+
+   COINBASE_MCP_SERVER_URL=http://localhost:8002
+   COINBASE_MCP_SERVER_NAME=coinbase_markets_tools
 
    # APP
    CONVERSATION_MESSAGES_LIMIT=15
