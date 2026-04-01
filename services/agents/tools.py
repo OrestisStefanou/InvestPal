@@ -14,7 +14,6 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.user_context import (
     UserContext,
-    UserPortfolioHolding
 )
 from services.user_context import UserContextService
 
@@ -27,25 +26,22 @@ class UserContextToolsRuntimeContext:
 class UpdateUserContextToolInput(BaseModel):
     user_id: str = Field(description="The id of the user to update the context for")
     user_profile: dict = Field(description="General information about the user. Must provide the complete user profile as it will replace the existing one.")
-    user_portfolio: list[UserPortfolioHolding] = Field(description="List of portfolio holdings. Must provide the complete portfolio as it will replace the existing one.")
 
 
 @tool(
     "updateUserContext",
     args_schema=UpdateUserContextToolInput,
-    description="Update the user context(for the given user_id) including user profile and portfolio holdings. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
+    description="Update the user context(for the given user_id) including user profile. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
 )
 async def update_user_context(
     runtime: ToolRuntime[UserContextToolsRuntimeContext],
     user_id: str,
     user_profile: dict,
-    user_portfolio: list[UserPortfolioHolding]
 ) -> UserContext:
     user_context_service = runtime.context.user_context_service
     updated_user_context = await user_context_service.update_user_context(
         user_id=user_id,
         user_profile=user_profile,
-        user_portfolio=user_portfolio,
     )
 
     return updated_user_context

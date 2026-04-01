@@ -104,7 +104,7 @@ Retrieve the details and message history of a specific session.
 ### Create User Context
 `POST /user_context`
 
-Create initial context and portfolio for a user.
+Create initial context for a user.
 
 #### Request Body
 ```json
@@ -112,15 +112,7 @@ Create initial context and portfolio for a user.
   "user_id": "string",
   "user_profile": {
     "key": "value"
-  }, // (optional)
-  "user_portfolio": [
-    {
-      "asset_class": "string",
-      "symbol": "string",
-      "name": "string",
-      "quantity": 0.0
-    }
-  ] // (optional)
+  } // (optional)
 }
 ```
 
@@ -129,7 +121,6 @@ Create initial context and portfolio for a user.
 {
   "user_id": "string",
   "user_profile": { ... },
-  "user_portfolio": [ ... ],
   "created_at": "string",
   "updated_at": "string"
 }
@@ -142,7 +133,7 @@ Create initial context and portfolio for a user.
 ### Get User Context
 `GET /user_context/{user_id}`
 
-Retrieve the context and portfolio for a specific user.
+Retrieve the context for a specific user.
 
 #### Parameters
 - `user_id` (path): The unique identifier of the user.
@@ -152,7 +143,6 @@ Retrieve the context and portfolio for a specific user.
 {
   "user_id": "string",
   "user_profile": { ... },
-  "user_portfolio": [ ... ],
   "created_at": "string",
   "updated_at": "string"
 }
@@ -165,7 +155,7 @@ Retrieve the context and portfolio for a specific user.
 ### Update User Context
 `PUT /user_context`
 
-Update existing context or portfolio for a user.
+Update existing context for a user.
 
 #### Request Body
 Same as `POST /user_context`.

@@ -15,24 +15,15 @@ from services.user_context import (
 )
 from models.user_context import (
     UserContext,
-    UserPortfolioHolding,
 )
 
 
 router = APIRouter()
 
 
-class UserPortfolioHoldingSchema(BaseModel):
-    asset_class: str
-    symbol: str
-    name: str
-    quantity: float
-
-
 class UserContextSchema(BaseModel):
     user_id: str
     user_profile: dict | None = None
-    user_portfolio: list[UserPortfolioHoldingSchema] | None = None
 
 
 class UserContextResponseSchema(UserContextSchema):
@@ -46,21 +37,12 @@ async def create_user_context(request: UserContextSchema, user_context_service: 
     user_context = UserContext(
         user_id=request.user_id,
         user_profile=request.user_profile or {},
-        user_portfolio=[
-            UserPortfolioHolding(
-                asset_class=holding.asset_class,
-                symbol=holding.symbol,
-                name=holding.name,
-                quantity=holding.quantity,
-            ) for holding in request.user_portfolio or []
-        ],
     )
 
     try:
         created_user_context = await user_context_service.create_user_context(
             user_id=user_context.user_id,
             user_profile=user_context.user_profile,
-            user_portfolio=user_context.user_portfolio,
         )
     except UserContextAlreadyExistsError as e:
         raise HTTPException(status_code=http.HTTPStatus.CONFLICT, detail=str(e))
@@ -68,12 +50,6 @@ async def create_user_context(request: UserContextSchema, user_context_service: 
     return UserContextResponseSchema(
         user_id=created_user_context.user_id,
         user_profile=created_user_context.user_profile,
-        user_portfolio=[UserPortfolioHoldingSchema(
-            asset_class=holding.asset_class,
-            symbol=holding.symbol,
-            name=holding.name,
-            quantity=holding.quantity,
-        ) for holding in created_user_context.user_portfolio],
         created_at=created_user_context.created_at,
         updated_at=created_user_context.updated_at,
     )
@@ -88,12 +64,6 @@ async def get_user_context(user_id: str, user_context_service: UserContextServic
     return UserContextResponseSchema(
         user_id=user_context.user_id,
         user_profile=user_context.user_profile,
-        user_portfolio=[UserPortfolioHoldingSchema(
-            asset_class=holding.asset_class,
-            symbol=holding.symbol,
-            name=holding.name,
-            quantity=holding.quantity,
-        ) for holding in user_context.user_portfolio],
         created_at=user_context.created_at,
         updated_at=user_context.updated_at,
     )
@@ -104,14 +74,6 @@ async def update_user_context(request: UserContextSchema, user_context_service: 
         user_context = await user_context_service.update_user_context(
             user_id=request.user_id,
             user_profile=request.user_profile,
-            user_portfolio=[
-                UserPortfolioHolding(
-                    asset_class=holding.asset_class,
-                    symbol=holding.symbol,
-                    name=holding.name,
-                    quantity=holding.quantity,
-                ) for holding in request.user_portfolio or []
-            ],
         )
     except UserContextNotFoundError as e:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail=str(e))
@@ -119,12 +81,6 @@ async def update_user_context(request: UserContextSchema, user_context_service: 
     return UserContextResponseSchema(
         user_id=user_context.user_id,
         user_profile=user_context.user_profile,
-        user_portfolio=[UserPortfolioHoldingSchema(
-            asset_class=holding.asset_class,
-            symbol=holding.symbol,
-            name=holding.name,
-            quantity=holding.quantity,
-        ) for holding in user_context.user_portfolio],
         created_at=user_context.created_at,
         updated_at=user_context.updated_at,
     )
