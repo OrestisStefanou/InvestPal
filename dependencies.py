@@ -2,6 +2,7 @@ from fastapi import (
     Depends,
     Request,
     HTTPException,
+    Header,
 )
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from pymongo import AsyncMongoClient
@@ -36,7 +37,10 @@ def get_db_client(request: Request):
     return request.app.state.mongodb_client
 
 
-def get_mcp_client():
+def get_mcp_client(
+    alpaca_api_key: str | None = Header(None, alias="X-Alpaca-Api-Key"),
+    alpaca_api_secret: str | None = Header(None, alias="X-Alpaca-Api-Secret"),
+):
     connections = {
         settings.MARKET_DATA_MCP_SERVER_NAME: {
             "transport": "streamable_http",
@@ -48,6 +52,10 @@ def get_mcp_client():
         connections[settings.ALPACA_MCP_SERVER_NAME] = {
             "transport": "streamable_http",
             "url": settings.ALPACA_MCP_SERVER_URL,
+            "headers": {
+                "X-Alpaca-Api-Key": alpaca_api_key or "",
+                "X-Alpaca-Api-Secret": alpaca_api_secret or "",
+            }
         }
     
     if settings.COINBASE_MCP_SERVER_URL:

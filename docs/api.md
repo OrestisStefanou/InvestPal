@@ -13,6 +13,10 @@ Welcome to the InvestPal API reference. This document provides detailed informat
 
 Send a message to the AI investment advisor for a specific session.
 
+#### Headers (Optional)
+- `X-Alpaca-Api-Key`: Alpaca API Key ID (required for Alpaca-related tools).
+- `X-Alpaca-Api-Secret`: Alpaca API Secret Key (required for Alpaca-related tools).
+
 #### Request Body
 ```json
 {
