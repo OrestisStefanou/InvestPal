@@ -8,7 +8,8 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 - **Session Management**: Persistent chat history stored in MongoDB.
 - **Context Awareness**: Remembers user preferences and context for more relevant advice.
 - **MCP Integration**: Extensible tool system to fetch market data, stock profiles, and forecasts.
-- **Internal MCP Server**: Manages user context, portfolio holdings, and provides specialized advisor prompts.
+- **Alpaca Markets Integration**: Execute orders, read portfolio holdings, and manage positions via Alpaca.
+- **Internal MCP Server**: Manages user context and provides specialized advisor prompts.
 - **Multi-LLM Support**: Choose between OpenAI, Google, or Anthropic providers.
 
 ## Tech Stack
@@ -16,9 +17,10 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
 - **Backend**: [FastAPI](https://fastapi.tiangolo.com/)
 - **Database**: [MongoDB](https://www.mongodb.com/)
 - **AI Framework**: [LangChain](https://www.langchain.com/)
-- **Protocol**: [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+- **MCP Protocol**: [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - **MCP Framework**: [FastMCP](https://github.com/jlowin/fastmcp)
-- **MCP Server**: [MarketDataMcpServer](https://github.com/OrestisStefanou/MarketDataMcpServer)
+- **Market Data MCP**: [MarketDataMcpServer](https://github.com/OrestisStefanou/MarketDataMcpServer)
+- **Alpaca MCP**: Integration with Alpaca Markets for trading and portfolio access.
 - **Dependency Management**: [uv](https://github.com/astral-sh/uv)
 
 ## Prerequisites
@@ -61,6 +63,9 @@ InvestPal is an advanced AI-powered investment advisor service. It leverages Fas
    # MCP
    MARKET_DATA_MCP_SERVER_URL=http://localhost:8000
    MARKET_DATA_MCP_SERVER_NAME=market_data_tools
+
+   ALPACA_MCP_SERVER_URL=http://localhost:8001
+   ALPACA_MCP_SERVER_NAME=alpaca_markets_tools
 
    # APP
    CONVERSATION_MESSAGES_LIMIT=15
