@@ -1,7 +1,12 @@
+import os
 import streamlit as st
 import requests
 import uuid
 import time
+from dotenv import load_dotenv
+
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
 
 # How to run this
 # 1. Activate the virtual environment
@@ -9,7 +14,10 @@ import time
 
 # ── Config ──────────────────────────────────────────────────────────────────
 BASE_URL = "http://localhost:8000"
-USER_ID = "test_user_2"
+USER_ID = "orestis_user_id"
+
+alpaca_api_key = os.getenv("ALPACA_MCP_SERVER_API_KEY", "")
+alpaca_api_secret = os.getenv("ALPACA_MCP_SERVER_API_SECRET", "")
 
 st.set_page_config(
     page_title="InvestPal · Dev Console",
@@ -248,6 +256,10 @@ def send_message(session_id: str, message: str) -> str | None:
             f"{BASE_URL}/chat",
             json={"session_id": session_id, "message": message},
             timeout=600,
+            headers={
+                # "X-Alpaca-Api-Key": alpaca_api_key,
+                # "X-Alpaca-Api-Secret": alpaca_api_secret,
+            }
         )
         if r.status_code == 200:
             return r.json().get("response", "")

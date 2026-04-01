@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     USER_CONTEXT_COLLECTION_NAME: str
     SESSION_COLLECTION_NAME: str
     # LLM
-    LLM_PROVIDER: LLMProvider
-    LLM_MODEL: str
+    LLM_PROVIDER: LLMProvider   # Default LLM provider
+    LLM_MODEL: str              # Default LLM model
     OPENAI_API_KEY: str | None = None
     GOOGLE_API_KEY: str | None = None
     ANTHROPIC_API_KEY: str | None = None
@@ -24,8 +24,10 @@ class Settings(BaseSettings):
     # MCP
     MARKET_DATA_MCP_SERVER_URL: str
     MARKET_DATA_MCP_SERVER_NAME: str = "market_data_tools"
+
     ALPACA_MCP_SERVER_URL: str | None = None
     ALPACA_MCP_SERVER_NAME: str = "alpaca_markets_tools"
+
     COINBASE_MCP_SERVER_URL: str | None = None
     COINBASE_MCP_SERVER_NAME: str = "coinbase_markets_tools"
 
