@@ -52,6 +52,13 @@ class SessionSchema(BaseModel):
     created_at: str
 
 
+class SessionSummarySchema(BaseModel):
+    session_id: str
+    user_id: str
+    name: str
+    created_at: str
+
+
 @router.post("/session", response_model=SessionSchema, status_code=http.HTTPStatus.CREATED)
 async def create_session(request: CreateSessionRequest, session_service: SessionService = Depends(get_session_service)):
     try:
@@ -94,3 +101,18 @@ async def get_session(session_id: str, session_service: SessionService = Depends
         name=session.name,
         created_at=session.created_at,
     )
+
+
+@router.get("/sessions/{user_id}", response_model=list[SessionSummarySchema])
+async def list_user_sessions(user_id: str, session_service: SessionService = Depends(get_session_service)):
+    sessions = await session_service.get_user_sessions(user_id)
+    
+    return [
+        SessionSummarySchema(
+            session_id=session.session_id,
+            user_id=session.user_id,
+            name=session.name,
+            created_at=session.created_at,
+        )
+        for session in sessions
+    ]
