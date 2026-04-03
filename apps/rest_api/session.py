@@ -26,9 +26,11 @@ class CreateSessionRequest(BaseModel):
     Attributes:
         user_id (str): The ID of the user.
         session_id (str | None): The ID of the session. If not provided, a new ID will be generated.
+        name (str | None): The name of the session. If not provided, the session_id will be used as the name.
     """
     user_id: str
     session_id: str | None = None
+    name: str | None = None
 
 
 class RoleSchema(str, Enum):
@@ -46,12 +48,14 @@ class SessionSchema(BaseModel):
     session_id: str
     user_id: str
     messages: list[MessageSchema]
+    name: str
+    created_at: str
 
 
 @router.post("/session", response_model=SessionSchema, status_code=http.HTTPStatus.CREATED)
 async def create_session(request: CreateSessionRequest, session_service: SessionService = Depends(get_session_service)):
     try:
-        session = await session_service.create_session(request.user_id, request.session_id)
+        session = await session_service.create_session(request.user_id, request.session_id, request.name)
     except SessionAlreadyExistsError as e:
         raise HTTPException(status_code=http.HTTPStatus.CONFLICT, detail=str(e))
     except UserContextNotFoundError as e:
@@ -61,6 +65,8 @@ async def create_session(request: CreateSessionRequest, session_service: Session
         session_id=session.session_id,
         user_id=session.user_id,
         messages=[],
+        name=session.name,
+        created_at=session.created_at,
     )
 
 
@@ -85,4 +91,6 @@ async def get_session(session_id: str, session_service: SessionService = Depends
         session_id=session.session_id,
         user_id=session.user_id,
         messages=messages,
+        name=session.name,
+        created_at=session.created_at,
     )

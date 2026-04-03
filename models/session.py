@@ -17,3 +17,5 @@ class Session(BaseModel):
     session_id: str
     user_id: str
     messages: list[Message]
+    name: str
+    created_at: str
