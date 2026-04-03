@@ -51,16 +51,20 @@ Create a new chat session for a user.
 ```json
 {
   "user_id": "string",
-  "session_id": "string (optional)"
+  "session_id": "string (optional)",
+  "name": "string (optional)"
 }
 ```
 *If `session_id` is not provided, a new one will be generated.*
+*If `name` is not provided, it will default to the `session_id`. Its purpose is to provide a more human-readable name for the session.*
 
 #### Response Body
 ```json
 {
   "session_id": "string",
   "user_id": "string",
+  "name": "string",
+  "created_at": "string",
   "messages": []
 }
 ```
@@ -83,6 +87,8 @@ Retrieve the details and message history of a specific session.
 {
   "session_id": "string",
   "user_id": "string",
+  "name": "string",
+  "created_at": "string",
   "messages": [
     {
       "role": "user | agent",
