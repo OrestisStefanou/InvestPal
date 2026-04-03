@@ -105,6 +105,31 @@ Retrieve the details and message history of a specific session.
 
 ---
 
+### List User Sessions
+`GET /sessions/{user_id}`
+
+Retrieve a list of all sessions for a specific user, excluding the message history.
+
+#### Parameters
+- `user_id` (path): The unique identifier of the user.
+
+#### Response Body
+```json
+[
+  {
+    "session_id": "string",
+    "user_id": "string",
+    "name": "string",
+    "created_at": "string"
+  }
+]
+```
+
+#### Errors
+- `500 Internal Server Error`: An error occurred during retrieval.
+
+---
+
 ## User Context Service
 
 ### Create User Context

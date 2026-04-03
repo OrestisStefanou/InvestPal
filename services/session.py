@@ -34,6 +34,10 @@ class SessionService(ABC):
     async def add_message(self, session_id: str, message: Message) -> Session | None:
         pass
 
+    @abstractmethod
+    async def get_user_sessions(self, user_id: str) -> list[Session]:
+        pass
+
 
 class MessageMongoDoc(Message):
     pass
@@ -142,3 +146,27 @@ class MongoDBSessionService(SessionService):
         session.messages.append(message)
 
         return session
+
+    async def get_user_sessions(self, user_id: str) -> list[Session]:
+        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
+        cursor = session_collection.find({"user_id": user_id})
+        sessions = []
+        async for doc in cursor:
+            mongo_doc = SessionMongoDoc.model_validate(doc)
+            sessions.append(
+                Session(
+                    session_id=mongo_doc.sessionID,
+                    user_id=mongo_doc.user_id,
+                    messages=[
+                        Message(
+                            role=msg.role,
+                            content=msg.content,
+                            created_at=msg.created_at,
+                        )
+                        for msg in mongo_doc.messages
+                    ],
+                    name=mongo_doc.name,
+                    created_at=mongo_doc.created_at,
+                )
+            )
+        return sessions
