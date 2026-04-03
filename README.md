@@ -100,8 +100,8 @@ The server will be available at `http://localhost:9000`.
 
 #### Tools Provided
 
-- `getUserContext(user_id: str)`: Retrieves the user's profile and portfolio details.
-- `updateUserContext(user_id: str, user_profile: dict, user_portfolio: list)`: Updates/Replaces the user's profile and portfolio.
+- `getUserContext(user_id: str)`: Retrieves the user's profile details.
+- `updateUserContext(user_id: str, user_profile: dict)`: Updates/Replaces the user's profile.
 
 #### Prompts Provided
 

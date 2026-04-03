@@ -19,7 +19,6 @@ async def main():
                     "name": "Orestis",
                     "age": 28
                 },
-                "user_portfolio": [],
             }
         )
         print(result.structured_content)

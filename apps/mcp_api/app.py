@@ -22,7 +22,6 @@ from services.user_context import (
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from models.user_context import (
     UserContext,
-    UserPortfolioHolding
 )
 
 
@@ -61,18 +60,16 @@ mcp_app.add_middleware(LoggingMiddleware())
 
 @mcp_app.tool(
     name="updateUserContext",
-    description="Update the user context(for the given user_id) including user profile and portfolio holdings. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
+    description="Update the user context(for the given user_id) including user profile. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
 )
 async def update_user_context(
     user_id: Annotated[str, "The id of the user to update the context for"],
     user_profile: Annotated[dict, "General information about the user. Must provide the complete user profile as it will replace the existing one."],
-    user_portfolio: Annotated[list[UserPortfolioHolding], "List of portfolio holdings. Must provide the complete portfolio as it will replace the existing one."],
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> UserContext:
     updated_user_context = await user_context_service.update_user_context(
         user_id=user_id,
         user_profile=user_profile,
-        user_portfolio=user_portfolio,
     )
 
     return updated_user_context
