@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import datetime as dt
+from typing import Any
 
 from pydantic import BaseModel
 from pymongo import (
@@ -16,6 +17,7 @@ class UserContextNotFoundError(Exception):
     pass
 from models.user_context import (
     UserContext,
+    UserConversationNotes,
 )
 
 
@@ -34,10 +36,27 @@ class UserContextService(ABC):
 
     @abstractmethod
     async def update_user_context(
-        self, 
+        self,
         user_id: str,
         user_profile: dict | None = None,
     ) -> UserContext:
+        pass
+
+    @abstractmethod
+    async def get_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str | None = None,
+    ) -> list[dict[str, dict[str, Any]]]:
+        pass
+
+    @abstractmethod
+    async def update_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str,
+        notes: dict[str, Any],
+    ) -> None:
         pass
 
 
@@ -46,6 +65,12 @@ class UserContextMongoDoc(BaseModel):
     user_profile: dict
     created_at: str | None = None
     updated_at: str | None = None
+
+
+class UserConversationNotesMongoDoc(BaseModel):
+    user_id: str
+    date: str
+    notes: dict
 
 
 class MongoDBUserContextService(UserContextService):
@@ -159,4 +184,52 @@ class MongoDBUserContextService(UserContextService):
             user_profile=mongo_result.user_profile,
             created_at=mongo_result.created_at,
             updated_at=mongo_result.updated_at,
+        )
+
+    # TODO: Update this to return a list of models.UserConversationNotes
+    async def get_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str | None = None,
+    ) -> list[dict[str, dict[str, Any]]]:
+        """
+        Get conversation notes for the given user_id, optionally filtered by date.
+
+        Args:
+            user_id: The user_id for which to get conversation notes.
+            date: Optional date string in YYYY-MM-DD format to filter notes by a specific date.
+
+        Returns:
+            A list of dicts where each dict maps a date string to its notes dict.
+        """
+        collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
+        query: dict[str, Any] = {"user_id": user_id}
+        if date:
+            query["date"] = date
+
+        cursor = collection.find(query)
+        docs = await cursor.to_list(length=None)
+
+        return [{doc["date"]: doc["notes"]} for doc in docs]
+
+    # TODO: Update this to take as param a model.UserConversationNotes object? 
+    async def update_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str,
+        notes: dict[str, Any],
+    ) -> None:
+        """
+        Create or update the conversation notes for the given user_id and date.
+
+        Args:
+            user_id: The user_id for which to update conversation notes.
+            date: The date string in YYYY-MM-DD format.
+            notes: A dict containing the notes to store for this date.
+        """
+        collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
+        await collection.find_one_and_update(
+            {"user_id": user_id, "date": date},
+            {"$set": {"notes": notes}},
+            upsert=True,
         )

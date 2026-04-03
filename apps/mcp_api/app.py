@@ -87,6 +87,44 @@ async def update_user_context(
     return user_context
 
 
+@mcp_app.tool(
+    name="getUserConversationNotes",
+    description=(
+        "Retrieve conversation notes for a user, optionally filtered by date. "
+        "Each entry in the returned list maps a date (YYYY-MM-DD) to its notes dict. "
+        "Always call this before updateUserConversationNotes to avoid storing duplicate information."
+    ),
+)
+async def get_user_conversation_notes(
+    user_id: Annotated[str, "The id of the user to get conversation notes for"],
+    date: Annotated[str | None, "Optional date filter in YYYY-MM-DD format. If omitted, returns notes for all dates."] = None,
+    user_context_service: UserContextService = Depends(get_user_context_service),
+) -> list[dict]:
+    return await user_context_service.get_user_conversation_notes(user_id=user_id, date=date)
+
+
+@mcp_app.tool(
+    name="updateUserConversationNotes",
+    description=(
+        "Store or update conversation notes for a specific user and date. "
+        "Notes will completely replace existing notes for that date, so merge with existing notes "
+        "retrieved via getUserConversationNotes first. "
+        "Keep notes short and concise — focused on information useful for future investment advice."
+    ),
+)
+async def update_user_conversation_notes(
+    user_id: Annotated[str, "The id of the user to update conversation notes for"],
+    date: Annotated[str, "The date of the conversation in YYYY-MM-DD format"],
+    notes: Annotated[dict, "A key-value store of short, concise notes about the conversation on this date"],
+    user_context_service: UserContextService = Depends(get_user_context_service),
+) -> None:
+    await user_context_service.update_user_conversation_notes(
+        user_id=user_id,
+        date=date,
+        notes=notes,
+    )
+
+
 @mcp_app.prompt
 def get_invstment_advisor_prompt(user_id: str) -> str:
     return INVESTMENT_ADVISOR_PROMPT.format(user_id=user_id)

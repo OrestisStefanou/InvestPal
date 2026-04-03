@@ -33,6 +33,8 @@ from services.agents.tools import (
     update_user_context,
     get_user_context,
     get_current_datetime,
+    get_user_conversation_notes,
+    update_user_conversation_notes,
 )
 
 # TODO: Create Agent ABC clas 
@@ -141,6 +143,10 @@ class InvestmentManagerPromptVars(TypedDict):
     client_profile: dict[str, Any]
 
 
+@dataclass
+class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+    pass
+
 
 class InvestmentManagerAgent(Agent):
     """
@@ -164,6 +170,7 @@ class InvestmentManagerAgent(Agent):
             response_format=InvestmentManagerAgentResponse,
             system_prompt=INVESTMENT_MANAGER_AGENT_PROMPT,
             middleware=middleware,
+            runtime_context_schema=UserContextManagerRuntimeContext,
             provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
             model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
             temperature=settings.INVESTMENT_MANAGER_TEMPERATURE,
@@ -190,7 +197,7 @@ class InvestmentManagerAgent(Agent):
         mcp_client: MultiServerMCPClient,
         middleware: list[AgentMiddleware],
     ):
-        tools = [get_current_datetime, ]
+        tools = [get_current_datetime, get_user_conversation_notes]
         if settings.MARKET_DATA_MCP_SERVER_URL:
             market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
             tools.extend(market_data_tools)
@@ -204,11 +211,6 @@ class InvestmentManagerAgent(Agent):
             tools.extend(coinbase_tools)
 
         return cls(tools=tools, middleware=middleware)
-
-
-@dataclass
-class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
-    pass
 
 
 class UserContextMemoryManagerAgentResponse(BaseModel):
@@ -240,13 +242,15 @@ class UserContextMemoryManagerAgent(Agent):
             update_user_context,
             get_user_context,
             get_current_datetime,
+            get_user_conversation_notes,
+            update_user_conversation_notes,
         ]
         super().__init__(
             tools=tools,
             response_format=UserContextMemoryManagerAgentResponse,
             system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
             middleware=middleware,
-            runtime_context_schema=UserContextManagerRuntimeContext,
+            runtime_context_schema=UserContextManagerRuntimeContext,   # TODO: We need a custom class for this agent runtime context
             provider=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_PROVIDER,
             model_name=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL,
             temperature=settings.USER_CONTEXT_MEMORY_MANAGER_TEMPERATURE,

@@ -90,6 +90,9 @@ class InvestmentManagerAgentService(TextAgentService):
         # Generate the response from the investment manager agent
         agent_response = await self._investment_manager_agent.generate_response(
             conversation=conversation,
+            runtime_context=UserContextManagerRuntimeContext(
+                user_context_service=self._user_context_service,
+            ),
             system_prompt_placeholder_values=InvestmentManagerPromptVars(
                 client_profile=user_context.model_dump(),
             )
