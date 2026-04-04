@@ -144,7 +144,7 @@ class InvestmentManagerPromptVars(TypedDict):
 
 
 @dataclass
-class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+class InvestmentManagerRuntimeContext(UserContextToolsRuntimeContext):
     pass
 
 
@@ -170,7 +170,7 @@ class InvestmentManagerAgent(Agent):
             response_format=InvestmentManagerAgentResponse,
             system_prompt=INVESTMENT_MANAGER_AGENT_PROMPT,
             middleware=middleware,
-            runtime_context_schema=UserContextManagerRuntimeContext,
+            runtime_context_schema=InvestmentManagerRuntimeContext,
             provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
             model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
             temperature=settings.INVESTMENT_MANAGER_TEMPERATURE,
@@ -179,7 +179,7 @@ class InvestmentManagerAgent(Agent):
     async def generate_response(
         self,
         conversation: list[Message],
-        runtime_context: Any | None = None,
+        runtime_context: InvestmentManagerRuntimeContext,
         system_prompt_placeholder_values: InvestmentManagerPromptVars | None = None,
     ) -> InvestmentManagerAgentResponse:
         """
@@ -230,6 +230,11 @@ class UserContextMemoryManagerPromptVars(TypedDict):
     user_id: str
 
 
+@dataclass
+class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+    pass
+
+
 class UserContextMemoryManagerAgent(Agent):
     """
     Agent responsible for managing the user context memory.
@@ -250,7 +255,7 @@ class UserContextMemoryManagerAgent(Agent):
             response_format=UserContextMemoryManagerAgentResponse,
             system_prompt=USER_CONTEXT_MEMORY_MANAGER_PROMPT,
             middleware=middleware,
-            runtime_context_schema=UserContextManagerRuntimeContext,   # TODO: We need a custom class for this agent runtime context
+            runtime_context_schema=UserContextManagerRuntimeContext,
             provider=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_PROVIDER,
             model_name=settings.USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL,
             temperature=settings.USER_CONTEXT_MEMORY_MANAGER_TEMPERATURE,
@@ -259,7 +264,7 @@ class UserContextMemoryManagerAgent(Agent):
     async def generate_response(
         self,
         conversation: list[Message],
-        runtime_context: UserContextManagerRuntimeContext | None = None,
+        runtime_context: UserContextManagerRuntimeContext,
         system_prompt_placeholder_values: UserContextMemoryManagerPromptVars | None = None,
     ) -> UserContextMemoryManagerAgentResponse:
         return await super().generate_response(

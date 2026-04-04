@@ -22,6 +22,7 @@ from services.user_context import (
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from models.user_context import (
     UserContext,
+    UserConversationNotes,
 )
 
 
@@ -91,15 +92,14 @@ async def update_user_context(
     name="getUserConversationNotes",
     description=(
         "Retrieve conversation notes for a user, optionally filtered by date. "
-        "Each entry in the returned list maps a date (YYYY-MM-DD) to its notes dict. "
-        "Always call this before updateUserConversationNotes to avoid storing duplicate information."
+        "Allows the agent to recall specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
     user_id: Annotated[str, "The id of the user to get conversation notes for"],
     date: Annotated[str | None, "Optional date filter in YYYY-MM-DD format. If omitted, returns notes for all dates."] = None,
     user_context_service: UserContextService = Depends(get_user_context_service),
-) -> list[dict]:
+) -> list[UserConversationNotes]:
     return await user_context_service.get_user_conversation_notes(user_id=user_id, date=date)
 
 
@@ -107,15 +107,14 @@ async def get_user_conversation_notes(
     name="updateUserConversationNotes",
     description=(
         "Store or update conversation notes for a specific user and date. "
-        "Notes will completely replace existing notes for that date, so merge with existing notes "
-        "retrieved via getUserConversationNotes first. "
-        "Keep notes short and concise — focused on information useful for future investment advice."
+        "The provided notes will be MERGED with existing ones for that date (only keys "
+        "provided will be overwritten or added). Keep notes short and concise."
     ),
 )
 async def update_user_conversation_notes(
     user_id: Annotated[str, "The id of the user to update conversation notes for"],
     date: Annotated[str, "The date of the conversation in YYYY-MM-DD format"],
-    notes: Annotated[dict, "A key-value store of short, concise notes about the conversation on this date"],
+    notes: Annotated[dict, "A key-value store of notes about the conversation. These will be merged with any existing notes for this date"],
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> None:
     await user_context_service.update_user_conversation_notes(

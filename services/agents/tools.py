@@ -14,6 +14,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.user_context import (
     UserContext,
+    UserConversationNotes,
 )
 from services.user_context import UserContextService
 
@@ -80,16 +81,14 @@ class GetUserConversationNotesToolInput(BaseModel):
     args_schema=GetUserConversationNotesToolInput,
     description=(
         "Retrieve conversation notes for a user, optionally filtered by date. "
-        "Each entry in the returned list maps a date (YYYY-MM-DD) to its notes dict. "
-        "IMPORTANT: Always call this tool before calling updateUserConversationNotes to read "
-        "existing notes and avoid storing duplicate or redundant information."
+        "Allows recalling specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
     runtime: ToolRuntime[UserContextToolsRuntimeContext],
     user_id: str,
     date: str | None = None,
-) -> list[dict]:
+) -> list[UserConversationNotes]:
     user_context_service = runtime.context.user_context_service
     return await user_context_service.get_user_conversation_notes(user_id=user_id, date=date)
 
@@ -100,9 +99,9 @@ class UpdateUserConversationNotesToolInput(BaseModel):
     notes: dict = Field(
         description=(
             "A key-value store of short, concise notes about the conversation on this date. "
-            "Notes will completely replace any existing notes for this date, so include all relevant "
-            "information (merge with existing notes retrieved via getUserConversationNotes). "
-            "Keep notes brief and focused on information useful for future investment advice."
+            "Notes will be MERGED into existing ones for this date (only keys provided will "
+            "be overwritten or added). Keep notes brief and focused on information useful "
+            "for future investment advice."
         )
     )
 
@@ -115,9 +114,7 @@ class UpdateUserConversationNotesToolInput(BaseModel):
         "Use this to capture conversation-specific context such as topics discussed, "
         "questions asked, or recommendations given — information that is relevant to a particular "
         "conversation but not a permanent part of the user's profile. "
-        "IMPORTANT: Always call getUserConversationNotes first to retrieve existing notes before "
-        "calling this tool, so you can merge new information without losing previous notes. "
-        "The provided notes will completely replace existing notes for that date."
+        "Updates are additive: any keys provided will overwrite or be added to existing notes for that date."
     ),
 )
 async def update_user_conversation_notes(

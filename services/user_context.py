@@ -9,16 +9,18 @@ from pymongo import (
 )
 
 from config import settings
+from models.user_context import (
+    UserContext,
+    UserConversationNotes,
+)
+
+
 class UserContextAlreadyExistsError(Exception):
     pass
 
 
 class UserContextNotFoundError(Exception):
     pass
-from models.user_context import (
-    UserContext,
-    UserConversationNotes,
-)
 
 
 class UserContextService(ABC):
@@ -47,7 +49,7 @@ class UserContextService(ABC):
         self,
         user_id: str,
         date: str | None = None,
-    ) -> list[dict[str, dict[str, Any]]]:
+    ) -> list[UserConversationNotes]:
         pass
 
     @abstractmethod
@@ -186,12 +188,11 @@ class MongoDBUserContextService(UserContextService):
             updated_at=mongo_result.updated_at,
         )
 
-    # TODO: Update this to return a list of models.UserConversationNotes
     async def get_user_conversation_notes(
         self,
         user_id: str,
         date: str | None = None,
-    ) -> list[dict[str, dict[str, Any]]]:
+    ) -> list[UserConversationNotes]:
         """
         Get conversation notes for the given user_id, optionally filtered by date.
 
@@ -200,7 +201,7 @@ class MongoDBUserContextService(UserContextService):
             date: Optional date string in YYYY-MM-DD format to filter notes by a specific date.
 
         Returns:
-            A list of dicts where each dict maps a date string to its notes dict.
+            A list of UserConversationNotes models.
         """
         collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
         query: dict[str, Any] = {"user_id": user_id}
@@ -210,9 +211,15 @@ class MongoDBUserContextService(UserContextService):
         cursor = collection.find(query)
         docs = await cursor.to_list(length=None)
 
-        return [{doc["date"]: doc["notes"]} for doc in docs]
+        return [
+            UserConversationNotes(
+                user_id=doc["user_id"],
+                date=doc["date"],
+                notes=doc["notes"],
+            )
+            for doc in docs
+        ]
 
-    # TODO: Update this to take as param a model.UserConversationNotes object? 
     async def update_user_conversation_notes(
         self,
         user_id: str,
@@ -221,15 +228,29 @@ class MongoDBUserContextService(UserContextService):
     ) -> None:
         """
         Create or update the conversation notes for the given user_id and date.
+        The provided notes are merged with any existing ones for that date using 
+        dot notation (only keys provided will be overwritten or added).
 
         Args:
             user_id: The user_id for which to update conversation notes.
             date: The date string in YYYY-MM-DD format.
-            notes: A dict containing the notes to store for this date.
+            notes: A dict containing the notes to store or merge for this date.
         """
         collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
-        await collection.find_one_and_update(
+        
+        if not notes:
+            # If notes is empty, just ensure the document exists with an empty notes object if new
+            await collection.update_one(
+                {"user_id": user_id, "date": date},
+                {"$setOnInsert": {"notes": {}}},
+                upsert=True,
+            )
+            return
+
+        # Use dot notation to update specific keys within the notes object without overwriting others
+        update_data = {f"notes.{k}": v for k, v in notes.items()}
+        await collection.update_one(
             {"user_id": user_id, "date": date},
-            {"$set": {"notes": notes}},
+            {"$set": update_data},
             upsert=True,
         )

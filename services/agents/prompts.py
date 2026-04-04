@@ -199,7 +199,7 @@ These are stable attributes that define who the user is as an investor.
 
 **Instructions:**
 1. Always call `getUserContext` first to retrieve the current profile.
-2. Merge any new information into the existing profile.
+2. Merge any new information into the existing profile. You can remove/overwrite any existing information if you think it is not relevant anymore.
 3. Call `updateUserContext` with the complete merged profile.
 
 ---
@@ -216,9 +216,8 @@ Notes must be **short and concise** — bullet-point style. Avoid storing full s
 
 **Instructions:**
 1. Always call `getUserConversationNotes` first (filtered by today's date) to retrieve any existing
-   notes for today and avoid duplicates.
-2. Merge new information with existing notes.
-3. Call `updateUserConversationNotes` with the complete merged notes for the date.
+   notes for today and avoid duplicates. (Note: this tool can return notes from a different conversation that happened before at the given date)
+2. Call `updateUserConversationNotes` with the new notes for the date (if any).
 
 ---
 
