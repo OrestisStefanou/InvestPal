@@ -236,6 +236,11 @@ class MongoDBUserContextService(UserContextService):
             date: The date string in YYYY-MM-DD format.
             notes: A dict containing the notes to store or merge for this date.
         """
+        try:
+            dt.datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"Invalid date format: {date}. Expected YYYY-MM-DD.")
+
         collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
         
         if not notes:
