@@ -14,6 +14,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.user_context import (
     UserContext,
+    UserConversationNotes,
 )
 from services.user_context import UserContextService
 
@@ -65,3 +66,66 @@ async def get_current_datetime() -> str:
     Get the current datetime.
     """
     return dt.datetime.now().isoformat()
+
+
+class GetUserConversationNotesToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user to get conversation notes for")
+    date: str | None = Field(
+        default=None,
+        description="Optional date filter in YYYY-MM-DD format. If provided, returns notes only for that specific date. If omitted, returns notes for all dates.",
+    )
+
+
+@tool(
+    "getUserConversationNotes",
+    args_schema=GetUserConversationNotesToolInput,
+    description=(
+        "Retrieve conversation notes for a user, optionally filtered by date. "
+        "Allows recalling specific details from past conversations."
+    ),
+)
+async def get_user_conversation_notes(
+    runtime: ToolRuntime[UserContextToolsRuntimeContext],
+    user_id: str,
+    date: str | None = None,
+) -> list[UserConversationNotes]:
+    user_context_service = runtime.context.user_context_service
+    return await user_context_service.get_user_conversation_notes(user_id=user_id, date=date)
+
+
+class UpdateUserConversationNotesToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user to update conversation notes for")
+    date: str = Field(description="The date of the conversation in YYYY-MM-DD format")
+    notes: dict = Field(
+        description=(
+            "A key-value store of short, concise notes about the conversation on this date. "
+            "Notes will be MERGED into existing ones for this date (only keys provided will "
+            "be overwritten or added). Keep notes brief and focused on information useful "
+            "for future investment advice."
+        )
+    )
+
+
+@tool(
+    "updateUserConversationNotes",
+    args_schema=UpdateUserConversationNotesToolInput,
+    description=(
+        "Store or update conversation notes for a specific user and date. "
+        "Use this to capture conversation-specific context such as topics discussed, "
+        "questions asked, or recommendations given — information that is relevant to a particular "
+        "conversation but not a permanent part of the user's profile. "
+        "Updates are additive: any keys provided will overwrite or be added to existing notes for that date."
+    ),
+)
+async def update_user_conversation_notes(
+    runtime: ToolRuntime[UserContextToolsRuntimeContext],
+    user_id: str,
+    date: str,
+    notes: dict,
+) -> None:
+    user_context_service = runtime.context.user_context_service
+    await user_context_service.update_user_conversation_notes(
+        user_id=user_id,
+        date=date,
+        notes=notes,
+    )

@@ -33,6 +33,8 @@ from services.agents.tools import (
     update_user_context,
     get_user_context,
     get_current_datetime,
+    get_user_conversation_notes,
+    update_user_conversation_notes,
 )
 
 # TODO: Create Agent ABC clas 
@@ -141,6 +143,10 @@ class InvestmentManagerPromptVars(TypedDict):
     client_profile: dict[str, Any]
 
 
+@dataclass
+class InvestmentManagerRuntimeContext(UserContextToolsRuntimeContext):
+    pass
+
 
 class InvestmentManagerAgent(Agent):
     """
@@ -164,6 +170,7 @@ class InvestmentManagerAgent(Agent):
             response_format=InvestmentManagerAgentResponse,
             system_prompt=INVESTMENT_MANAGER_AGENT_PROMPT,
             middleware=middleware,
+            runtime_context_schema=InvestmentManagerRuntimeContext,
             provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
             model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
             temperature=settings.INVESTMENT_MANAGER_TEMPERATURE,
@@ -172,7 +179,7 @@ class InvestmentManagerAgent(Agent):
     async def generate_response(
         self,
         conversation: list[Message],
-        runtime_context: Any | None = None,
+        runtime_context: InvestmentManagerRuntimeContext,
         system_prompt_placeholder_values: InvestmentManagerPromptVars | None = None,
     ) -> InvestmentManagerAgentResponse:
         """
@@ -190,7 +197,7 @@ class InvestmentManagerAgent(Agent):
         mcp_client: MultiServerMCPClient,
         middleware: list[AgentMiddleware],
     ):
-        tools = [get_current_datetime, ]
+        tools = [get_current_datetime, get_user_conversation_notes]
         if settings.MARKET_DATA_MCP_SERVER_URL:
             market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
             tools.extend(market_data_tools)
@@ -204,11 +211,6 @@ class InvestmentManagerAgent(Agent):
             tools.extend(coinbase_tools)
 
         return cls(tools=tools, middleware=middleware)
-
-
-@dataclass
-class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
-    pass
 
 
 class UserContextMemoryManagerAgentResponse(BaseModel):
@@ -228,6 +230,11 @@ class UserContextMemoryManagerPromptVars(TypedDict):
     user_id: str
 
 
+@dataclass
+class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+    pass
+
+
 class UserContextMemoryManagerAgent(Agent):
     """
     Agent responsible for managing the user context memory.
@@ -240,6 +247,8 @@ class UserContextMemoryManagerAgent(Agent):
             update_user_context,
             get_user_context,
             get_current_datetime,
+            get_user_conversation_notes,
+            update_user_conversation_notes,
         ]
         super().__init__(
             tools=tools,
@@ -255,7 +264,7 @@ class UserContextMemoryManagerAgent(Agent):
     async def generate_response(
         self,
         conversation: list[Message],
-        runtime_context: UserContextManagerRuntimeContext | None = None,
+        runtime_context: UserContextManagerRuntimeContext,
         system_prompt_placeholder_values: UserContextMemoryManagerPromptVars | None = None,
     ) -> UserContextMemoryManagerAgentResponse:
         return await super().generate_response(

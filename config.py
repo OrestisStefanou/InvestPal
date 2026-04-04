@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     # MongoDB
     MONGO_URI: str
     MONGO_DB_NAME: str
-    USER_CONTEXT_COLLECTION_NAME: str
-    SESSION_COLLECTION_NAME: str
+    USER_CONTEXT_COLLECTION_NAME: str = "user_context"
+    SESSION_COLLECTION_NAME: str = "session"
+    USER_CONVERSATION_NOTES_COLLECTION_NAME: str = "user_conversation_notes"
     # LLM
     LLM_PROVIDER: LLMProvider   # Default LLM provider
     LLM_MODEL: str              # Default LLM model

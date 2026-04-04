@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import datetime as dt
+from typing import Any
 
 from pydantic import BaseModel
 from pymongo import (
@@ -8,15 +9,18 @@ from pymongo import (
 )
 
 from config import settings
+from models.user_context import (
+    UserContext,
+    UserConversationNotes,
+)
+
+
 class UserContextAlreadyExistsError(Exception):
     pass
 
 
 class UserContextNotFoundError(Exception):
     pass
-from models.user_context import (
-    UserContext,
-)
 
 
 class UserContextService(ABC):
@@ -34,10 +38,27 @@ class UserContextService(ABC):
 
     @abstractmethod
     async def update_user_context(
-        self, 
+        self,
         user_id: str,
         user_profile: dict | None = None,
     ) -> UserContext:
+        pass
+
+    @abstractmethod
+    async def get_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str | None = None,
+    ) -> list[UserConversationNotes]:
+        pass
+
+    @abstractmethod
+    async def update_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str,
+        notes: dict[str, Any],
+    ) -> None:
         pass
 
 
@@ -46,6 +67,12 @@ class UserContextMongoDoc(BaseModel):
     user_profile: dict
     created_at: str | None = None
     updated_at: str | None = None
+
+
+class UserConversationNotesMongoDoc(BaseModel):
+    user_id: str
+    date: str
+    notes: dict
 
 
 class MongoDBUserContextService(UserContextService):
@@ -159,4 +186,76 @@ class MongoDBUserContextService(UserContextService):
             user_profile=mongo_result.user_profile,
             created_at=mongo_result.created_at,
             updated_at=mongo_result.updated_at,
+        )
+
+    async def get_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str | None = None,
+    ) -> list[UserConversationNotes]:
+        """
+        Get conversation notes for the given user_id, optionally filtered by date.
+
+        Args:
+            user_id: The user_id for which to get conversation notes.
+            date: Optional date string in YYYY-MM-DD format to filter notes by a specific date.
+
+        Returns:
+            A list of UserConversationNotes models.
+        """
+        collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
+        query: dict[str, Any] = {"user_id": user_id}
+        if date:
+            query["date"] = date
+
+        cursor = collection.find(query)
+        docs = await cursor.to_list(length=None)
+
+        return [
+            UserConversationNotes(
+                user_id=doc["user_id"],
+                date=doc["date"],
+                notes=doc["notes"],
+            )
+            for doc in docs
+        ]
+
+    async def update_user_conversation_notes(
+        self,
+        user_id: str,
+        date: str,
+        notes: dict[str, Any],
+    ) -> None:
+        """
+        Create or update the conversation notes for the given user_id and date.
+        The provided notes are merged with any existing ones for that date using 
+        dot notation (only keys provided will be overwritten or added).
+
+        Args:
+            user_id: The user_id for which to update conversation notes.
+            date: The date string in YYYY-MM-DD format.
+            notes: A dict containing the notes to store or merge for this date.
+        """
+        try:
+            dt.datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"Invalid date format: {date}. Expected YYYY-MM-DD.")
+
+        collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
+        
+        if not notes:
+            # If notes is empty, just ensure the document exists with an empty notes object if new
+            await collection.update_one(
+                {"user_id": user_id, "date": date},
+                {"$setOnInsert": {"notes": {}}},
+                upsert=True,
+            )
+            return
+
+        # Use dot notation to update specific keys within the notes object without overwriting others
+        update_data = {f"notes.{k}": v for k, v in notes.items()}
+        await collection.update_one(
+            {"user_id": user_id, "date": date},
+            {"$set": update_data},
+            upsert=True,
         )
