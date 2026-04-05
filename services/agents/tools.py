@@ -16,12 +16,19 @@ from models.user_context import (
     UserContext,
     UserConversationNotes,
 )
+from models.agent_reminder import AgentReminder
 from services.user_context import UserContextService
+from services.agent_reminder import AgentReminderService
 
 
 @dataclass
 class UserContextToolsRuntimeContext:
     user_context_service: UserContextService
+
+
+@dataclass
+class AgentReminderToolsRuntimeContext:
+    agent_reminder_service: AgentReminderService
 
 
 class UpdateUserContextToolInput(BaseModel):
@@ -128,4 +135,102 @@ async def update_user_conversation_notes(
         user_id=user_id,
         date=date,
         notes=notes,
+    )
+
+
+class CreateAgentReminderToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user to create the reminder for")
+    reminder_description: str = Field(description="The description of the reminder")
+    due_date: str | None = Field(
+        default=None,
+        description="Optional due date for the reminder in YYYY-MM-DD format",
+    )
+
+
+@tool(
+    "createAgentReminder",
+    args_schema=CreateAgentReminderToolInput,
+    description="Create a new reminder for the user.",
+)
+async def create_agent_reminder(
+    runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
+    user_id: str,
+    reminder_description: str,
+    due_date: str | None = None,
+) -> AgentReminder:
+    agent_reminder_service = runtime.context.agent_reminder_service
+    return await agent_reminder_service.create_agent_reminder(
+        user_id=user_id,
+        reminder_description=reminder_description,
+        due_date=due_date,
+    )
+
+
+@tool("getAgentReminders")
+async def get_agent_reminders(
+    runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
+    user_id: str,
+) -> list[AgentReminder]:
+    """Get all reminders for the given user.
+
+    Args:
+        user_id: The id of the user to get reminders for
+    """
+    agent_reminder_service = runtime.context.agent_reminder_service
+    return await agent_reminder_service.get_agent_reminders(user_id=user_id)
+
+
+class UpdateAgentReminderToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user the reminder belongs to")
+    reminder_id: str = Field(description="The unique id of the reminder to update")
+    reminder_description: str | None = Field(
+        default=None,
+        description="New description for the reminder. If omitted, the existing description is kept.",
+    )
+    due_date: str | None = Field(
+        default=None,
+        description="New due date for the reminder in YYYY-MM-DD format. If omitted, the existing due date is kept.",
+    )
+
+
+@tool(
+    "updateAgentReminder",
+    args_schema=UpdateAgentReminderToolInput,
+    description="Update an existing reminder for the user.",
+)
+async def update_agent_reminder(
+    runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
+    user_id: str,
+    reminder_id: str,
+    reminder_description: str | None = None,
+    due_date: str | None = None,
+) -> AgentReminder:
+    agent_reminder_service = runtime.context.agent_reminder_service
+    return await agent_reminder_service.update_agent_reminder(
+        user_id=user_id,
+        reminder_id=reminder_id,
+        reminder_description=reminder_description,
+        due_date=due_date,
+    )
+
+
+class DeleteAgentReminderToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user the reminder belongs to")
+    reminder_id: str = Field(description="The unique id of the reminder to delete")
+
+
+@tool(
+    "deleteAgentReminder",
+    args_schema=DeleteAgentReminderToolInput,
+    description="Delete a reminder for the user.",
+)
+async def delete_agent_reminder(
+    runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
+    user_id: str,
+    reminder_id: str,
+) -> None:
+    agent_reminder_service = runtime.context.agent_reminder_service
+    await agent_reminder_service.delete_agent_reminder(
+        user_id=user_id,
+        reminder_id=reminder_id,
     )

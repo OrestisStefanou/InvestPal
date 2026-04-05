@@ -27,8 +27,12 @@ from services.chat import (
     AgenticChatService,
 )
 from services.user_context import (
-    MongoDBUserContextService, 
+    MongoDBUserContextService,
     UserContextService,
+)
+from services.agent_reminder import (
+    MongoDBAgentReminderService,
+    AgentReminderService,
 )
 
 def get_db_client(request: Request):
@@ -87,6 +91,12 @@ def get_user_context_service(
     return MongoDBUserContextService(mongo_client=db_client)
 
 
+def get_agent_reminder_service(
+    db_client: AsyncMongoClient = Depends(get_db_client),
+) -> AgentReminderService:
+    return MongoDBAgentReminderService(mongo_client=db_client)
+
+
 async def get_investment_manager_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
 ) -> InvestmentManagerAgent:
@@ -107,11 +117,13 @@ def get_investment_manager_agent_service(
     investment_manager_agent: InvestmentManagerAgent = Depends(get_investment_manager_agent),
     user_context_memory_manager_agent: UserContextMemoryManagerAgent = Depends(get_user_context_memory_manager_agent),
     user_context_service: UserContextService = Depends(get_user_context_service),
+    agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> InvestmentManagerAgentService:
     return InvestmentManagerAgentService(
         investment_manager_agent=investment_manager_agent,
         user_context_memory_manager_agent=user_context_memory_manager_agent,
         user_context_service=user_context_service,
+        agent_reminder_service=agent_reminder_service,
     )
 
 
