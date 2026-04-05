@@ -7,9 +7,10 @@ from abc import (
 
 from models.session import Message
 from services.user_context import (
-    UserContextService, 
+    UserContextService,
     UserContextNotFoundError,
 )
+from services.agent_reminder import AgentReminderService
 from services.agents.agent import (
     InvestmentManagerAgent,
     InvestmentManagerPromptVars,
@@ -49,10 +50,11 @@ class InvestmentManagerAgentService(TextAgentService):
     """
 
     def __init__(
-        self, 
+        self,
         investment_manager_agent: InvestmentManagerAgent,
         user_context_memory_manager_agent: UserContextMemoryManagerAgent,
         user_context_service: UserContextService,
+        agent_reminder_service: AgentReminderService,
     ):
         """
         Initializes the InvestmentManagerAgentService.
@@ -61,10 +63,12 @@ class InvestmentManagerAgentService(TextAgentService):
             investment_manager_agent: The agent responsible for providing investment advice.
             user_context_memory_manager_agent: The agent responsible for updating user context.
             user_context_service: Service to retrieve and store user context.
+            agent_reminder_service: Service to manage agent reminders.
         """
         self._investment_manager_agent = investment_manager_agent
         self._user_context_memory_manager_agent = user_context_memory_manager_agent
         self._user_context_service = user_context_service
+        self._agent_reminder_service = agent_reminder_service
     
     async def generate_agent_text_response(
         self,
@@ -93,6 +97,7 @@ class InvestmentManagerAgentService(TextAgentService):
             conversation=conversation,
             runtime_context=InvestmentManagerRuntimeContext(
                 user_context_service=self._user_context_service,
+                agent_reminder_service=self._agent_reminder_service,
             ),
             system_prompt_placeholder_values=InvestmentManagerPromptVars(
                 client_profile=user_context.model_dump(),
