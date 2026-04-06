@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     COINBASE_MCP_SERVER_URL: str | None = None
     COINBASE_MCP_SERVER_NAME: str = "coinbase_markets_tools"
 
-    # APP
+    # REST API APP
     CONVERSATION_MESSAGES_LIMIT: int = 15
     
     INVESTMENT_MANAGER_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC
@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     USER_CONTEXT_MEMORY_MANAGER_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC
     USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL: str = "claude-haiku-4-5"
     USER_CONTEXT_MEMORY_MANAGER_TEMPERATURE: float = 0.1
+
+    # MCP APP
+    MCP_APP_SERVER_PORT: int = 9000
 
     model_config = SettingsConfigDict(env_file=".env")
 
