@@ -406,7 +406,7 @@ await client.call_tool(
 
 ### `get_invstment_advisor_prompt`
 
-Returns the system prompt used to configure the InvestPal investment advisor agent for a given user. This prompt is pre-loaded with the user's context and instructs the agent on how to behave.
+Returns the system prompt used to configure the InvestPal investment advisor agent for a given user.
 
 **Parameters**
 
