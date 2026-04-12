@@ -397,6 +397,7 @@ The `due_date` field is in `YYYY-MM-DD` format and may be `null` if no due date 
 
 | Status | Condition |
 |---|---|
+| `404 Not Found` | No user context exists for the given `user_id` |
 | `500 Internal Server Error` | Unexpected server error |
 
 ---
