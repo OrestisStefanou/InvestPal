@@ -13,6 +13,7 @@ from apps.rest_api import (
     session,
     user_context,
     chat,
+    agent_reminders,
 )
 from config import settings
 
@@ -70,3 +71,4 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(session.router)
 app.include_router(user_context.router)
 app.include_router(chat.router)
+app.include_router(agent_reminders.router)

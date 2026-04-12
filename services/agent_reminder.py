@@ -10,6 +10,7 @@ from pymongo import (
 
 from config import settings
 from models.agent_reminder import AgentReminder
+from services.user_context import UserContextNotFoundError
 
 
 class AgentReminderNotFoundError(Exception):
@@ -78,9 +79,17 @@ class MongoDBAgentReminderService(AgentReminderService):
             reminder_description: The description of the reminder.
             due_date: Optional due date in YYYY-MM-DD format.
 
+        Raises:
+            UserContextNotFoundError: If no user context exists for the given user_id.
+
         Returns:
             The created reminder.
         """
+        user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
+        user_context = await user_context_collection.find_one({"user_id": user_id})
+        if not user_context:
+            raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
+
         collection = self.db[settings.AGENT_REMINDERS_COLLECTION_NAME]
         reminder_id = str(uuid.uuid4())
         created_at = dt.datetime.now(dt.timezone.utc).isoformat()
@@ -112,9 +121,17 @@ class MongoDBAgentReminderService(AgentReminderService):
         Args:
             user_id: The user_id for which to get reminders.
 
+        Raises:
+            UserContextNotFoundError: If no user context exists for the given user_id.
+
         Returns:
             A list of reminders for the given user. Empty list if none exist.
         """
+        user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
+        user_context = await user_context_collection.find_one({"user_id": user_id})
+        if not user_context:
+            raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
+
         collection = self.db[settings.AGENT_REMINDERS_COLLECTION_NAME]
         cursor = collection.find({"user_id": user_id})
         docs = await cursor.to_list(length=None)
