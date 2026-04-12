@@ -101,16 +101,16 @@ async def update_user_context(
 @mcp_app.tool(
     name="getUserConversationNotes",
     description=(
-        "Retrieve conversation notes for a user, optionally filtered by date. "
+        "Retrieve conversation notes for a user, ordered by most recent date first. "
         "Allows the agent to recall specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
     user_id: Annotated[str, "The id of the user to get conversation notes for"],
-    date: Annotated[str | None, "Optional date filter in YYYY-MM-DD format. If omitted, returns notes for all dates."] = None,
+    limit: Annotated[int | None, "Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes."] = 5,
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> list[UserConversationNotes]:
-    return await user_context_service.get_user_conversation_notes(user_id=user_id, date=date)
+    return await user_context_service.get_user_conversation_notes(user_id=user_id, limit=limit)
 
 
 @mcp_app.tool(

@@ -12,13 +12,10 @@ async def main():
         await client.ping()
 
         result = await client.call_tool(
-            name="updateUserContext",
+            name="getUserConversationNotes",
             arguments={
                 "user_id": "orestis_user_id",
-                "user_profile": {
-                    "name": "Orestis",
-                    "age": 28
-                },
+                "limit": 1,
             }
         )
         print(result.structured_content)

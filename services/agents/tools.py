@@ -77,9 +77,9 @@ async def get_current_datetime() -> str:
 
 class GetUserConversationNotesToolInput(BaseModel):
     user_id: str = Field(description="The id of the user to get conversation notes for")
-    date: str | None = Field(
-        default=None,
-        description="Optional date filter in YYYY-MM-DD format. If provided, returns notes only for that specific date. If omitted, returns notes for all dates.",
+    limit: int | None = Field(
+        default=5,
+        description="Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
     )
 
 
@@ -87,17 +87,17 @@ class GetUserConversationNotesToolInput(BaseModel):
     "getUserConversationNotes",
     args_schema=GetUserConversationNotesToolInput,
     description=(
-        "Retrieve conversation notes for a user, optionally filtered by date. "
+        "Retrieve conversation notes for a user, ordered by most recent date first. "
         "Allows recalling specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
     runtime: ToolRuntime[UserContextToolsRuntimeContext],
     user_id: str,
-    date: str | None = None,
+    limit: int | None = 5,
 ) -> list[UserConversationNotes]:
     user_context_service = runtime.context.user_context_service
-    return await user_context_service.get_user_conversation_notes(user_id=user_id, date=date)
+    return await user_context_service.get_user_conversation_notes(user_id=user_id, limit=limit)
 
 
 class UpdateUserConversationNotesToolInput(BaseModel):
