@@ -13,9 +13,6 @@ from services.user_context import (
     UserContextAlreadyExistsError,
     UserContextNotFoundError,
 )
-from models.user_context import (
-    UserContext,
-)
 
 
 router = APIRouter()
@@ -33,16 +30,10 @@ class UserContextResponseSchema(UserContextSchema):
 
 @router.post("/user_context", response_model=UserContextResponseSchema, status_code=http.HTTPStatus.CREATED)
 async def create_user_context(request: UserContextSchema, user_context_service: UserContextService = Depends(get_user_context_service)):
-    # Convert UserContextSchema to UserContext
-    user_context = UserContext(
-        user_id=request.user_id,
-        user_profile=request.user_profile or {},
-    )
-
     try:
         created_user_context = await user_context_service.create_user_context(
-            user_id=user_context.user_id,
-            user_profile=user_context.user_profile,
+            user_id=request.user_id,
+            user_profile=request.user_profile or {},
         )
     except UserContextAlreadyExistsError as e:
         raise HTTPException(status_code=http.HTTPStatus.CONFLICT, detail=str(e))

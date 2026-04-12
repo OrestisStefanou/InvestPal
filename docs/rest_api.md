@@ -10,13 +10,14 @@ Welcome to the InvestPal REST API reference. This document covers the HTTP endpo
 
 ## Overview
 
-The InvestPal REST API is the primary integration point for client applications. It exposes three services:
+The InvestPal REST API is the primary integration point for client applications. It exposes four services:
 
 | Service | Purpose |
 |---|---|
 | **User Context** | Register users and store profile information before starting conversations |
 | **Session** | Create and retrieve conversation sessions |
 | **Chat** | Send messages to the AI investment advisor and receive responses |
+| **Agent Reminders** | Retrieve reminders created by the agent for a user |
 
 ### Typical integration flow
 
@@ -25,6 +26,7 @@ The InvestPal REST API is the primary integration point for client applications.
 2. POST /session             → Open a conversation session
 3. POST /chat (repeating)    → Exchange messages with the advisor
 4. GET  /session/{id}        → Retrieve full conversation history
+5. GET  /agent_reminders/{user_id} → Retrieve reminders set by the agent
 ```
 
 ---
@@ -347,6 +349,55 @@ X-Coinbase-Api-Secret: <base64-encoded-coinbase-secret>
 |---|---|
 | `404 Not Found` | No session with the given `session_id` exists |
 | `500 Internal Server Error` | An error occurred during response generation |
+
+---
+
+## Agent Reminders Service
+
+Agent reminders are notes or follow-up actions the AI advisor creates on behalf of the user during a conversation.
+
+### Get Agent Reminders
+
+`GET /agent_reminders/{user_id}`
+
+Retrieve all reminders for a user.
+
+**Path Parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `user_id` | string | The unique identifier of the user |
+
+**Response** `200 OK`
+
+```json
+[
+  {
+    "user_id": "user-abc123",
+    "reminder_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "reminder_description": "Review the Q1 earnings report for AAPL before next session",
+    "created_at": "2024-01-15T10:40:00.000Z",
+    "due_date": "2024-01-22"
+  },
+  {
+    "user_id": "user-abc123",
+    "reminder_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "reminder_description": "Check crypto allocation after BTC halving",
+    "created_at": "2024-01-15T11:00:00.000Z",
+    "due_date": null
+  }
+]
+```
+
+Returns an empty array `[]` if the user has no reminders.
+
+The `due_date` field is in `YYYY-MM-DD` format and may be `null` if no due date was set.
+
+**Errors**
+
+| Status | Condition |
+|---|---|
+| `500 Internal Server Error` | Unexpected server error |
 
 ---
 
