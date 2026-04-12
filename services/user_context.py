@@ -48,7 +48,7 @@ class UserContextService(ABC):
     async def get_user_conversation_notes(
         self,
         user_id: str,
-        date: str | None = None,
+        limit: int | None = None,
     ) -> list[UserConversationNotes]:
         pass
 
@@ -191,25 +191,21 @@ class MongoDBUserContextService(UserContextService):
     async def get_user_conversation_notes(
         self,
         user_id: str,
-        date: str | None = None,
+        limit: int | None = None,
     ) -> list[UserConversationNotes]:
         """
-        Get conversation notes for the given user_id, optionally filtered by date.
+        Get conversation notes for the given user_id, ordered by most recent date first.
 
         Args:
             user_id: The user_id for which to get conversation notes.
-            date: Optional date string in YYYY-MM-DD format to filter notes by a specific date.
+            limit: Maximum number of dates to return. If None, returns all notes.
 
         Returns:
-            A list of UserConversationNotes models.
+            A list of UserConversationNotes models ordered by date descending.
         """
         collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
-        query: dict[str, Any] = {"user_id": user_id}
-        if date:
-            query["date"] = date
-
-        cursor = collection.find(query)
-        docs = await cursor.to_list(length=None)
+        cursor = collection.find({"user_id": user_id}).sort("date", -1)
+        docs = await cursor.to_list(length=limit)
 
         return [
             UserConversationNotes(
