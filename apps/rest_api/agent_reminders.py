@@ -1,10 +1,14 @@
+import http
+
 from fastapi import (
     APIRouter,
     Depends,
+    HTTPException,
 )
 from pydantic import BaseModel
 
 from services.agent_reminder import AgentReminderService
+from services.user_context import UserContextNotFoundError
 from dependencies import get_agent_reminder_service
 
 
@@ -21,7 +25,10 @@ class AgentReminderSchema(BaseModel):
 
 @router.get("/agent_reminders/{user_id}", response_model=list[AgentReminderSchema])
 async def get_agent_reminders(user_id: str, agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service)):
-    reminders = await agent_reminder_service.get_agent_reminders(user_id)
+    try:
+        reminders = await agent_reminder_service.get_agent_reminders(user_id)
+    except UserContextNotFoundError as e:
+        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail=str(e))
 
     return [
         AgentReminderSchema(
