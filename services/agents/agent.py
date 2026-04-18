@@ -42,6 +42,10 @@ from services.agents.tools import (
     delete_agent_reminder,
     get_skill_names,
     get_skill,
+    add,
+    subtract,
+    multiply,
+    divide,
 )
 
 # TODO: Create Agent ABC clas 
@@ -213,6 +217,10 @@ class InvestmentManagerAgent(Agent):
             delete_agent_reminder,
             get_skill_names,
             get_skill,
+            add,
+            subtract,
+            multiply,
+            divide,
         ]
         if settings.MARKET_DATA_MCP_SERVER_URL:
             market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
