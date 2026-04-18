@@ -12,10 +12,10 @@ async def main():
         await client.ping()
 
         result = await client.call_tool(
-            name="getUserConversationNotes",
+            name="getSkill",
             arguments={
-                "user_id": "orestis_user_id",
-                "limit": 1,
+                "skill_name": "analyze_stock_valuation",
+                #"limit": 1,
             }
         )
         print(result.structured_content)
