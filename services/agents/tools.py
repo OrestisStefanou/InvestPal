@@ -10,7 +10,6 @@ from langchain.tools import (
     tool,
     ToolRuntime,
 )
-from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from models.user_context import (
     UserContext,
@@ -19,6 +18,7 @@ from models.user_context import (
 from models.agent_reminder import AgentReminder
 from services.user_context import UserContextService
 from services.agent_reminder import AgentReminderService
+from services.agents.skills import SkillName, skills
 
 
 @dataclass
@@ -234,3 +234,27 @@ async def delete_agent_reminder(
         user_id=user_id,
         reminder_id=reminder_id,
     )
+
+
+@tool("getSkillNames")
+async def get_skill_names() -> list[str]:
+    """
+    Returns the available skill names. A skill is a set of instructions for performing a specific task,
+    such as analyzing a company's balance sheet.
+    """
+    return [
+        skill_name.value for skill_name in skills.keys()
+    ]
+
+
+@tool("getSkill")
+async def get_skill(skill_name: str) -> str:
+    """
+    Returns the instructions for a specific skill. Use getSkillNames to retrieve the list of available skill names.
+    """
+    try:
+        skill_enum = SkillName(skill_name)
+    except ValueError:
+        return f"Skill '{skill_name}' not found. Use getSkillNames to see available skills."
+
+    return skills[skill_enum]

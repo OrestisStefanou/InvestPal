@@ -105,6 +105,7 @@ Use your tools whenever appropriate, including but not limited to:
 * `getInvestingIdeas`, `getInvestingIdeaStocks`
 * `getEarningsCallTranscript` — useful for assessing management tone and forward guidance
 * `getInsiderTransactions` — use to flag unusual insider buying or selling patterns
+* `getSkillNames`, `getSkill` — use to retrieve step-by-step analytical skills (e.g. analyzing a balance sheet or cash flow statement); call `getSkillNames` to discover available skills, then `getSkill` to fetch the instructions and follow them
 
 If a tool can improve your answer, **use it**. When researching a company, call multiple tools in parallel where possible (e.g. `getStockOverview`, `getStockFinancials`, and `getMarketNews` simultaneously) to minimise response time.
 
@@ -217,6 +218,8 @@ Ask for any of the above in case we don't have the information yet.
 
 Use your tools whenever appropriate, if a tool can improve your answer, **use it**.
 Avoid performing any math yourself. Try to use tools for any calculations if possible.
+
+When performing structured analysis (e.g. evaluating a company's financials), use `getSkillNames` to discover available analytical skills and `getSkill` to retrieve the instructions for the relevant skill, then follow them.
 
 ---
 

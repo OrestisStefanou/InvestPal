@@ -24,6 +24,7 @@ from services.agent_reminder import (
     AgentReminderService,
 )
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
+from services.agents.skills import SkillName, skills
 from models.user_context import (
     UserContext,
     UserConversationNotes,
@@ -194,6 +195,28 @@ async def delete_agent_reminder(
         user_id=user_id,
         reminder_id=reminder_id,
     )
+
+
+@mcp_app.tool(
+    name="getSkillNames",
+    description="Returns the available skill names. A skill is a set of instructions for performing a specific task, such as analyzing a company's balance sheet.",
+)
+async def get_skill_names() -> list[str]:
+    return [skill_name.value for skill_name in skills.keys()]
+
+
+@mcp_app.tool(
+    name="getSkill",
+    description="Returns the instructions for a specific skill. Use getSkillNames to retrieve the list of available skill names.",
+)
+async def get_skill(
+    skill_name: Annotated[str, "The name of the skill to retrieve"],
+) -> str:
+    try:
+        skill_enum = SkillName(skill_name)
+    except ValueError:
+        return f"Skill '{skill_name}' not found. Use getSkillNames to see available skills."
+    return skills[skill_enum]
 
 
 @mcp_app.prompt
