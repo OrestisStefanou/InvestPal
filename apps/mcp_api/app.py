@@ -219,6 +219,40 @@ async def get_skill(
     return skills[skill_enum]
 
 
+@mcp_app.tool(name="add", description="Add two numbers together.")
+async def add(
+    a: Annotated[float, "The first operand"],
+    b: Annotated[float, "The second operand"],
+) -> float:
+    return a + b
+
+
+@mcp_app.tool(name="subtract", description="Subtract b from a.")
+async def subtract(
+    a: Annotated[float, "The first operand"],
+    b: Annotated[float, "The second operand"],
+) -> float:
+    return a - b
+
+
+@mcp_app.tool(name="multiply", description="Multiply two numbers together.")
+async def multiply(
+    a: Annotated[float, "The first operand"],
+    b: Annotated[float, "The second operand"],
+) -> float:
+    return a * b
+
+
+@mcp_app.tool(name="divide", description="Divide a by b. Returns an error if b is zero.")
+async def divide(
+    a: Annotated[float, "The first operand"],
+    b: Annotated[float, "The second operand"],
+) -> float | str:
+    if b == 0:
+        return "Error: division by zero"
+    return a / b
+
+
 @mcp_app.prompt
 def get_invstment_advisor_prompt(user_id: str) -> str:
     return INVESTMENT_ADVISOR_PROMPT.format(user_id=user_id)

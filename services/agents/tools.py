@@ -235,7 +235,6 @@ async def delete_agent_reminder(
         reminder_id=reminder_id,
     )
 
-
 @tool("getSkillNames")
 async def get_skill_names() -> list[str]:
     """
@@ -258,3 +257,30 @@ async def get_skill(skill_name: str) -> str:
         return f"Skill '{skill_name}' not found. Use getSkillNames to see available skills."
 
     return skills[skill_enum]
+
+
+class MathOperationToolInput(BaseModel):
+    a: float = Field(description="The first operand")
+    b: float = Field(description="The second operand")
+
+
+@tool("add", args_schema=MathOperationToolInput, description="Add two numbers together.")
+async def add(a: float, b: float) -> float:
+    return a + b
+
+
+@tool("subtract", args_schema=MathOperationToolInput, description="Subtract b from a.")
+async def subtract(a: float, b: float) -> float:
+    return a - b
+
+
+@tool("multiply", args_schema=MathOperationToolInput, description="Multiply two numbers together.")
+async def multiply(a: float, b: float) -> float:
+    return a * b
+
+
+@tool("divide", args_schema=MathOperationToolInput, description="Divide a by b. Returns an error if b is zero.")
+async def divide(a: float, b: float) -> float | str:
+    if b == 0:
+        return "Error: division by zero"
+    return a / b
