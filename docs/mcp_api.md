@@ -19,6 +19,7 @@ The server exposes two categories of tools and one prompt:
 | **User Context** | `updateUserContext`, `getUserContext` |
 | **Conversation Memory** | `getUserConversationNotes`, `updateUserConversationNotes` |
 | **Reminders** | `createAgentReminder`, `getAgentReminders`, `updateAgentReminder`, `deleteAgentReminder` |
+| **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults` |
 | **Prompts** | `get_invstment_advisor_prompt` |
 
 ---
@@ -399,6 +400,49 @@ await client.call_tool(
 ```
 
 **Returns**: `null` (no body). The operation succeeds silently even if the `reminder_id` does not exist.
+
+---
+
+## Agent Workflow Tools
+
+Agent Workflows enable the AI advisor to autonomously execute recurring tasks on behalf of the user using cron schedules.
+
+### `createAgentWorkflow`
+
+Create a new scheduled workflow. 
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `user_id` | string | yes | The ID of the user |
+| `name` | string | yes | A short human-readable name |
+| `instructions` | string | yes | Instructions to execute |
+| `schedule` | string | yes | Cron expression |
+
+---
+
+### `getAgentWorkflows`
+
+Retrieve all scheduled workflows for a user.
+
+---
+
+### `updateAgentWorkflow`
+
+Update an existing workflow.
+
+---
+
+### `deleteAgentWorkflow`
+
+Delete a workflow.
+
+---
+
+### `getWorkflowResults`
+
+Get the results of past workflow runs for the user, ordered by most recent first.
 
 ---
 
