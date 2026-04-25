@@ -39,6 +39,7 @@ from services.agents.tools import (
     create_agent_reminder,
     get_agent_reminders,
     update_agent_reminder,
+    update_agent_reminder,
     delete_agent_reminder,
     get_skill_names,
     get_skill,
@@ -46,7 +47,16 @@ from services.agents.tools import (
     subtract,
     multiply,
     divide,
+    AgentWorkflowToolsRuntimeContext,
+    create_agent_workflow,
+    get_agent_workflows,
+    update_agent_workflow,
+    delete_agent_workflow,
+    get_workflow_results,
 )
+from services.agent_workflows.workflow import AgentWorkflowService
+from services.agent_workflows.results import WorkflowResultService
+from services.agents.prompts import WORKFLOW_EXECUTION_AGENT_PROMPT
 
 # TODO: Create Agent ABC clas 
 
@@ -155,7 +165,11 @@ class InvestmentManagerPromptVars(TypedDict):
 
 
 @dataclass
-class InvestmentManagerRuntimeContext(UserContextToolsRuntimeContext, AgentReminderToolsRuntimeContext):
+class InvestmentManagerRuntimeContext(
+    UserContextToolsRuntimeContext,
+    AgentReminderToolsRuntimeContext,
+    AgentWorkflowToolsRuntimeContext,
+):
     pass
 
 
@@ -215,6 +229,11 @@ class InvestmentManagerAgent(Agent):
             get_agent_reminders,
             update_agent_reminder,
             delete_agent_reminder,
+            create_agent_workflow,
+            get_agent_workflows,
+            update_agent_workflow,
+            delete_agent_workflow,
+            get_workflow_results,
             get_skill_names,
             get_skill,
             add,
@@ -296,3 +315,88 @@ class UserContextMemoryManagerAgent(Agent):
             runtime_context=runtime_context,
             system_prompt_placeholder_values=system_prompt_placeholder_values,
         )
+
+
+class WorkflowExecutionAgentResponse(BaseModel):
+    response: str
+
+
+class WorkflowExecutionPromptVars(TypedDict):
+    client_profile: dict[str, Any]
+
+
+@dataclass
+class WorkflowExecutionAgentRuntimeContext(
+    UserContextToolsRuntimeContext,
+    AgentReminderToolsRuntimeContext,
+):
+    pass
+
+
+class WorkflowExecutionAgent(Agent):
+    """
+    Non-conversational agent that executes scheduled workflows autonomously.
+    Note: Callers should use the create classmethod to instantiate.
+    """
+
+    def __init__(
+        self,
+        tools: list[BaseTool],
+        middleware: list[AgentMiddleware],
+    ):
+        super().__init__(
+            tools=tools,
+            response_format=WorkflowExecutionAgentResponse,
+            system_prompt=WORKFLOW_EXECUTION_AGENT_PROMPT,
+            middleware=middleware,
+            runtime_context_schema=WorkflowExecutionAgentRuntimeContext,
+            provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
+            model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
+            temperature=settings.INVESTMENT_MANAGER_TEMPERATURE,
+        )
+
+    async def generate_response(
+        self,
+        conversation: list[Message],
+        runtime_context: WorkflowExecutionAgentRuntimeContext,
+        system_prompt_placeholder_values: WorkflowExecutionPromptVars | None = None,
+    ) -> WorkflowExecutionAgentResponse:
+        return await super().generate_response(
+            conversation=conversation,
+            runtime_context=runtime_context,
+            system_prompt_placeholder_values=system_prompt_placeholder_values,
+        )
+
+    @classmethod
+    async def create(
+        cls,
+        mcp_client: MultiServerMCPClient,
+        middleware: list[AgentMiddleware],
+    ) -> "WorkflowExecutionAgent":
+        tools = [
+            get_current_datetime,
+            get_user_conversation_notes,
+            create_agent_reminder,
+            get_agent_reminders,
+            update_agent_reminder,
+            delete_agent_reminder,
+            get_skill_names,
+            get_skill,
+            add,
+            subtract,
+            multiply,
+            divide,
+        ]
+        if settings.MARKET_DATA_MCP_SERVER_URL:
+            market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+            tools.extend(market_data_tools)
+
+        if settings.ALPACA_MCP_SERVER_URL:
+            alpaca_tools = await mcp_client.get_tools(server_name=settings.ALPACA_MCP_SERVER_NAME)
+            tools.extend(alpaca_tools)
+
+        if settings.COINBASE_MCP_SERVER_URL:
+            coinbase_tools = await mcp_client.get_tools(server_name=settings.COINBASE_MCP_SERVER_NAME)
+            tools.extend(coinbase_tools)
+
+        return cls(tools=tools, middleware=middleware)

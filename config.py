@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     SESSION_COLLECTION_NAME: str = "session"
     USER_CONVERSATION_NOTES_COLLECTION_NAME: str = "user_conversation_notes"
     AGENT_REMINDERS_COLLECTION_NAME: str = "agent_reminders"
+    AGENT_WORKFLOWS_COLLECTION_NAME: str = "agent_workflows"
+    WORKFLOW_RESULTS_COLLECTION_NAME: str = "workflow_results"
     # LLM
     LLM_PROVIDER: LLMProvider   # Default LLM provider
     LLM_MODEL: str              # Default LLM model

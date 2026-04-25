@@ -23,6 +23,14 @@ from services.agent_reminder import (
     MongoDBAgentReminderService,
     AgentReminderService,
 )
+from services.agent_workflows.workflow import (
+    MongoDBAgentWorkflowService,
+    AgentWorkflowService,
+)
+from services.agent_workflows.results import (
+    MongoDBWorkflowResultService,
+    WorkflowResultService,
+)
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from services.agents.skills import SkillName, skills
 from models.user_context import (
@@ -30,6 +38,10 @@ from models.user_context import (
     UserConversationNotes,
 )
 from models.agent_reminder import AgentReminder
+from models.agent_workflow import (
+    AgentWorkflow,
+    WorkflowResult,
+)
 
 
 logging.basicConfig(
@@ -64,6 +76,16 @@ def get_user_context_service(ctx: Context = CurrentContext()) -> UserContextServ
 def get_agent_reminder_service(ctx: Context = CurrentContext()) -> AgentReminderService:
     db_client = ctx.lifespan_context["db_client"]
     return MongoDBAgentReminderService(mongo_client=db_client)
+
+
+def get_agent_workflow_service(ctx: Context = CurrentContext()) -> AgentWorkflowService:
+    db_client = ctx.lifespan_context["db_client"]
+    return MongoDBAgentWorkflowService(mongo_client=db_client)
+
+
+def get_workflow_result_service(ctx: Context = CurrentContext()) -> WorkflowResultService:
+    db_client = ctx.lifespan_context["db_client"]
+    return MongoDBWorkflowResultService(mongo_client=db_client)
 
 
 mcp_app = FastMCP("InvestPal MCP Server", lifespan=db_lifespan)
@@ -195,6 +217,85 @@ async def delete_agent_reminder(
         user_id=user_id,
         reminder_id=reminder_id,
     )
+
+
+@mcp_app.tool(
+    name="createAgentWorkflow",
+    description="Create a new scheduled workflow for the user. The agent will execute the given instructions autonomously on the given schedule.",
+)
+async def create_agent_workflow(
+    user_id: Annotated[str, "The id of the user to create the workflow for"],
+    name: Annotated[str, "A short human-readable name for the workflow"],
+    instructions: Annotated[str, "The full instructions the agent will execute on each scheduled run"],
+    schedule: Annotated[str, "Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st"],
+    agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
+) -> AgentWorkflow:
+    return await agent_workflow_service.create_workflow(
+        user_id=user_id,
+        name=name,
+        instructions=instructions,
+        schedule=schedule,
+    )
+
+
+@mcp_app.tool(
+    name="getAgentWorkflows",
+    description="Get all scheduled workflows for the given user.",
+)
+async def get_agent_workflows(
+    user_id: Annotated[str, "The id of the user to get workflows for"],
+    agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
+) -> list[AgentWorkflow]:
+    return await agent_workflow_service.get_workflows(user_id=user_id)
+
+
+@mcp_app.tool(
+    name="updateAgentWorkflow",
+    description="Update an existing scheduled workflow. Only fields provided will be changed.",
+)
+async def update_agent_workflow(
+    user_id: Annotated[str, "The id of the user the workflow belongs to"],
+    workflow_id: Annotated[str, "The unique id of the workflow to update"],
+    name: Annotated[str | None, "New name. If omitted, existing name is kept."] = None,
+    instructions: Annotated[str | None, "New instructions. If omitted, existing instructions are kept."] = None,
+    schedule: Annotated[str | None, "New cron schedule. If omitted, existing schedule is kept."] = None,
+    status: Annotated[str | None, "New status: 'active' or 'paused'. If omitted, existing status is kept."] = None,
+    agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
+) -> AgentWorkflow:
+    return await agent_workflow_service.update_workflow(
+        user_id=user_id,
+        workflow_id=workflow_id,
+        name=name,
+        instructions=instructions,
+        schedule=schedule,
+        status=status,
+    )
+
+
+@mcp_app.tool(
+    name="deleteAgentWorkflow",
+    description="Delete a scheduled workflow for the user.",
+)
+async def delete_agent_workflow(
+    user_id: Annotated[str, "The id of the user the workflow belongs to"],
+    workflow_id: Annotated[str, "The unique id of the workflow to delete"],
+    agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
+) -> None:
+    await agent_workflow_service.delete_workflow(
+        user_id=user_id,
+        workflow_id=workflow_id,
+    )
+
+
+@mcp_app.tool(
+    name="getWorkflowResults",
+    description="Get the results of all past workflow runs for the user, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
+)
+async def get_workflow_results(
+    user_id: Annotated[str, "The id of the user to get workflow results for"],
+    workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
+) -> list[WorkflowResult]:
+    return await workflow_result_service.get_results(user_id=user_id)
 
 
 @mcp_app.tool(

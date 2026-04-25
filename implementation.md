@@ -123,8 +123,13 @@ class AgentWorkflowService(ABC):
         pass
 
     @abstractmethod
-    async def get_due_workflows(self) -> list[AgentWorkflow]:
-        """Return all active workflows where next_run_at <= now."""
+    async def claim_next_due_workflow(self) -> AgentWorkflow | None:
+        """Atomically find one due workflow, mark it as 'running', and return it."""
+        pass
+
+    @abstractmethod
+    async def release_workflow_lock(self, workflow_id: str) -> None:
+        """Release the running lock by setting status back to 'active'."""
         pass
 
     @abstractmethod
@@ -145,7 +150,7 @@ class AgentWorkflowService(ABC):
 
     @abstractmethod
     async def mark_workflow_ran(self, workflow_id: str, ran_at: str) -> None:
-        """Update last_run_at and compute next_run_at from the cron schedule."""
+        """Update last_run_at, compute next_run_at from schedule, and reset status to 'active'."""
         pass
 
 
@@ -217,15 +222,25 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         docs = await cursor.to_list(length=None)
         return [self._doc_to_model(doc) for doc in docs]
 
-    async def get_due_workflows(self) -> list[AgentWorkflow]:
+    async def claim_next_due_workflow(self) -> AgentWorkflow | None:
         now = dt.datetime.now(dt.timezone.utc).isoformat()
         collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        cursor = collection.find({
-            "status": "active",
-            "next_run_at": {"$lte": now},
-        })
-        docs = await cursor.to_list(length=None)
-        return [self._doc_to_model(doc) for doc in docs]
+        doc = await collection.find_one_and_update(
+            {
+                "status": "active",
+                "next_run_at": {"$lte": now},
+            },
+            {"$set": {"status": "running"}},
+            return_document=ReturnDocument.AFTER,
+        )
+        return self._doc_to_model(doc) if doc else None
+
+    async def release_workflow_lock(self, workflow_id: str) -> None:
+        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
+        await collection.update_one(
+            {"workflow_id": workflow_id, "status": "running"},
+            {"$set": {"status": "active"}}
+        )
 
     async def update_workflow(
         self,
@@ -280,7 +295,11 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         next_run_at = self._compute_next_run_at(doc["schedule"], base)
         await collection.update_one(
             {"workflow_id": workflow_id},
-            {"$set": {"last_run_at": ran_at, "next_run_at": next_run_at}},
+            {"$set": {
+                "last_run_at": ran_at,
+                "next_run_at": next_run_at,
+                "status": "active"
+            }},
         )
 ```
 
@@ -441,8 +460,10 @@ class WorkflowRunner:
         self._notifier = notifier
 
     async def run_due_workflows(self) -> None:
-        due_workflows = await self._workflow_service.get_due_workflows()
-        for workflow in due_workflows:
+        while True:
+            workflow = await self._workflow_service.claim_next_due_workflow()
+            if not workflow:
+                break
             try:
                 await self._run_workflow(workflow)
             except Exception:
@@ -451,6 +472,7 @@ class WorkflowRunner:
                     workflow.workflow_id,
                     workflow.user_id,
                 )
+                await self._workflow_service.release_workflow_lock(workflow.workflow_id)
 
     async def _run_workflow(self, workflow) -> None:
         user_context = await self._user_context_service.get_user_context(workflow.user_id)

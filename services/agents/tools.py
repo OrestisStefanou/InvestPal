@@ -16,8 +16,11 @@ from models.user_context import (
     UserConversationNotes,
 )
 from models.agent_reminder import AgentReminder
+from models.agent_workflow import AgentWorkflow, WorkflowResult
 from services.user_context import UserContextService
 from services.agent_reminder import AgentReminderService
+from services.agent_workflows.workflow import AgentWorkflowService
+from services.agent_workflows.results import WorkflowResultService
 from services.agents.skills import SkillName, skills
 
 
@@ -29,6 +32,12 @@ class UserContextToolsRuntimeContext:
 @dataclass
 class AgentReminderToolsRuntimeContext:
     agent_reminder_service: AgentReminderService
+
+
+@dataclass
+class AgentWorkflowToolsRuntimeContext:
+    agent_workflow_service: AgentWorkflowService
+    workflow_result_service: WorkflowResultService
 
 
 class UpdateUserContextToolInput(BaseModel):
@@ -284,3 +293,114 @@ async def divide(a: float, b: float) -> float | str:
     if b == 0:
         return "Error: division by zero"
     return a / b
+
+
+class CreateAgentWorkflowToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user to create the workflow for")
+    name: str = Field(description="A short human-readable name for the workflow")
+    instructions: str = Field(description="The full instructions the agent will execute on each scheduled run")
+    schedule: str = Field(description="Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st")
+
+
+@tool(
+    "createAgentWorkflow",
+    args_schema=CreateAgentWorkflowToolInput,
+    description="Create a new scheduled workflow for the user. The agent will execute the given instructions autonomously on the given schedule.",
+)
+async def create_agent_workflow(
+    runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
+    user_id: str,
+    name: str,
+    instructions: str,
+    schedule: str,
+) -> AgentWorkflow:
+    return await runtime.context.agent_workflow_service.create_workflow(
+        user_id=user_id,
+        name=name,
+        instructions=instructions,
+        schedule=schedule,
+    )
+
+
+@tool("getAgentWorkflows")
+async def get_agent_workflows(
+    runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
+    user_id: str,
+) -> list[AgentWorkflow]:
+    """Get all scheduled workflows for the given user.
+
+    Args:
+        user_id: The id of the user to get workflows for
+    """
+    return await runtime.context.agent_workflow_service.get_workflows(user_id=user_id)
+
+
+class UpdateAgentWorkflowToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user the workflow belongs to")
+    workflow_id: str = Field(description="The unique id of the workflow to update")
+    name: str | None = Field(default=None, description="New name. If omitted, existing name is kept.")
+    instructions: str | None = Field(default=None, description="New instructions. If omitted, existing instructions are kept.")
+    schedule: str | None = Field(default=None, description="New cron schedule. If omitted, existing schedule is kept.")
+    status: str | None = Field(default=None, description="New status: 'active' or 'paused'. If omitted, existing status is kept.")
+
+
+@tool(
+    "updateAgentWorkflow",
+    args_schema=UpdateAgentWorkflowToolInput,
+    description="Update an existing scheduled workflow. Only fields provided will be changed.",
+)
+async def update_agent_workflow(
+    runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
+    user_id: str,
+    workflow_id: str,
+    name: str | None = None,
+    instructions: str | None = None,
+    schedule: str | None = None,
+    status: str | None = None,
+) -> AgentWorkflow:
+    return await runtime.context.agent_workflow_service.update_workflow(
+        user_id=user_id,
+        workflow_id=workflow_id,
+        name=name,
+        instructions=instructions,
+        schedule=schedule,
+        status=status,
+    )
+
+
+class DeleteAgentWorkflowToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user the workflow belongs to")
+    workflow_id: str = Field(description="The unique id of the workflow to delete")
+
+
+@tool(
+    "deleteAgentWorkflow",
+    args_schema=DeleteAgentWorkflowToolInput,
+    description="Delete a scheduled workflow for the user.",
+)
+async def delete_agent_workflow(
+    runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
+    user_id: str,
+    workflow_id: str,
+) -> None:
+    await runtime.context.agent_workflow_service.delete_workflow(
+        user_id=user_id,
+        workflow_id=workflow_id,
+    )
+
+
+class GetWorkflowResultsToolInput(BaseModel):
+    user_id: str = Field(description="The id of the user to get workflow results for")
+
+
+# TODO: Add a limit here
+@tool(
+    "getWorkflowResults",
+    args_schema=GetWorkflowResultsToolInput,
+    description="Get the results of all past workflow runs for the user, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
+)
+async def get_workflow_results(
+    runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
+    user_id: str,
+) -> list[WorkflowResult]:
+    return await runtime.context.workflow_result_service.get_results(user_id=user_id)

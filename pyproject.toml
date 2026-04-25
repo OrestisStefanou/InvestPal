@@ -15,4 +15,5 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.14",
     "langchain-anthropic>=1.2.0",
     "fastmcp>=3.0.0b2",
+    "croniter>=6.2.2",
 ]
