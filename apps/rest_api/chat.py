@@ -19,7 +19,7 @@ from services.session import SessionNotFoundError
 from services.chat import ChatService
 from dependencies import get_chat_service
 
-router = APIRouter()
+router = APIRouter(tags=["Chat"])
 
 
 class ChatRequest(BaseModel):

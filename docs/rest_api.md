@@ -18,6 +18,7 @@ The InvestPal REST API is the primary integration point for client applications.
 | **Session** | Create and retrieve conversation sessions |
 | **Chat** | Send messages to the AI investment advisor and receive responses |
 | **Agent Reminders** | Retrieve reminders created by the agent for a user |
+| **Agent Workflows** | Manage scheduled, autonomous workflows and retrieve their execution results |
 
 ### Typical integration flow
 
@@ -399,6 +400,83 @@ The `due_date` field is in `YYYY-MM-DD` format and may be `null` if no due date 
 |---|---|
 | `404 Not Found` | No user context exists for the given `user_id` |
 | `500 Internal Server Error` | Unexpected server error |
+
+---
+
+## Agent Workflows Service
+
+Scheduled agent workflows allow the AI to autonomously execute instructions on a predefined schedule.
+
+### Create Workflow
+
+`POST /workflows`
+
+Create a new scheduled workflow.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `user_id` | string | yes | The ID of the user who owns this workflow |
+| `name` | string | yes | A human-readable name for the workflow |
+| `instructions` | string | yes | Instructions the agent should execute |
+| `schedule` | string | yes | Cron expression (e.g. `0 0 * * 5` for every Friday) |
+
+**Response** `201 Created`
+
+```json
+{
+  "workflow_id": "wf-1234",
+  "user_id": "user-abc123",
+  "name": "Weekly Portfolio Review",
+  "instructions": "Review my portfolio and email me a summary",
+  "schedule": "0 0 * * 5",
+  "status": "active",
+  "created_at": "2024-01-15T10:35:00.000Z",
+  "last_run_at": null,
+  "next_run_at": "2024-01-19T00:00:00.000Z"
+}
+```
+
+---
+
+### Get Workflows
+
+`GET /workflows/{user_id}`
+
+Retrieve all workflows for a user.
+
+---
+
+### Update Workflow
+
+`PATCH /workflows/{user_id}/{workflow_id}`
+
+Update the fields of a workflow.
+
+---
+
+### Delete Workflow
+
+`DELETE /workflows/{user_id}/{workflow_id}`
+
+Delete a workflow.
+
+---
+
+### Check and Run Workflows
+
+`POST /workflows/check-and-run`
+
+Heartbeat endpoint to check for and execute due workflows. Intended to be called by an external cron job.
+
+---
+
+### Get Workflow Results
+
+`GET /workflow_results/{user_id}`
+
+Retrieve the results of executed workflows for a user.
 
 ---
 

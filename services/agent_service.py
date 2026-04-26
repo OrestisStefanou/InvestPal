@@ -11,6 +11,8 @@ from services.user_context import (
     UserContextNotFoundError,
 )
 from services.agent_reminder import AgentReminderService
+from services.agent_workflows.workflow import AgentWorkflowService
+from services.agent_workflows.results import WorkflowResultService
 from services.agents.agent import (
     InvestmentManagerAgent,
     InvestmentManagerPromptVars,
@@ -49,12 +51,15 @@ class InvestmentManagerAgentService(TextAgentService):
     management happen seamlessly.
     """
 
+
     def __init__(
         self,
         investment_manager_agent: InvestmentManagerAgent,
         user_context_memory_manager_agent: UserContextMemoryManagerAgent,
         user_context_service: UserContextService,
         agent_reminder_service: AgentReminderService,
+        agent_workflow_service: AgentWorkflowService,
+        workflow_result_service: WorkflowResultService,
     ):
         """
         Initializes the InvestmentManagerAgentService.
@@ -69,6 +74,8 @@ class InvestmentManagerAgentService(TextAgentService):
         self._user_context_memory_manager_agent = user_context_memory_manager_agent
         self._user_context_service = user_context_service
         self._agent_reminder_service = agent_reminder_service
+        self._agent_workflow_service = agent_workflow_service
+        self._workflow_result_service = workflow_result_service
     
     async def generate_agent_text_response(
         self,
@@ -98,6 +105,8 @@ class InvestmentManagerAgentService(TextAgentService):
             runtime_context=InvestmentManagerRuntimeContext(
                 user_context_service=self._user_context_service,
                 agent_reminder_service=self._agent_reminder_service,
+                agent_workflow_service=self._agent_workflow_service,
+                workflow_result_service=self._workflow_result_service,
             ),
             system_prompt_placeholder_values=InvestmentManagerPromptVars(
                 client_profile=user_context.model_dump(),

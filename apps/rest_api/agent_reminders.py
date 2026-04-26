@@ -12,7 +12,7 @@ from services.user_context import UserContextNotFoundError
 from dependencies import get_agent_reminder_service
 
 
-router = APIRouter()
+router = APIRouter(tags=["Agent Reminders"])
 
 
 class AgentReminderSchema(BaseModel):

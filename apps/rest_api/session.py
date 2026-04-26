@@ -16,7 +16,7 @@ from services.user_context import  UserContextNotFoundError
 from dependencies import get_session_service
 
 
-router = APIRouter()
+router = APIRouter(tags=["Sessions"])
 
 
 class CreateSessionRequest(BaseModel):

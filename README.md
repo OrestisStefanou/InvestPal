@@ -8,6 +8,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 - **Session Management**: Persistent, per-user conversation history stored in MongoDB.
 - **Conversation Memory**: Agent recalls key details from past sessions via a dedicated notes system.
 - **Reminders**: Agent can create and manage time-sensitive action items for users across sessions.
+- **Agent Workflows**: Run scheduled, autonomous workflows on behalf of users (powered by cron).
 - **User Context**: Store and update user profiles to inform personalized advice.
 - **MCP Integration**: Extensible tool system for market data, stock profiles, forecasts, and more.
 - **Alpaca Markets Integration**: Execute orders, read portfolio holdings, and manage positions.
@@ -122,6 +123,10 @@ GET    /session/{session_id}   Get session with full message history
 GET    /sessions/{user_id}     List all sessions for a user
 
 POST   /chat                   Send a message and receive an AI response
+
+POST   /workflows              Create a new scheduled workflow
+GET    /workflows/{user_id}    List scheduled workflows
+POST   /workflows/check-and-run Execute due workflows (heartbeat)
 ```
 
 ### MCP tools quick reference
@@ -136,6 +141,11 @@ POST   /chat                   Send a message and receive an AI response
 | `getAgentReminders` | List all reminders for a user |
 | `updateAgentReminder` | Update a reminder's description or due date |
 | `deleteAgentReminder` | Delete a reminder |
+| `createAgentWorkflow` | Create a new scheduled workflow for a user |
+| `getAgentWorkflows` | List all workflows for a user |
+| `updateAgentWorkflow` | Update an existing workflow |
+| `deleteAgentWorkflow` | Delete a workflow |
+| `getWorkflowResults` | Get results of past workflow runs |
 
 ## Project Structure
 
