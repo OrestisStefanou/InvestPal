@@ -35,8 +35,16 @@ class Settings(BaseSettings):
     COINBASE_MCP_SERVER_URL: str | None = None
     COINBASE_MCP_SERVER_NAME: str = "coinbase_markets_tools"
 
-    # REST API APP
+    # APP
     CONVERSATION_MESSAGES_LIMIT: int = 15
+    TOKEN_INTENSIVE_TOOLS: list[str] = [
+        "getSkill",
+        "getMarketNews",
+        "getStockFinancials",
+        "getEarningsCallTranscript",
+        "getInsiderTransactions",
+        "getCompanyKpiMetrics",
+    ]
     
     INVESTMENT_MANAGER_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC
     INVESTMENT_MANAGER_LLM_MODEL: str = "claude-sonnet-4-6"
@@ -45,6 +53,12 @@ class Settings(BaseSettings):
     USER_CONTEXT_MEMORY_MANAGER_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC
     USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL: str = "claude-haiku-4-5"
     USER_CONTEXT_MEMORY_MANAGER_TEMPERATURE: float = 0.1
+
+    # TODO: Add a section here for the workflow execution agent
+    WORKFLOW_EXECUTION_AGENT_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC
+    WORKFLOW_EXECUTION_AGENT_LLM_MODEL: str = "claude-sonnet-4-6"
+    WORKFLOW_EXECUTION_AGENT_TEMPERATURE: float = 0.1
+
 
     # MCP APP
     MCP_APP_SERVER_PORT: int = 9000

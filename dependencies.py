@@ -16,6 +16,7 @@ from services.agents.agent import (
 from services.agents.middleware import (
     ToolErrorMiddleware,
     ToolLoggingMiddleware,
+    ToolTokenRateLimitMiddleware,
 )
 from services.agent_service import InvestmentManagerAgentService
 from services.session import (
@@ -155,7 +156,11 @@ async def get_workflow_runner(
 ) -> WorkflowRunner:
     agent = await WorkflowExecutionAgent.create(
         mcp_client=mcp_client,
-        middleware=[ToolErrorMiddleware(), ToolLoggingMiddleware()],
+        middleware=[
+            ToolErrorMiddleware(),
+            ToolLoggingMiddleware(),
+            ToolTokenRateLimitMiddleware(),
+        ],
     )
     return WorkflowRunner(
         workflow_execution_agent=agent,

@@ -350,9 +350,9 @@ class WorkflowExecutionAgent(Agent):
             system_prompt=WORKFLOW_EXECUTION_AGENT_PROMPT,
             middleware=middleware,
             runtime_context_schema=WorkflowExecutionAgentRuntimeContext,
-            provider=settings.INVESTMENT_MANAGER_LLM_PROVIDER,
-            model_name=settings.INVESTMENT_MANAGER_LLM_MODEL,
-            temperature=settings.INVESTMENT_MANAGER_TEMPERATURE,
+            provider=settings.WORKFLOW_EXECUTION_AGENT_LLM_PROVIDER,
+            model_name=settings.WORKFLOW_EXECUTION_AGENT_LLM_MODEL,
+            temperature=settings.WORKFLOW_EXECUTION_AGENT_TEMPERATURE,
         )
 
     async def generate_response(
