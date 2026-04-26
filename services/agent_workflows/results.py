@@ -21,7 +21,7 @@ class WorkflowResultService(ABC):
         pass
 
     @abstractmethod
-    async def get_results(self, user_id: str) -> list[WorkflowResult]:
+    async def get_results(self, user_id: str, limit: int | None = 10) -> list[WorkflowResult]:
         pass
 
 
@@ -69,8 +69,8 @@ class MongoDBWorkflowResultService(WorkflowResultService):
         await collection.insert_one(doc.model_dump())
         return self._doc_to_model(doc.model_dump())
 
-    async def get_results(self, user_id: str) -> list[WorkflowResult]:
+    async def get_results(self, user_id: str, limit: int | None = 10) -> list[WorkflowResult]:
         collection = self.db[settings.WORKFLOW_RESULTS_COLLECTION_NAME]
         cursor = collection.find({"user_id": user_id}).sort("ran_at", -1)
-        docs = await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=limit)
         return [self._doc_to_model(doc) for doc in docs]

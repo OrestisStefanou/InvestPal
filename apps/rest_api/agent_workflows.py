@@ -126,7 +126,8 @@ async def check_and_run_workflows(
 @router.get("/workflow_results/{user_id}", response_model=list[WorkflowResultSchema])
 async def get_workflow_results(
     user_id: str,
+    limit: int = 10,
     service: WorkflowResultService = Depends(get_workflow_result_service),
 ):
-    results = await service.get_results(user_id=user_id)
+    results = await service.get_results(user_id=user_id, limit=limit)
     return [WorkflowResultSchema(**r.model_dump()) for r in results]

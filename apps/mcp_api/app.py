@@ -294,9 +294,10 @@ async def delete_agent_workflow(
 )
 async def get_workflow_results(
     user_id: Annotated[str, "The id of the user to get workflow results for"],
+    limit: Annotated[int | None, "Maximum number of results to return. Defaults to 10. Pass None to return all."] = 10,
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
 ) -> list[WorkflowResult]:
-    return await workflow_result_service.get_results(user_id=user_id)
+    return await workflow_result_service.get_results(user_id=user_id, limit=limit)
 
 
 @mcp_app.tool(

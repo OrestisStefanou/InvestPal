@@ -391,9 +391,12 @@ async def delete_agent_workflow(
 
 class GetWorkflowResultsToolInput(BaseModel):
     user_id: str = Field(description="The id of the user to get workflow results for")
+    limit: int | None = Field(
+        default=10,
+        description="Maximum number of results to return. Defaults to 10. Pass None to return all results.",
+    )
 
 
-# TODO: Add a limit here
 @tool(
     "getWorkflowResults",
     args_schema=GetWorkflowResultsToolInput,
@@ -402,5 +405,6 @@ class GetWorkflowResultsToolInput(BaseModel):
 async def get_workflow_results(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
     user_id: str,
+    limit: int | None = 10,
 ) -> list[WorkflowResult]:
-    return await runtime.context.workflow_result_service.get_results(user_id=user_id)
+    return await runtime.context.workflow_result_service.get_results(user_id=user_id, limit=limit)
