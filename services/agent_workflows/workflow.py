@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pymongo import AsyncMongoClient, ReturnDocument
 
 from config import settings
-from models.agent_workflow import AgentWorkflow
+from models.agent_workflow import AgentWorkflow, WorkflowStatus
 from services.user_context import UserContextNotFoundError
 
 
@@ -31,7 +31,7 @@ class AgentWorkflowService(ABC):
         pass
 
     @abstractmethod
-    async def claim_next_due_workflow(self) -> AgentWorkflow | None:
+    async def claim_next_due_workflow(self, exclude_ids: list[str] | None = None) -> AgentWorkflow | None:
         """Atomically find one due workflow, mark it as 'running', and return it."""
         pass
 
@@ -68,7 +68,7 @@ class AgentWorkflowMongoDoc(BaseModel):
     name: str
     instructions: str
     schedule: str
-    status: str
+    status: WorkflowStatus
     created_at: str
     last_run_at: str | None = None
     next_run_at: str | None = None
@@ -116,7 +116,7 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
             name=name,
             instructions=instructions,
             schedule=schedule,
-            status="active",
+            status=WorkflowStatus.ACTIVE,
             created_at=now.isoformat(),
             next_run_at=next_run_at,
         )
@@ -130,15 +130,19 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         docs = await cursor.to_list(length=None)
         return [self._doc_to_model(doc) for doc in docs]
 
-    async def claim_next_due_workflow(self) -> AgentWorkflow | None:
+    async def claim_next_due_workflow(self, exclude_ids: list[str] | None = None) -> AgentWorkflow | None:
         now = dt.datetime.now(dt.timezone.utc).isoformat()
         collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
+        query = {
+            "status": WorkflowStatus.ACTIVE,
+            "next_run_at": {"$lte": now},
+        }
+        if exclude_ids:
+            query["workflow_id"] = {"$nin": exclude_ids}
+
         doc = await collection.find_one_and_update(
-            {
-                "status": "active",
-                "next_run_at": {"$lte": now},
-            },
-            {"$set": {"status": "running"}},
+            query,
+            {"$set": {"status": WorkflowStatus.RUNNING}},
             return_document=ReturnDocument.AFTER,
         )
         return self._doc_to_model(doc) if doc else None
@@ -146,8 +150,8 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
     async def release_workflow_lock(self, workflow_id: str) -> None:
         collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
         await collection.update_one(
-            {"workflow_id": workflow_id, "status": "running"},
-            {"$set": {"status": "active"}}
+            {"workflow_id": workflow_id, "status": WorkflowStatus.RUNNING},
+            {"$set": {"status": WorkflowStatus.ACTIVE}}
         )
 
     async def update_workflow(
@@ -206,6 +210,6 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
             {"$set": {
                 "last_run_at": ran_at,
                 "next_run_at": next_run_at,
-                "status": "active"
+                "status": WorkflowStatus.ACTIVE
             }},
         )

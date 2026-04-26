@@ -35,19 +35,22 @@ class WorkflowRunner:
         self._notifier = notifier
 
     async def run_due_workflows(self) -> None:
+        failed_workflows = []
         while True:
-            workflow = await self._workflow_service.claim_next_due_workflow()
+            workflow = await self._workflow_service.claim_next_due_workflow(exclude_ids=failed_workflows)
             if not workflow:
                 break
             try:
                 await self._run_workflow(workflow)
-            except Exception:
+            except Exception as e:
                 logger.exception(
-                    "Failed to run workflow %s for user %s",
+                    "Failed to run workflow %s for user %s: %s",
                     workflow.workflow_id,
                     workflow.user_id,
+                    str(e),
                 )
                 await self._workflow_service.release_workflow_lock(workflow.workflow_id)
+                failed_workflows.append(workflow.workflow_id)
 
     async def _run_workflow(self, workflow) -> None:
         user_context = await self._user_context_service.get_user_context(workflow.user_id)

@@ -41,6 +41,7 @@ from models.agent_reminder import AgentReminder
 from models.agent_workflow import (
     AgentWorkflow,
     WorkflowResult,
+    WorkflowStatus,
 )
 
 
@@ -259,7 +260,7 @@ async def update_agent_workflow(
     name: Annotated[str | None, "New name. If omitted, existing name is kept."] = None,
     instructions: Annotated[str | None, "New instructions. If omitted, existing instructions are kept."] = None,
     schedule: Annotated[str | None, "New cron schedule. If omitted, existing schedule is kept."] = None,
-    status: Annotated[str | None, "New status: 'active' or 'paused'. If omitted, existing status is kept."] = None,
+    status: Annotated[WorkflowStatus | None, "New status: 'active' or 'paused'. If omitted, existing status is kept."] = None,
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.update_workflow(

@@ -15,7 +15,7 @@ from services.user_context import (
 )
 
 
-router = APIRouter()
+router = APIRouter(tags=["User Context"])
 
 
 class UserContextSchema(BaseModel):

@@ -16,7 +16,7 @@ from models.user_context import (
     UserConversationNotes,
 )
 from models.agent_reminder import AgentReminder
-from models.agent_workflow import AgentWorkflow, WorkflowResult
+from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
 from services.user_context import UserContextService
 from services.agent_reminder import AgentReminderService
 from services.agent_workflows.workflow import AgentWorkflowService
@@ -341,7 +341,7 @@ class UpdateAgentWorkflowToolInput(BaseModel):
     name: str | None = Field(default=None, description="New name. If omitted, existing name is kept.")
     instructions: str | None = Field(default=None, description="New instructions. If omitted, existing instructions are kept.")
     schedule: str | None = Field(default=None, description="New cron schedule. If omitted, existing schedule is kept.")
-    status: str | None = Field(default=None, description="New status: 'active' or 'paused'. If omitted, existing status is kept.")
+    status: WorkflowStatus | None = Field(default=None, description="New status: 'active' or 'paused'. If omitted, existing status is kept.")
 
 
 @tool(
@@ -356,7 +356,7 @@ async def update_agent_workflow(
     name: str | None = None,
     instructions: str | None = None,
     schedule: str | None = None,
-    status: str | None = None,
+    status: WorkflowStatus | None = None,
 ) -> AgentWorkflow:
     return await runtime.context.agent_workflow_service.update_workflow(
         user_id=user_id,

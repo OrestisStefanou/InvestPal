@@ -1,4 +1,11 @@
+from enum import Enum
 from pydantic import BaseModel, Field
+
+
+class WorkflowStatus(str, Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    RUNNING = "running"
 
 
 class AgentWorkflow(BaseModel):
@@ -7,7 +14,7 @@ class AgentWorkflow(BaseModel):
     name: str = Field(description="Human-readable name for the workflow")
     instructions: str = Field(description="The instructions the agent will execute on each run")
     schedule: str = Field(description="Cron expression, e.g. '0 0 1 * *' for monthly")
-    status: str = Field(description="'active' or 'paused'")
+    status: WorkflowStatus = Field(description="Workflow status")
     created_at: str = Field(description="ISO 8601 creation timestamp")
     last_run_at: str | None = Field(default=None, description="ISO 8601 timestamp of last run")
     next_run_at: str | None = Field(default=None, description="ISO 8601 timestamp of next scheduled run")
