@@ -329,6 +329,7 @@ class WorkflowExecutionPromptVars(TypedDict):
 
 @dataclass
 class WorkflowExecutionAgentRuntimeContext(
+    UserContextToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
 ):
     pass
@@ -376,6 +377,7 @@ class WorkflowExecutionAgent(Agent):
     ) -> "WorkflowExecutionAgent":
         tools = [
             get_current_datetime,
+            get_user_conversation_notes,
             get_workflow_results,
             get_skill_names,
             get_skill,
