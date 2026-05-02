@@ -37,6 +37,10 @@ class AgentReminderToolsRuntimeContext:
 @dataclass
 class AgentWorkflowToolsRuntimeContext:
     agent_workflow_service: AgentWorkflowService
+
+
+@dataclass
+class WorkflowResultsToolRuntimeContext:
     workflow_result_service: WorkflowResultService
 
 
@@ -305,7 +309,9 @@ class CreateAgentWorkflowToolInput(BaseModel):
 @tool(
     "createAgentWorkflow",
     args_schema=CreateAgentWorkflowToolInput,
-    description="Create a new scheduled workflow for the user. The agent will execute the given instructions autonomously on the given schedule.",
+    description="""Create a new scheduled workflow for the user. An agent will execute the given instructions autonomously on the given schedule.
+    Don't add any user information in the instruction of the workflow, the agent that will execute it has access to the user profile of the user.
+    """,
 )
 async def create_agent_workflow(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
@@ -403,7 +409,7 @@ class GetWorkflowResultsToolInput(BaseModel):
     description="Get the results of all past workflow runs for the user, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
 )
 async def get_workflow_results(
-    runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
+    runtime: ToolRuntime[WorkflowResultsToolRuntimeContext],
     user_id: str,
     limit: int | None = 10,
 ) -> list[WorkflowResult]:

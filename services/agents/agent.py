@@ -32,6 +32,7 @@ from services.agents.tools import (
     UserContextToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
+    WorkflowResultsToolRuntimeContext,
     update_user_context,
     get_user_context,
     get_current_datetime,
@@ -169,6 +170,7 @@ class InvestmentManagerRuntimeContext(
     UserContextToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
+    WorkflowResultsToolRuntimeContext,
 ):
     pass
 
@@ -327,9 +329,7 @@ class WorkflowExecutionPromptVars(TypedDict):
 
 @dataclass
 class WorkflowExecutionAgentRuntimeContext(
-    UserContextToolsRuntimeContext,
-    AgentReminderToolsRuntimeContext,
-    AgentWorkflowToolsRuntimeContext,
+    WorkflowResultsToolRuntimeContext,
 ):
     pass
 
@@ -376,11 +376,6 @@ class WorkflowExecutionAgent(Agent):
     ) -> "WorkflowExecutionAgent":
         tools = [
             get_current_datetime,
-            get_user_conversation_notes,
-            create_agent_reminder,
-            get_agent_reminders,
-            update_agent_reminder,
-            delete_agent_reminder,
             get_workflow_results,
             get_skill_names,
             get_skill,

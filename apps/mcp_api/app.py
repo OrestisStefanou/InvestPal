@@ -231,7 +231,9 @@ async def delete_agent_reminder(
 
 @mcp_app.tool(
     name="createAgentWorkflow",
-    description="Create a new scheduled workflow for the user. The agent will execute the given instructions autonomously on the given schedule.",
+    description="""Create a new scheduled workflow for the user. An agent will execute the given instructions autonomously on the given schedule.
+    Don't add any user information in the instruction of the workflow, the agent that will execute it has access to the user profile of the user.
+    """
 )
 async def create_agent_workflow(
     user_id: Annotated[str, "The id of the user to create the workflow for"],
