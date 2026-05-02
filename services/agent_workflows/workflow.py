@@ -21,7 +21,7 @@ class AgentWorkflowService(ABC):
         self,
         user_id: str,
         name: str,
-        instructions: str,
+        description: str,
         schedule: str,
     ) -> AgentWorkflow:
         pass
@@ -46,7 +46,7 @@ class AgentWorkflowService(ABC):
         user_id: str,
         workflow_id: str,
         name: str | None = None,
-        instructions: str | None = None,
+        description: str | None = None,
         schedule: str | None = None,
         status: str | None = None,
     ) -> AgentWorkflow:
@@ -66,7 +66,7 @@ class AgentWorkflowMongoDoc(BaseModel):
     workflow_id: str
     user_id: str
     name: str
-    instructions: str
+    description: str
     schedule: str
     status: WorkflowStatus
     created_at: str
@@ -87,7 +87,7 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
             workflow_id=doc["workflow_id"],
             user_id=doc["user_id"],
             name=doc["name"],
-            instructions=doc["instructions"],
+            description=doc["description"],
             schedule=doc["schedule"],
             status=doc["status"],
             created_at=doc["created_at"],
@@ -99,7 +99,7 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         self,
         user_id: str,
         name: str,
-        instructions: str,
+        description: str,
         schedule: str,
     ) -> AgentWorkflow:
         user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
@@ -114,7 +114,7 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
             workflow_id=workflow_id,
             user_id=user_id,
             name=name,
-            instructions=instructions,
+            description=description,
             schedule=schedule,
             status=WorkflowStatus.ACTIVE,
             created_at=now.isoformat(),
@@ -159,7 +159,7 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         user_id: str,
         workflow_id: str,
         name: str | None = None,
-        instructions: str | None = None,
+        description: str | None = None,
         schedule: str | None = None,
         status: str | None = None,
     ) -> AgentWorkflow:
@@ -167,8 +167,8 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         update_data: dict = {}
         if name is not None:
             update_data["name"] = name
-        if instructions is not None:
-            update_data["instructions"] = instructions
+        if description is not None:
+            update_data["description"] = description
         if status is not None:
             update_data["status"] = status
         if schedule is not None:

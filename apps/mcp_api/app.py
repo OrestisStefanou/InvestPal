@@ -231,21 +231,22 @@ async def delete_agent_reminder(
 
 @mcp_app.tool(
     name="createAgentWorkflow",
-    description="""Create a new scheduled workflow for the user. An agent will execute the given instructions autonomously on the given schedule.
-    Don't add any user information in the instruction of the workflow, the agent that will execute it has access to the user profile of the user.
+    description="""Create a new scheduled workflow for the user. An agent will execute the description autonomously on the given schedule.
+    The description must state only WHAT goal to achieve — not HOW. Do not include tool names, user data, or implementation steps.
+    The execution agent has its own tools and will independently access the user's profile.
     """
 )
 async def create_agent_workflow(
     user_id: Annotated[str, "The id of the user to create the workflow for"],
     name: Annotated[str, "A short human-readable name for the workflow"],
-    instructions: Annotated[str, "The full instructions the agent will execute on each scheduled run"],
+    description: Annotated[str, "Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent."],
     schedule: Annotated[str, "Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st"],
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.create_workflow(
         user_id=user_id,
         name=name,
-        instructions=instructions,
+        description=description,
         schedule=schedule,
     )
 
@@ -269,7 +270,7 @@ async def update_agent_workflow(
     user_id: Annotated[str, "The id of the user the workflow belongs to"],
     workflow_id: Annotated[str, "The unique id of the workflow to update"],
     name: Annotated[str | None, "New name. If omitted, existing name is kept."] = None,
-    instructions: Annotated[str | None, "New instructions. If omitted, existing instructions are kept."] = None,
+    description: Annotated[str | None, "Updated goal-only description. No tool names, no user data, no implementation steps. If omitted, existing description is kept."] = None,
     schedule: Annotated[str | None, "New cron schedule. If omitted, existing schedule is kept."] = None,
     status: Annotated[WorkflowStatus | None, "New status: 'active' or 'paused'. If omitted, existing status is kept."] = None,
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
@@ -278,7 +279,7 @@ async def update_agent_workflow(
         user_id=user_id,
         workflow_id=workflow_id,
         name=name,
-        instructions=instructions,
+        description=description,
         schedule=schedule,
         status=status,
     )

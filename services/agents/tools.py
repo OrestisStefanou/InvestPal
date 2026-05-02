@@ -302,28 +302,29 @@ async def divide(a: float, b: float) -> float | str:
 class CreateAgentWorkflowToolInput(BaseModel):
     user_id: str = Field(description="The id of the user to create the workflow for")
     name: str = Field(description="A short human-readable name for the workflow")
-    instructions: str = Field(description="The full instructions the agent will execute on each scheduled run")
+    description: str = Field(description="Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent.")
     schedule: str = Field(description="Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st")
 
 
 @tool(
     "createAgentWorkflow",
     args_schema=CreateAgentWorkflowToolInput,
-    description="""Create a new scheduled workflow for the user. An agent will execute the given instructions autonomously on the given schedule.
-    Don't add any user information in the instruction of the workflow, the agent that will execute it has access to the user profile of the user.
+    description="""Create a new scheduled workflow for the user. An agent will execute the description autonomously on the given schedule.
+    The description must state only WHAT goal to achieve — not HOW. Do not include tool names, user data, or implementation steps.
+    The execution agent has its own tools and will independently access the user's profile.
     """,
 )
 async def create_agent_workflow(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
     user_id: str,
     name: str,
-    instructions: str,
+    description: str,
     schedule: str,
 ) -> AgentWorkflow:
     return await runtime.context.agent_workflow_service.create_workflow(
         user_id=user_id,
         name=name,
-        instructions=instructions,
+        description=description,
         schedule=schedule,
     )
 
@@ -345,7 +346,7 @@ class UpdateAgentWorkflowToolInput(BaseModel):
     user_id: str = Field(description="The id of the user the workflow belongs to")
     workflow_id: str = Field(description="The unique id of the workflow to update")
     name: str | None = Field(default=None, description="New name. If omitted, existing name is kept.")
-    instructions: str | None = Field(default=None, description="New instructions. If omitted, existing instructions are kept.")
+    description: str | None = Field(default=None, description="Updated goal-only description. No tool names, no user data, no implementation steps. If omitted, existing description is kept.")
     schedule: str | None = Field(default=None, description="New cron schedule. If omitted, existing schedule is kept.")
     status: WorkflowStatus | None = Field(default=None, description="New status: 'active' or 'paused'. If omitted, existing status is kept.")
 
@@ -360,7 +361,7 @@ async def update_agent_workflow(
     user_id: str,
     workflow_id: str,
     name: str | None = None,
-    instructions: str | None = None,
+    description: str | None = None,
     schedule: str | None = None,
     status: WorkflowStatus | None = None,
 ) -> AgentWorkflow:
@@ -368,7 +369,7 @@ async def update_agent_workflow(
         user_id=user_id,
         workflow_id=workflow_id,
         name=name,
-        instructions=instructions,
+        description=description,
         schedule=schedule,
         status=status,
     )

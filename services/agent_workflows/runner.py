@@ -57,8 +57,8 @@ class WorkflowRunner:
         if not user_context:
             raise UserContextNotFoundError(f"User context not found for user_id: {workflow.user_id}")
 
-        # Single-turn synthetic conversation — no history, just the workflow instructions
-        conversation = [Message(role=MessageRole.USER, content=workflow.instructions)]
+        # Single-turn synthetic conversation — no history, just the workflow description
+        conversation = [Message(role=MessageRole.USER, content=workflow.description)]
 
         runtime_context = WorkflowExecutionAgentRuntimeContext(
             workflow_result_service=self._workflow_result_service,
