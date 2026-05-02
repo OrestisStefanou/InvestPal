@@ -1,6 +1,20 @@
 analyze_portfolio_risk_skill = """
 ## CORE LOGIC
 
+### What Risk Means
+
+Risk is NOT volatility. A stock that drops 50% while its intrinsic value remains
+unchanged has become LESS risky -- the margin of safety has increased. Risk is:
+
+1. **Permanent loss of capital** -- buying above intrinsic value, or holding a business
+   whose intrinsic value is declining irreversibly
+2. **Being forced to sell at the wrong time** -- through leverage, liquidity needs,
+   or psychological pressure
+
+Price fluctuations are only dangerous if they force action or reflect genuine
+business deterioration. For a patient investor with a sound process, Mr. Market's
+mood swings are opportunities, not threats.
+
 ### Step 0: Gather Portfolio Data
 
 Retrieve all current holdings including:
@@ -10,150 +24,183 @@ Retrieve all current holdings including:
 
 Compute:
 * Total portfolio value
-* Weight of each position (position value / total value × 100)
+* Weight of each position (position value / total value x 100)
 
 ---
 
 ## RISK DIMENSIONS
 
-Assess the portfolio across the following risk dimensions in order:
+Assess the portfolio across the following dimensions, ordered by importance:
 
 ---
 
-### 1. CONCENTRATION RISK
+### 1. MARGIN OF SAFETY RISK (Most Important)
 
-**Position-level concentration:**
+The margin of safety is the gap between what you paid and what the business is worth.
+It is the single most important measure of investment risk.
 
+**For each significant holding, assess:**
+
+* Was the position purchased at a discount to estimated intrinsic value?
+* Has the intrinsic value changed since purchase (business improvement or deterioration)?
+* What is the current margin of safety (estimated intrinsic value vs current market price)?
+
+**Classification:**
+
+* Holdings with wide margin of safety (>30% below intrinsic value) → low risk
+* Holdings near fair value → moderate risk
+* Holdings above estimated intrinsic value → high risk -- the primary source of
+  permanent capital loss
+
+**Portfolio-level assessment:**
+
+* What fraction of the portfolio was purchased with an adequate margin of safety?
+* Are there positions that were once cheap but have appreciated beyond fair value?
+  These should be candidates for trimming.
+
+Note: If margin of safety cannot be assessed for a holding (insufficient data), flag
+it as an unquantified risk rather than ignoring it.
+
+---
+
+### 2. BUSINESS QUALITY RISK
+
+Not all businesses carry equal risk. The quality of the underlying business determines
+how likely the intrinsic value is to hold up or grow over time.
+
+**Franchise businesses** (wide moat, EPV >> asset value):
+* Lower risk of permanent impairment
+* Earnings protected by barriers to entry
+* But: franchise erosion ("fade") is a real risk -- assess durability
+* Dying franchises destroy value far more severely than dying competitive businesses
+
+**Competitive businesses** (no moat, EPV ≈ asset value):
+* Moderate risk -- earnings can fluctuate but asset values provide a floor
+* Capital recoveries from shrinkage roughly offset lost earnings
+* Growth neither helps nor hurts
+
+**Poor management / value trap businesses** (asset value > EPV):
+* Higher risk unless a catalyst for management change exists
+* Growth actively destroys value
+* Requires deep discount to BOTH asset value and EPV
+
+**Portfolio-level assessment:**
+* What fraction of the portfolio is in franchise vs competitive vs value-trap businesses?
+* Is franchise fade risk concentrated (e.g., multiple tech franchises all vulnerable
+  to the same disruption)?
+
+---
+
+### 3. LEVERAGE RISK (Company-Level)
+
+Debt is the most common mechanism by which temporary business problems become
+permanent capital losses. Graham and Dodd avoided highly leveraged firms for
+good reason.
+
+**For each holding, assess:**
+
+* Debt-to-equity and net debt / EBITDA
+* Interest coverage ratio
+* Debt maturity profile (near-term maturities in a downturn = danger)
+* Does the company have enough liquidity to survive 2-3 years of poor conditions?
+
+**Portfolio-level assessment:**
+
+* What fraction of the portfolio is in highly leveraged companies?
+* In a recession scenario, which holdings face bankruptcy or severe distress risk?
+* Leverage magnifies equity margin of safety calculations -- a 15% error in
+  enterprise value can mean a 5x swing in equity value for a leveraged firm
+
+---
+
+### 4. CONCENTRATION RISK
+
+Concentration magnifies both gains and losses. It is acceptable only when paired
+with deep knowledge (circle of competence) and wide margins of safety.
+
+**Position-level:**
 * Flag any single position > 10% of portfolio
 * Flag any single position > 20% as high concentration
-* Ideal: no single stock > 5–8% for a diversified portfolio
+* Concentrated positions are acceptable IF: the investor has deep expertise in the
+  business AND the margin of safety is wide
 
-**Sector-level concentration:**
-
-* Compute total weight per sector
+**Sector-level:**
 * Flag any sector > 30% of portfolio
-* Flag any sector > 50% as critical overexposure
-* Acceptable sector weights vary by strategy (growth vs income vs balanced)
+* Assess whether sector concentration reflects specialization (deliberate, informed)
+  or drift (accidental, uninformed)
 
-**Asset class concentration:**
-
-* Compute weight by asset class: equities, fixed income, crypto, cash, alternatives
-* Flag if >80% in a single asset class (unless user is explicitly a concentrated investor)
-* Flag if crypto > 20% — elevated volatility risk
-* Flag if cash > 30% — potential opportunity cost
+**Asset class:**
+* Flag if >80% in a single asset class
+* Note: for a value investor, being >80% in equities is not inherently wrong if
+  each position has an adequate margin of safety
 
 ---
 
-### 2. DIVERSIFICATION QUALITY
+### 5. LIQUIDITY RISK
 
-**Geographic diversification:**
+Liquidity risk matters only when the investor may be forced to sell. It is a function
+of both the portfolio and the investor's personal circumstances.
 
-* Identify % in US vs international vs emerging markets
-* Flag: >90% US-only = home country bias
-* Flag: >30% in a single emerging market = concentrated EM risk
-
-**Correlation risk:**
-
-* Identify clusters of assets that tend to move together:
-  * Multiple tech stocks (correlated)
-  * Multiple crypto assets (highly correlated)
-  * Sector ETFs + individual stocks in same sector (redundant)
-* Warn when holdings appear to provide less diversification than they seem
-
-**Style diversification:**
-
-* Check balance of:
-  * Growth vs Value
-  * Large cap vs Mid/Small cap
-  * Domestic vs International
-* Flag if heavily skewed to one style without clear rationale
-
----
-
-### 3. VOLATILITY RISK
-
-Assess expected portfolio volatility:
-
-* **Low volatility**: mostly bonds, dividend stocks, stable large-caps
-* **Moderate volatility**: diversified equity portfolio, some growth
-* **High volatility**: concentrated in growth/tech, significant crypto, small caps
-* **Very high volatility**: >20% crypto, concentrated single-stock, leveraged positions
-
-Adjust assessment based on user's:
-* Risk tolerance (from user context)
-* Time horizon (longer horizon → more tolerance for volatility)
-* Investment goals (retirement → prefer lower volatility)
-
----
-
-### 4. LIQUIDITY RISK
-
-Assess ease of exiting positions:
-
+**Portfolio-level:**
 * Large-cap stocks / major ETFs → high liquidity
-* Small-cap stocks → moderate liquidity
-* Crypto → varies; major coins (BTC, ETH) are liquid; altcoins may not be
+* Small-cap stocks → moderate liquidity (but small-cap illiquidity often creates
+  opportunity -- fewer analysts, institutional size bias)
+* Crypto → varies; major coins liquid, altcoins may not be
 * Real estate / private assets → illiquid
 
-Flag:
-* >20% in illiquid assets if user may need funds in <3 years
+**Flag:**
+* >20% in illiquid assets if user may need funds within 3 years
 * Over-reliance on illiquid assets for short-term financial goals
+* Margin or leveraged positions that could force sales at unfavorable prices
 
 ---
 
-### 5. DRAWDOWN RISK
+### 6. INCOME RISK
 
-Estimate potential maximum drawdown scenarios:
-
-* **Bear market scenario** (equity market -30–40%):
-  * Apply sector-specific drawdowns
-  * Tech/growth: typically -40–60% in severe bear markets
-  * Defensive sectors: typically -15–25%
-  * Crypto: typically -60–80%+ in crypto winters
-
-* **Recession scenario**:
-  * Cyclicals hit hardest
-  * Defensives (utilities, healthcare, consumer staples) hold better
-
-State estimated portfolio drawdown range:
-* e.g., "In a 2022-style correction, this portfolio could decline ~X–Y%"
-
----
-
-### 6. INCOME & DIVIDEND RISK
-
-If user relies on portfolio income:
+If the user relies on portfolio income:
 
 * Identify dividend-paying holdings and yield
-* Flag if dividend income is concentrated in 1–2 holdings
+* Flag if dividend income is concentrated in 1-2 holdings
 * Assess dividend sustainability (payout ratio, FCF coverage)
-* Note: high yield stocks may signal distress, not income quality
+* High yield may signal distress, not income quality
+* Prefer dividends backed by sustainable earnings power, not funded by debt or
+  asset sales
 
 ---
 
-## REBALANCING RECOMMENDATIONS
+## PRICE DECLINES IN CONTEXT
 
-Based on findings, suggest:
+When a holding's price drops significantly:
 
-1. **Positions to reduce** (overweight, concentrated, correlated)
-2. **Areas underrepresented** (missing sectors, geographies, asset classes)
-3. **Risk-adjusted alternatives** if applicable (e.g., "replace concentrated tech stock with broad tech ETF")
-4. **Priority order**: address highest concentration risks first
+**Ask: Has the intrinsic value changed?**
 
-Only make specific recommendations if sufficient data is available. Flag data gaps.
+* If NO (business fundamentals intact) → risk has DECREASED because margin of
+  safety is wider. This is an opportunity to add, not a reason to sell.
+* If YES (business fundamentally impaired) → risk has increased. Reassess
+  whether the revised intrinsic value still exceeds the new price.
+* If UNCERTAIN → this is the critical situation. The research effort should focus
+  on determining whether the decline reflects Mr. Market's mood or genuine
+  business deterioration.
+
+Historical drawdown estimates (bear market -30%, crypto -70%, etc.) are useful
+for assessing whether the investor can psychologically and financially withstand
+price declines without being forced to sell. They are NOT measures of investment risk.
 
 ---
 
 ## ALIGNMENT WITH USER PROFILE
 
-Cross-check risk profile against user context:
+Cross-check against user context:
 
-* **Risk tolerance**: Is current risk level consistent with stated tolerance?
-* **Time horizon**: Does portfolio volatility match investment timeline?
-* **Goals**: Does current allocation serve stated goals (growth, income, preservation)?
-
-Flag mismatches explicitly:
-* e.g., "You've indicated low risk tolerance, but 45% of your portfolio is in high-volatility growth stocks"
+* **Risk tolerance**: Does the investor have the temperament to hold through
+  significant price declines without panicking? If not, wider margins of safety
+  and less concentration are necessary -- not because the investments are riskier,
+  but because the investor may be forced into bad decisions.
+* **Time horizon**: Longer horizons allow more time for price to converge to value.
+  Shorter horizons require wider margins of safety.
+* **Goals**: Does the portfolio serve stated goals (growth, income, preservation)?
+* **Circle of competence**: Are concentrated positions within the investor's area
+  of expertise?
 
 ---
 
@@ -161,17 +208,23 @@ Flag mismatches explicitly:
 
 Must include:
 
-1. **Overall risk rating**: "Conservative", "Moderate", "Aggressive", "Very Aggressive"
-2. **Top 3 risks**: the most important issues to address
-3. **Alignment score**: Does the portfolio match the user's stated goals and risk tolerance?
-4. **Recommended actions**: prioritized list of rebalancing steps
+1. **Overall risk assessment**: "Well-Protected", "Adequate", "Elevated", or "Dangerous"
+2. **Top 3 risks**: the most important issues, prioritized by potential for
+   permanent capital loss (not by volatility)
+3. **Margin of safety status**: What fraction of the portfolio has adequate margin of safety?
+4. **Alignment**: Does the portfolio match the user's circumstances and temperament?
+5. **Recommended actions**: prioritized steps to reduce risk of permanent capital loss
 
 ---
 
 ## STYLE RULES
 
-* Always contextualize risk against user's profile — not a generic investor
-* Avoid alarmism: flag risks proportionally to severity
-* Be specific: name the positions causing concentration, not just abstract warnings
-* Acknowledge when portfolio is well-diversified — positive feedback matters
+* Never equate price decline with risk -- always ask whether intrinsic value changed
+* Risk is about permanent capital loss, not quarterly price fluctuations
+* Concentration in well-understood, undervalued businesses is not inherently risky
+* Leverage is the most common path from temporary problem to permanent loss
+* Frame recommendations around margin of safety, not around diversification for
+  its own sake
+* Acknowledge when the portfolio is well-positioned -- not every assessment needs
+  to find problems
 """

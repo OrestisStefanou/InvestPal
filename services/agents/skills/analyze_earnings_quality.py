@@ -105,6 +105,14 @@ Assessment:
 * Large gains masking operating weakness → flag
 * Impairments may signal prior overvaluation of assets (goodwill, investments)
 
+**Graham & Dodd approach to recurring "one-time" charges:**
+* Calculate the average annual ratio that these charges bear to reported earnings
+  before adjustments over the past 5-7 years
+* Reduce current year's reported earnings proportionally
+* Even when charges are genuinely independent of ongoing operations, if they recur
+  as a regular feature of management's track record, their average level should be
+  subtracted when calculating sustainable earnings power
+
 "Adjusted EPS" scrutiny:
 * Compare GAAP earnings vs "adjusted" earnings disclosed by management
 * Large and consistent gap → management may be excluding real costs
@@ -183,6 +191,43 @@ Negative signals:
 
 ---
 
+### 8. EARNINGS POWER VALUE (EPV) ADJUSTMENTS
+
+When assessing earnings for the purpose of intrinsic value calculation, apply these
+additional adjustments to arrive at **sustainable distributable earnings power**:
+
+**Depreciation vs Maintenance CapEx (most important adjustment):**
+* Accounting depreciation ≠ economic depreciation (maintenance capital expense)
+* Maintenance CapEx = the investment needed to restore assets to start-of-year condition
+* **Method A:** Find periods of zero/low revenue growth in the company's or peers' history.
+  Total CapEx in those periods ≈ maintenance CapEx.
+* **Method B:** Estimate growth CapEx = revenue growth x (fixed assets / revenue ratio).
+  Subtract from total CapEx to isolate maintenance CapEx.
+* If accounting depreciation > maintenance CapEx → earnings are understated (add back
+  the excess, but account for the gradual loss of the depreciation tax shield)
+* If accounting depreciation < maintenance CapEx → earnings are overstated (subtract
+  the shortfall)
+* NEVER assume depreciation = 0 (i.e., never rely on EBITDA as a proxy for earnings power).
+  Buildings eventually wear out; products become obsolete; customer bases erode.
+
+**Growth-related expenses buried in operating costs:**
+* R&D, marketing, and hiring above maintenance levels represent investment, not cost
+* For growing companies, the excess spending above what is needed to maintain the current
+  business should be added back to calculate distributable earnings
+* For shrinking companies that underinvest (cutting R&D, deferring maintenance), the
+  shortfall must be subtracted
+* Intangible investments (product development, customer acquisition, employee training)
+  are often expensed but represent real assets with reproduction value
+
+**Sustainable margin selection:**
+* Use average operating margins over 7-15 years spanning at least one full business cycle
+* If margins show a secular trend with an identifiable economic cause, use recent margins
+  adjusted for cyclical position
+* If the trend has no clear cause, use the arithmetic mean — do not extrapolate
+* Apply to current revenue (unless revenue itself is highly cyclical)
+
+---
+
 ## ANALYST VERDICT
 
 Must include:
@@ -202,4 +247,8 @@ Must include:
 * Separate structural issues from temporary items
 * Acknowledge when earnings appear clean and high-quality — avoid false skepticism
 * Never dismiss "adjusted earnings" entirely — but always scrutinize what's being excluded
+* When calculating sustainable earnings power, be conservative: use average margins
+  over full cycles, not peak margins
+* Always compare maintenance CapEx to accounting depreciation — this single adjustment
+  can change earnings power estimates by 10-20%
 """

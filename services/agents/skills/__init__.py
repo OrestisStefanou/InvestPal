@@ -7,6 +7,8 @@ from services.agents.skills.analyze_income_statement import analyze_income_state
 from services.agents.skills.analyze_macro_impact import analyze_macro_impact_skill
 from services.agents.skills.analyze_portfolio_risk import analyze_portfolio_risk_skill
 from services.agents.skills.analyze_stock_valuation import analyze_stock_valuation_skill
+from services.agents.skills.assess_competitive_moat import assess_competitive_moat_skill
+from services.agents.skills.calculate_intrinsic_value import calculate_intrinsic_value_skill
 from services.agents.skills.compare_sector_peers import compare_sector_peers_skill
 
 
@@ -18,6 +20,8 @@ class SkillName(enum.Enum):
     ANALYZE_MACRO_IMPACT = "analyze_macro_impact"
     ANALYZE_PORTFOLIO_RISK = "analyze_portfolio_risk"
     ANALYZE_STOCK_VALUATION = "analyze_stock_valuation"
+    ASSESS_COMPETITIVE_MOAT = "assess_competitive_moat"
+    CALCULATE_INTRINSIC_VALUE = "calculate_intrinsic_value"
     COMPARE_SECTOR_PEERS = "compare_sector_peers"
 
 
@@ -29,5 +33,7 @@ skills: dict[SkillName, str] = {
     SkillName.ANALYZE_MACRO_IMPACT: analyze_macro_impact_skill,
     SkillName.ANALYZE_PORTFOLIO_RISK: analyze_portfolio_risk_skill,
     SkillName.ANALYZE_STOCK_VALUATION: analyze_stock_valuation_skill,
+    SkillName.ASSESS_COMPETITIVE_MOAT: assess_competitive_moat_skill,
+    SkillName.CALCULATE_INTRINSIC_VALUE: calculate_intrinsic_value_skill,
     SkillName.COMPARE_SECTOR_PEERS: compare_sector_peers_skill,
 }

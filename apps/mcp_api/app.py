@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 from typing import Annotated
 
@@ -120,6 +121,14 @@ async def update_user_context(
 ) -> UserContext:
     user_context = await user_context_service.get_user_context(user_id=user_id)
     return user_context
+
+
+@mcp_app.tool(
+    name="getCurrentDatetime",
+    description="Get the current datetime.",
+)
+async def get_current_datetime() -> str:
+    return dt.datetime.now().isoformat()
 
 
 @mcp_app.tool(

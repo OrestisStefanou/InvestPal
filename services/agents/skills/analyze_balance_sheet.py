@@ -147,6 +147,29 @@ Evaluate:
 
   * flag if rising faster than expected
 
+**Graham & Dodd Asset Reproduction Cost Assessment:**
+
+When evaluating balance sheet strength, consider the gap between book values and
+reproduction costs:
+
+* **Goodwill (accounting):** Often represents overpayment in past acquisitions, not
+  reproducible economic value. Treat accounting goodwill with skepticism — a new
+  entrant does not need to reproduce acquisition premiums. Estimate the underlying
+  intangible assets (product portfolio, customer base, trained workforce) from first
+  principles instead.
+* **Intangible assets not on the balance sheet:** Many companies have significant
+  unrecorded intangible assets — product portfolios (estimate as R&D spend x years
+  of product life), customer relationships (revenue acquisition costs), trained workforce
+  (recruitment and training costs), organizational infrastructure (1-3 years of admin costs).
+  These are real assets that a competitor must reproduce to enter the business.
+* **PP&E book vs reproduction value:** Land may be worth far more than book (inflation,
+  economic growth). Buildings depreciate slower than accounting assumes. Equipment prices
+  may be falling (technology-driven), making replacement cheaper than original cost.
+  Estimate equipment at ~50% of original cost x price trend adjustment.
+* **LIFO reserve:** If the company uses LIFO accounting for inventory, the stated book
+  value may understate reproduction cost. The LIFO reserve (disclosed in footnotes)
+  should be added back.
+
 ---
 
 ### Capital Structure
@@ -155,6 +178,9 @@ Assess:
 
 * Sustainability of financing model relative to sector
 * Flexibility under stress
+* **Net asset value comparison:** Does the market price reflect a reasonable premium or
+  discount to estimated net asset reproduction value? A market price significantly below
+  reproduction cost may signal opportunity (or management quality concerns).
 
 ---
 
@@ -186,7 +212,7 @@ Flag only if abnormal *for the sector*:
 
 Must include:
 
-1. Classification: "Strong", "Moderate", or "Risky"
+1. Classification: “Strong”, “Moderate”, or “Risky”
 2. Sector-aware reasoning:
 
    * “High leverage is acceptable given capital-intensive nature”
@@ -195,6 +221,11 @@ Must include:
 3. One key insight:
 
    * The single most important takeaway
+4. **Reproduction cost assessment** (where data permits):
+
+   * Are book values likely to understate or overstate true asset reproduction costs?
+   * Are there significant unrecorded intangible assets?
+   * What is the estimated gap between book equity and reproduction cost net asset value?
 
 ---
 

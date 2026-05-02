@@ -1,173 +1,114 @@
 analyze_macro_impact_skill = """
 ## CORE LOGIC
 
-### Step 0: Gather Current Macro Context
+### Role of Macro in Value Investing
 
-Retrieve current readings for key economic indicators:
-* Interest rates (central bank policy rate, 10Y Treasury yield)
-* Inflation (CPI, PCE)
-* GDP growth (current and forecast)
-* Unemployment rate
-* Manufacturing and services PMI
-* Consumer sentiment / confidence index
-* Yield curve shape (normal, flat, inverted)
-* Credit spreads (investment grade and high yield)
-* Commodity prices (oil, gold, copper) if relevant
-* USD strength (DXY) for international holdings
+Graham and Dodd investors are micro-fundamentalists. Macro analysis is NOT a primary
+driver of investment decisions. Its role is supplementary:
 
-Identify the current macro **regime** before proceeding.
+1. **Calibrating earnings power**: Is the current economic environment inflating or
+   depressing the company's earnings relative to sustainable levels? This directly
+   affects EPV calculations.
+2. **Cost of capital context**: Interest rate levels determine the discount rate used
+   in valuations. Changes in rates affect what investors must earn to justify an
+   investment.
+3. **Identifying fear and greed**: Extreme macro environments (recessions, crises)
+   create the fear that drives prices below intrinsic value. These are the moments
+   when value investors find the best opportunities.
+4. **Industry viability check**: Macro conditions can affect whether an industry
+   remains economically viable -- the foundational assumption behind reproduction
+   cost asset valuation.
+
+Do NOT use macro analysis to make top-down sector allocation calls or to time
+the market. Use it to sharpen bottom-up valuations.
 
 ---
 
 ## MACRO REGIME IDENTIFICATION
 
-Classify the current environment into one of these regimes:
+Classify the current environment:
 
-### 1. EXPANSION (growth up, inflation moderate)
-* Strong GDP, low unemployment, moderate inflation, rising earnings
-* Generally favorable for equities, especially cyclicals and growth
-* Central bank: accommodative or neutral
+* **Expansion** -- GDP growing, moderate inflation, accommodative/neutral policy.
+  Corporate earnings likely at or above sustainable levels. Be cautious about using
+  peak earnings as earnings power.
+* **Overheating** -- Strong growth, rising inflation, tightening policy. Earnings may
+  be cyclically elevated. Cost of capital rising. Value stocks historically outperform
+  growth in this environment.
+* **Recession** -- Declining output, rising unemployment, easing policy. Earnings
+  depressed below sustainable levels. This is historically when value investors find
+  the best opportunities. Be greedy when others are fearful.
+* **Recovery** -- Growth resuming, policy still accommodative. Earnings rebounding
+  toward sustainable levels. Opportunities narrowing but still present in laggards.
+* **Stagflation** -- Weak growth, high inflation. The most difficult environment.
+  Earnings uncertain, cost of capital elevated. Focus on businesses with pricing
+  power (franchise businesses with customer captivity).
 
-### 2. OVERHEATING (growth up, inflation high)
-* Strong GDP but inflation rising uncomfortably
-* Central bank: tightening cycle
-* Risk: policy mistake → recession
-* Favors: real assets, commodities, value over growth
-
-### 3. STAGFLATION (growth down, inflation high)
-* Worst macro regime for most assets
-* Real returns erode; bonds and growth stocks hit hardest
-* Favors: commodities, energy, inflation-linked bonds, gold
-
-### 4. RECESSION (growth down, inflation falling)
-* Earnings decline, credit stress, unemployment rising
-* Central bank: easing or about to ease
-* Defensives outperform; cyclicals, small caps, high yield hit hardest
-* Later in recession: growth assets may begin recovering in anticipation of recovery
-
-### 5. RECOVERY (growth recovering, inflation low)
-* Earnings rebounding, monetary policy still accommodative
-* Broad equity rally typical; cyclicals and growth lead
-* Small caps often outperform early in recovery
-
-### 6. RATE PLATEAU / UNCERTAINTY
-* Central bank near peak rates, direction unclear
-* Markets sensitive to inflation data and Fed language
-* Sector rotation common; high uncertainty on timing
-
-State the regime and provide supporting evidence from current indicators.
+State the regime with supporting evidence.
 
 ---
 
-## INTEREST RATE IMPACT ANALYSIS
+## IMPACT ON VALUATIONS
 
-Interest rates are the most powerful macro driver. Analyze their impact:
+### Interest Rates and Cost of Capital
 
-### On Equity Valuations:
-* Rising rates → higher discount rate → lower present value of future earnings → multiples compress
-* Most impacted: long-duration assets (high-growth, high-multiple stocks)
-* Least impacted: near-term earners, value stocks, dividend payers
-* Rate-sensitive sectors (most affected by rising rates):
-  * Technology / Growth → negative (high duration)
-  * Real Estate (REITs) → negative (higher cap rates, higher financing costs)
-  * Utilities → negative (bond-like, dividend yield less attractive)
-* Rate-sensitive sectors (may benefit from rising rates):
-  * Financials (banks) → positive (wider net interest margins)
-  * Insurance → positive (higher investment returns on float)
+Interest rates directly determine the cost of capital used in EPV calculations:
 
-### On Fixed Income (if applicable):
-* Rising rates → existing bond prices fall (inverse relationship)
-* Longer duration bonds: more sensitive to rate changes
-* Short-duration / floating rate: less affected
-* High yield spreads: watch for widening = increasing credit stress
+* **Low rate environment** (risk-free <3%): Equity cost of capital range ~6-12%.
+  Asset values and EPVs will be higher. Be cautious -- low rates can inflate
+  valuations and compress future returns.
+* **High rate environment** (risk-free >5%): Equity cost of capital range ~8-14%.
+  Valuations lower, but prospective returns higher. Historically favorable for
+  disciplined value investors.
+* **Key question**: Are current rates likely to persist? If rates are abnormally low
+  or high, sustainable EPV should be calculated using a normalized cost of capital,
+  not the current extreme.
 
-### On Crypto:
-* Highly correlated with risk appetite
-* Rising rates / tightening → risk-off → crypto typically sells off
-* Easing cycle → risk-on → crypto benefits
+### Earnings Cyclicality
 
----
+The macro regime determines where current earnings sit relative to sustainable
+earnings power:
 
-## INFLATION IMPACT ANALYSIS
+* In **expansion/overheating**: Current earnings likely ABOVE sustainable levels.
+  Using peak margins overstates EPV. Use average margins over a full cycle instead.
+* In **recession**: Current earnings likely BELOW sustainable levels. Depressed
+  margins understate EPV. This is where the margin of safety is widest -- the market
+  prices stocks on temporarily impaired earnings while intrinsic value, based on
+  sustainable earnings, is much higher.
+* **Cyclical businesses** are most affected. Franchise businesses with pricing power
+  are less sensitive to macro cycles.
 
-### High inflation environment:
+### Credit Conditions
 
-**Favored:**
-* Commodities (oil, metals, agricultural)
-* Energy stocks
-* Real assets (real estate, infrastructure)
-* Companies with strong pricing power (wide moats)
-* TIPS / inflation-linked bonds
-
-**Hurt:**
-* Fixed income (purchasing power eroded)
-* Growth stocks (higher discount rates, margin compression)
-* Consumer discretionary (cost of living pressure on consumers)
-* Companies with thin margins and no pricing power
-
-### Low/falling inflation environment:
-
-**Favored:**
-* Growth stocks (lower rates, lower discount rates)
-* Long-duration bonds
-* Consumer discretionary (more disposable income)
+* Widening credit spreads signal financial stress -- increases bankruptcy risk for
+  leveraged holdings
+* Tight credit can impair operations of capital-intensive businesses
+* Watch: inverted yield curve historically precedes recession by 12-18 months
 
 ---
 
-## GDP & ECONOMIC CYCLE IMPACT
+## PORTFOLIO IMPLICATIONS
 
-Map asset classes and sectors to economic cycle phase:
+After establishing the macro context, assess the user's holdings:
 
-| Sector | Expansion | Peak | Recession | Recovery |
-|--------|-----------|------|-----------|----------|
-| Consumer Discretionary | ++ | + | -- | + |
-| Consumer Staples | + | + | ++ | + |
-| Financials | ++ | + | -- | + |
-| Healthcare | + | ++ | ++ | + |
-| Industrials | ++ | + | -- | ++ |
-| Technology | ++ | + | - | ++ |
-| Energy | + | ++ | - | + |
-| Materials | ++ | + | -- | ++ |
-| Real Estate | + | - | - | + |
-| Utilities | - | + | ++ | - |
-| Communication Services | + | + | - | + |
-
-Apply this table to assess whether current holdings are positioned for the macro regime.
-
----
-
-## CURRENCY & INTERNATIONAL IMPACT
-
-If user holds international assets or companies with significant foreign revenue:
-
-* **Strong USD** → headwind for US multinationals (foreign revenue worth less when repatriated)
-* **Weak USD** → tailwind for US multinationals, headwind for USD-denominated commodities
-* Emerging markets: particularly sensitive to USD strength (dollar-denominated debt burden)
-* Check: Does the company hedge currency exposure?
-
----
-
-## PORTFOLIO IMPACT ASSESSMENT
-
-After establishing the macro context, assess the user's specific portfolio:
-
-1. **Identify macro-sensitive positions**: Which holdings are most exposed to the current macro regime?
-2. **Alignment check**: Does the current portfolio positioning align with the macro environment?
-3. **Stress test**: In the most likely adverse scenario, which holdings would be hit hardest?
-4. **Opportunities**: Are there sectors or assets that typically outperform in the current regime that are underrepresented?
+1. **Earnings sustainability**: For each significant holding, are current earnings
+   at sustainable, above-cycle, or below-cycle levels? Adjust EPV assessments
+   accordingly.
+2. **Leverage exposure**: In a tightening or recessionary environment, which holdings
+   have dangerous levels of debt?
+3. **Opportunity identification**: In fearful markets (recession, crisis), which quality
+   businesses are being sold below intrinsic value due to indiscriminate selling?
+4. **Pricing power**: Which holdings can pass cost increases to customers? These are
+   most resilient in inflationary environments.
 
 ---
 
 ## MACRO RISK FLAGS
 
-Flag the following conditions when present:
-
-* Inverted yield curve → historically precedes recession (12-18 month lag)
-* Credit spread widening → financial stress increasing
-* PMI below 50 → manufacturing contraction
-* Consumer confidence falling sharply → spending slowdown risk
-* Commodity price spike (especially oil) → inflation reacceleration risk
-* Central bank policy error signals → watch for aggressive language changes
+Flag when present:
+* Inverted yield curve -- recession signal (12-18 month lag)
+* Credit spread widening -- financial stress, leveraged holdings at risk
+* Earnings at cyclical extremes -- peak or trough, adjust EPV estimates
+* Rapid policy shifts -- cost of capital assumptions may need revision
 
 ---
 
@@ -175,19 +116,21 @@ Flag the following conditions when present:
 
 Must include:
 
-1. **Current macro regime**: clearly stated with supporting evidence
-2. **Key macro risk**: the single most important macro factor for the user's portfolio right now
-3. **Portfolio alignment**: does current allocation fit the macro environment?
-4. **Recommended adjustments** (if any): specific sector tilts or asset class shifts suggested by the macro picture
-5. **Time horizon context**: macro impacts play out over different timeframes — distinguish short-term (months) vs structural (years)
+1. **Current macro regime**: with brief supporting evidence
+2. **Earnings cycle position**: are earnings generally above, at, or below sustainable levels?
+3. **Cost of capital assessment**: is the current rate environment normal, elevated, or depressed?
+4. **Key macro risk for this portfolio**: the single most relevant macro factor
+5. **Opportunity or caution**: does the current environment favor finding bargains (fear)
+   or demand extra caution (euphoria)?
 
 ---
 
 ## STYLE RULES
 
-* Always start with the regime — macro analysis without regime context is meaningless
-* Be specific about which holdings are affected and how
-* Distinguish cyclical macro risks from structural secular trends
-* Avoid macro determinism — acknowledge uncertainty and multiple scenarios
-* Frame macro in terms of the user's goals and time horizon, not abstract theory
+* Macro is context, not a decision driver -- always bring it back to individual holdings
+* Never recommend sector rotation based purely on macro regime
+* The most important macro insight for a value investor: where are we in the
+  fear/greed cycle? Widespread fear = opportunity. Widespread euphoria = caution.
+* Distinguish between what macro tells us about sustainable earnings (useful) and
+  what it tells us about next quarter's GDP (not useful for value investors)
 """
