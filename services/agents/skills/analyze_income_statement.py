@@ -93,6 +93,34 @@ Adjust expectations by sector:
 
 ---
 
+### Sustainable Earnings Power (Graham & Dodd Approach)
+
+The goal is not to measure this quarter's margins but to estimate **sustainable
+distributable earnings** -- what this business can reliably earn over a full
+economic cycle.
+
+**Calculating sustainable margins:**
+
+1. Collect operating margins over 7-15 years (spanning at least one full business cycle,
+   ideally two)
+2. If margins show a **secular trend with an identifiable economic cause** (e.g.,
+   industry consolidation improving pricing, technology shift changing cost
+   structure), use the most recent margin adjusted for cyclical position
+3. If margins show a trend with **no identifiable cause**, use the arithmetic mean --
+   do NOT extrapolate trends. Extrapolation is forecasting, and forecasts
+   systematically mislead.
+4. Apply the sustainable margin to **current revenue** (unless revenue itself is
+   highly cyclical, in which case use average sustainable revenue)
+5. The result is an estimate of sustainable operating earnings
+
+**Common pitfalls:**
+* Using peak margins during an expansion → overstates earnings power
+* Using trough margins during a recession → understates earnings power
+* Extrapolating a recent margin improvement into the indefinite future →
+  the most common and costly mistake in equity analysis
+
+---
+
 ### Growth
 
 Evaluate:
@@ -102,8 +130,47 @@ Evaluate:
 
 Interpret:
 
-* Earnings growing faster than revenue → efficiency
-* Revenue growing without profits → risk
+* Earnings growing faster than revenue → efficiency or operating leverage
+* Revenue growing without profits → risk, especially if management is
+  spending on growth that earns below cost of capital
+
+**Value investing perspective on growth:**
+* Revenue growth in a **competitive business** (no moat) does not create value --
+  it merely attracts entry and competition until returns fall to cost of capital
+* Revenue growth in a **franchise business** creates value only when invested
+  within or adjacent to protected markets
+* Declining revenue in a competitive business is not catastrophic if capital
+  recoveries offset lost earnings
+
+---
+
+### Expense Quality and Hidden Investments
+
+**Overhead expense analysis:**
+* Operating expenses (R&D, marketing, SGA) can be manipulated up or down by
+  management to distort current earnings
+* Cutting R&D raises operating income today but may impair future earnings power.
+  Flag unexplained drops in R&D as % of revenue.
+* Rising SGA faster than revenue → loss of operating discipline OR investment in
+  growth (determine which)
+
+**Growth-related expenses buried in operating costs:**
+* R&D, marketing, and hiring that exceeds the level needed to maintain the
+  current business is effectively investment, not cost
+* For growing companies, these "excess" expenses reduce reported margins but
+  represent investment in intangible assets (product portfolios, customer bases,
+  trained workforce)
+* When comparing margins across companies, adjust for differences in growth
+  investment disguised as operating expense
+* A company spending 18% of revenue on R&D while growing at 20% has different
+  economics than one spending 18% on R&D while growing at 3%
+
+**Pricing power assessment:**
+* Can the company raise prices to offset cost increases? This is the income
+  statement signature of a franchise business.
+* Stable or expanding gross margins during periods of input cost inflation → pricing power
+* Compressing gross margins during cost pressure → no pricing power, competitive business
+* Pricing power is the most reliable indicator of sustainable margins
 
 ---
 
@@ -113,6 +180,8 @@ Analyze:
 
 * Operating expense trends
 * Cost discipline
+* Returns on invested capital (ROIC) -- the ultimate measure of whether revenue
+  and margins translate into value creation
 
 ---
 
@@ -126,6 +195,7 @@ Evaluate:
 Flag:
 
 * Earnings not supported by core operations
+* Recurring "one-time" charges (if they happen every year, they are not one-time)
 
 ---
 
@@ -135,15 +205,16 @@ Focus on:
 
 * Margin expansion or compression
 * Growth sustainability
+* Whether margin trends reflect cyclical factors or structural changes
 
 ---
 
 ### Red Flags (Context-Aware)
 
-* asset_light → falling margins
-* capital_intensive → unstable earnings
-* retail → margin compression
-* all → inconsistent earnings, large one-offs
+* asset_light → falling margins, R&D cuts to boost short-term earnings
+* capital_intensive → unstable earnings, margins at cyclical extremes
+* retail → margin compression, loss of pricing power
+* all → inconsistent earnings, large one-offs, earnings growing while revenue stagnates
 
 ---
 
@@ -154,12 +225,20 @@ Include:
 1. Classification: "Strong", "Moderate", "Weak"
 2. Sector-aware interpretation
 3. Key driver of performance
+4. **Sustainable margin estimate**: What is the best estimate of through-cycle
+   operating margin? Is the current margin above, below, or at sustainable levels?
+5. **Pricing power assessment**: Does the company demonstrate ability to maintain
+   or raise prices? (strong indicator of franchise status)
 
 ---
 
 ## STYLE RULES
 
 * Focus on drivers, not just metrics
-* Always explain “why margins are changing”
+* Always explain "why margins are changing"
 * Highlight sustainability of earnings
+* Use through-cycle averages, not single-period snapshots, for assessing earnings power
+* Distinguish between margin changes that are cyclical (temporary) and structural
+  (permanent)
+* Never extrapolate recent margin trends without an identifiable economic cause
 """
