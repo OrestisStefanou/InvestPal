@@ -63,6 +63,8 @@ class WorkflowRunner:
         runtime_context = WorkflowExecutionAgentRuntimeContext(
             user_context_service=self._user_context_service,
             agent_reminder_service=self._agent_reminder_service,
+            agent_workflow_service=self._workflow_service,
+            workflow_result_service=self._workflow_result_service,
         )
 
         agent_response = await self._agent.generate_response(

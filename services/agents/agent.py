@@ -30,6 +30,7 @@ from services.agents.prompts import (
 )
 from services.agents.tools import (
     UserContextToolsRuntimeContext,
+    AgentWorkflowToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
     update_user_context,
     get_user_context,
@@ -47,7 +48,6 @@ from services.agents.tools import (
     subtract,
     multiply,
     divide,
-    AgentWorkflowToolsRuntimeContext,
     create_agent_workflow,
     get_agent_workflows,
     update_agent_workflow,
@@ -329,6 +329,7 @@ class WorkflowExecutionPromptVars(TypedDict):
 class WorkflowExecutionAgentRuntimeContext(
     UserContextToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
+    AgentWorkflowToolsRuntimeContext,
 ):
     pass
 
@@ -380,6 +381,7 @@ class WorkflowExecutionAgent(Agent):
             get_agent_reminders,
             update_agent_reminder,
             delete_agent_reminder,
+            get_workflow_results,
             get_skill_names,
             get_skill,
             add,
