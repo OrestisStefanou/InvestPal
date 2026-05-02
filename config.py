@@ -44,6 +44,8 @@ class Settings(BaseSettings):
         "getEarningsCallTranscript",
         "getInsiderTransactions",
         "getCompanyKpiMetrics",
+        "getUserConversationNotes",
+        "getWorkflowResults",
     ]
     
     INVESTMENT_MANAGER_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC
