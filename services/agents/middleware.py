@@ -65,10 +65,10 @@ class ToolTokenRateLimitMiddleware(AgentMiddleware):
         handler: Callable[[ToolCallRequest], ToolMessage | Command],
     ) -> ToolMessage | Command:
         tool_name = request.tool_call["name"]
-        if tool_name in settings.TOKEN_INTENSIVE_TOOLS:
-            async with ToolTokenRateLimitMiddleware._lock:
-                logger.info("Sleeping before calling tool %s", tool_name)
+        async with ToolTokenRateLimitMiddleware._lock:
+            if tool_name in settings.TOKEN_INTENSIVE_TOOLS:
+                await asyncio.sleep(125)
+            else:
                 await asyncio.sleep(65)
-                return await handler(request)
 
         return await handler(request)
