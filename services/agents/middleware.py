@@ -47,20 +47,28 @@ class ToolLoggingMiddleware(AgentMiddleware):
 
 class ToolTokenRateLimitMiddleware(AgentMiddleware):
     """
-    We have some tools that consume a lot of tokens and this has a 
+    We have some tools that consume a lot of tokens and this has a
     result to get token rate limit by the LLM provider. The purpose of
-    this middleware is to delay the tool execution of the tools that 
+    this middleware is to delay the tool execution of the tools that
     consume a big amount of tokens to avoid getting rate limited.
+
+    A class-level lock serialises all token-intensive calls so that when
+    the LLM requests multiple such tools in one response (LangGraph runs
+    them concurrently via asyncio.gather), they still execute one at a
+    time with the full cooldown between them.
     """
+    _lock: asyncio.Lock = asyncio.Lock()
+
     async def awrap_tool_call(
         self,
         request: ToolCallRequest,
         handler: Callable[[ToolCallRequest], ToolMessage | Command],
     ) -> ToolMessage | Command:
         tool_name = request.tool_call["name"]
-        if tool_name in settings.TOKEN_INTENSIVE_TOOLS:
-            logger.info("Sleeping before calling tool %s", tool_name)
-            await asyncio.sleep(60)
-        
-        result = await handler(request)
-        return result
+        async with ToolTokenRateLimitMiddleware._lock:
+            if tool_name in settings.TOKEN_INTENSIVE_TOOLS:
+                await asyncio.sleep(125)
+            else:
+                await asyncio.sleep(65)
+
+        return await handler(request)
