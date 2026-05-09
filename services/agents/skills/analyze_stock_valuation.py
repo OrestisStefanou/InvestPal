@@ -1,6 +1,30 @@
 analyze_stock_valuation_skill = """
 ## CORE LOGIC
 
+### Foundational Premise: Price vs Value
+
+Investment success comes from "buying things well," not from "buying good
+things." No asset is so good that it cannot be a bad investment if bought at
+too high a price. Few assets are so bad that they cannot be a good investment
+if bought cheap enough.
+
+The valuation task is therefore inseparable from the price relationship.
+Identifying intrinsic value matters only insofar as it lets you decide whether
+the current price is below it (potentially attractive), at it (uninteresting),
+or above it (avoid or sell).
+
+"Well bought is half sold." If you have entered at a sufficiently large
+discount to value, the exit takes care of itself. If you have overpaid,
+nothing can rescue the position except an even greater fool buyer or a
+material improvement in fundamentals -- neither of which is dependable.
+
+The riskiest stocks are not low-quality assets. They are high-quality assets
+purchased on the "pedestal of popularity" where consensus has eliminated all
+imaginable flaws and the price implies that nothing can go wrong. Nothing's
+perfect, however, and everything eventually turns out to have flaws. When
+you pay for perfection, the high price exposes you to large loss when reality
+intrudes.
+
 ### Step 0: Determine Valuation Approach
 
 **Graham & Dodd Hierarchy (preferred order of reliability):**
@@ -196,6 +220,85 @@ Interpret:
 
 ---
 
+## PRICE DRIVERS BEYOND FUNDAMENTAL VALUE
+
+Fundamental value is one of three forces determining the price at which you
+can buy an asset on a given day. The other two often dominate in the short
+run:
+
+### Psychology
+
+Investor sentiment can place a security at almost any price relative to its
+fundamentals. The discipline most important for valuation is not accounting
+or economics but psychology -- understanding who likes the investment now,
+who does not, and which way the popularity tide is flowing.
+
+* An asset on the "pedestal of popularity" carries a sentiment premium that
+  can compress quickly when the first crack appears.
+* An asset that "no one will buy at any price" carries a sentiment discount
+  that can convert into outsized return when consensus shifts even modestly.
+* Investing is a popularity contest in the short run; the most dangerous
+  thing is to buy at the peak of popularity, the safest and most potentially
+  profitable thing is to buy when no one likes it.
+
+When sourcing valuations, identify where on the popularity spectrum the
+asset sits. The same fair-value estimate has very different implications for
+prospective return depending on whether sentiment has further to fall or
+rise.
+
+### Technicals
+
+Non-fundamental supply/demand factors that affect price independently of
+intrinsic value:
+
+* **Forced selling**: margin calls, fund redemptions, bankruptcies, ratings
+  downgrades that mandate institutional sales, rebalancing flows.
+* **Forced buying**: index inclusions, mutual fund inflows requiring
+  deployment, mandate-driven purchases, short squeezes.
+
+Forced sellers transact "regardless of price" -- the most beautiful three
+words in investing if you are on the other side. The presence of a forced
+seller is one of the most reliable sources of mispricing. Identify it where
+possible:
+
+* Recent index deletion
+* Bankruptcy or restructuring of a parent
+* Spin-off where the receiving shareholder base is mismatched to the asset
+* Ratings downgrade pushing institutional holders out
+* Sector ETF outflows triggering proportional sales
+* Tax-loss selling at year-end
+
+Bargains created by technical pressure are typically transient. The reverse
+applies to forced buying: assets bid up by mandate or flow are usually fully
+priced or worse. Be cautious about buying into a market where the marginal
+buyer is uninformed (e.g., index inclusion-driven, retail momentum-driven,
+covering-driven).
+
+### Bubbles and Crashes
+
+When fundamental value is overwhelmed by psychology and momentum, prices
+detach from any reasonable estimate of worth. Recurring features of bubbles:
+
+* "Attractive" morphs into "attractive at any price."
+* Logical-seeming rationale circulates ("this technology changes the world,"
+  "rates will be low forever," "central banks have it under control").
+* Price gains attract more buyers, who interpret the gains as validation.
+* Skeptics are dismissed as out-of-touch.
+* No one can identify a flaw -- the asset is "priced for perfection."
+
+Mirror image in crashes:
+* "Avoid at any price."
+* Logical-seeming rationale for unlimited downside.
+* Skeptics of the panic are dismissed as Pollyannas.
+* No one can identify any positive case -- the asset is "priced as if it can
+  only get worse."
+
+Both states resolve. Bidirectional skepticism is the valuation analyst's
+defence. Sometimes "too good to be true" is the right call; sometimes "too
+bad to be true" is. Apply the same critical lens in both directions.
+
+---
+
 ## GROWTH VS VALUE CONTEXT
 
 ### Graham & Dodd Framework for Growth
@@ -252,4 +355,17 @@ Must include:
 * Remember: 80-90% of active fund managers underperform index funds. The bar for
   claiming a stock is mispriced is high — you must explain why you are on the right
   side of the trade
+* Price drives both risk and return: a stock at €100 is materially riskier than the
+  same stock at €60. Frame valuation conclusions in terms of risk and return
+  jointly, not as a fair-value estimate alone.
+* Identify the marginal buyer and seller. If the marginal buyer is uninformed
+  (momentum, index, covering, retail FOMO), be cautious even when the
+  fundamental case is sound. If the marginal seller is forced (margin call,
+  redemption, downgrade-driven), the asset can offer significant margin of
+  safety even with weaker fundamentals.
+* Bidirectional skepticism: at sentiment extremes, apply the same critical
+  lens to bullish and bearish theses. "Too good to be true" and "too bad to
+  be true" are both valid valuation calls at the right moments.
+* "Well bought is half sold." Decisions about exit are largely determined by
+  the discipline applied at entry. Insist on margin of safety up front.
 """

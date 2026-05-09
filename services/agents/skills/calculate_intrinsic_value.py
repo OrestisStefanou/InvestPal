@@ -257,6 +257,56 @@ Margin of Safety = Benchmark Return - Cost of Capital - Fade Rate
 * Also verify that the enterprise margin of safety (not just equity) is adequate
   -- leverage can create illusory equity bargains
 
+### Why Margin of Safety Matters Beyond a Single Number
+
+The margin of safety exists to absorb three things, all of which routinely
+materialize:
+
+1. **Errors in the valuation itself** -- inputs that turn out to be wrong:
+   normalized margins too high, cost of capital too low, capex requirements
+   understated, hidden liabilities discovered later.
+2. **Adverse fundamental change** -- the business you valued is not
+   necessarily the business you own three years later. Markets shift,
+   technology disrupts, regulation tightens, management changes.
+3. **Adverse macro / sentiment shifts** -- the price can decline well below
+   intrinsic value before recovering. Margin of safety ensures the valuation
+   error or the sentiment overshoot does not turn into permanent loss.
+
+A 33% margin of safety is not "33% guaranteed return." It is a buffer against
+all three sources of error simultaneously. If even one materializes, the
+remaining buffer protects you. If none materializes, the realized return
+exceeds the margin -- but that should be treated as a bonus, not the central
+case.
+
+### Strongly Held vs Loosely Held Estimates
+
+A correctly-derived intrinsic value is useful only if held with sufficient
+conviction to act on it. The hardest moments in investing -- buying as a
+position falls, holding through extended underperformance, refusing to chase
+a popular winner -- require a strongly held view.
+
+Sources of strong conviction:
+* The estimate is built from multiple independent methods that triangulate
+  (AV and EPV, not a single DCF).
+* The most reliable element (asset value) anchors the estimate; growth
+  contributes only when the franchise case is established.
+* The key inputs are derived from observable history (margins, capex,
+  asset values), not from forecasts.
+* Sensitivity analysis has been performed; the range of intrinsic value is
+  understood, not pretended to be a single point.
+* The thesis has explicit failure modes -- if X happens, the estimate is
+  invalidated. This is what keeps strong conviction from becoming dogma.
+
+A loosely held estimate is worse than no estimate at all. It will not help
+you average down through a 30% decline; it will not stop you from
+capitulating to bubble euphoria. Either commit to the work required for a
+strongly held view, or pass on the position.
+
+An incorrect estimate held strongly is even worse. The defence against this
+is intellectual honesty about failure modes and willingness to revise when
+the evidence demands it -- distinct from emotional capitulation under price
+pressure alone.
+
 ### Enterprise vs Equity Margin of Safety
 
 * For highly leveraged companies, ALWAYS check the enterprise margin of safety
@@ -296,6 +346,35 @@ List the 3-5 most important assumptions and their sensitivity:
 
 ---
 
+## REASONABLENESS CHECKS
+
+Before publishing an intrinsic value, sanity-check it against these tests:
+
+1. **"Too good to be true" test**: if the implied return is far above the
+   reasonable range for the asset class (single digits to low double digits
+   for equities, with cyclical exceptions), demand a satisfying explanation.
+   Higher returns require one of: extremely depressed entry environment,
+   exceptional skill, real risk borne, leverage, or luck. If none apply,
+   reconsider.
+2. **"Why me?" test**: if the asset is so clearly mispriced, why is it
+   available at this price? Who is the seller, why are they selling,
+   why has no one else corrected this? A satisfying answer is required
+   (forced seller, headline aversion, mandate exclusion, complexity barrier,
+   structural illiquidity). Vague answers usually mean you are missing
+   something.
+3. **Implied consensus test**: the current market price implies a particular
+   set of operating assumptions. Back into them. How does your assumption
+   set differ? In which specific variable, and why are you more correct?
+4. **Survivorship and base rate test**: the asset class itself has historical
+   base rates for return. Does your estimate fall within plausible bounds for
+   the asset class, or does it require this specific name to be an extreme
+   outlier?
+
+If the valuation cannot survive these tests, it is more likely the analyst
+who is mistaken than the market.
+
+---
+
 ## ANALYST VERDICT
 
 Must include:
@@ -307,6 +386,12 @@ Must include:
    "Overvalued", or "Insufficient margin of safety"
 5. **Key risk**: the single factor most likely to invalidate the valuation
 6. **Catalyst** (if Case A): what would unlock value?
+7. **Reasonableness assessment**: does the estimate pass the "too good to be
+   true" and "why me?" tests, and what is the explanation if it appears to
+   show extreme mispricing?
+8. **Conviction level**: high / medium / low, with the criteria from
+   "Strongly Held vs Loosely Held Estimates" as basis. State explicitly the
+   single development that would invalidate the valuation.
 
 ---
 
@@ -321,4 +406,13 @@ Must include:
 * Distinguish between equity and enterprise valuations -- never mix them
 * Do not present false precision: round to appropriate significant figures
 * Always state the margin of safety relative to the estimated intrinsic value
+* Distinguish a strongly-held estimate (multiple methods, observable inputs,
+  explicit failure modes) from a loosely-held one. A loosely-held estimate
+  cannot support contrarian action -- and contrarian action is where the
+  return comes from.
+* Never identify a "bottom" prospectively. Bottoms are visible only in
+  retrospect. The investor's job is not to time the bottom but to buy when
+  margin of safety is wide and to keep buying as price falls if intrinsic
+  value is unchanged. Insisting on perfection -- buying only at the bottom
+  -- causes investors to miss the opportunity entirely.
 """

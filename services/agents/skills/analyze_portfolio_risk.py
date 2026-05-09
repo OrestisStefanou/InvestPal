@@ -15,6 +15,47 @@ Price fluctuations are only dangerous if they force action or reflect genuine
 business deterioration. For a patient investor with a sound process, Mr. Market's
 mood swings are opportunities, not threats.
 
+### Other Forms of Risk That Affect Investor Behavior
+
+While permanent loss is the primary risk, several secondary risks shape how
+investors actually behave -- and surface as portfolio problems if ignored:
+
+* **Falling short of one's goal** -- subjective, depends on the investor's
+  spending or actuarial requirements. A 6% return is a windfall for one
+  investor and a crisis for another.
+* **Underperformance / benchmark risk** -- the risk of trailing peers or an
+  index. Tempts investors to chase consensus and abandon discipline at exactly
+  the wrong times.
+* **Career / agency risk** -- when the manager and the capital owner are
+  different, the manager's incentive is asymmetric: limited upside from gains,
+  large downside from underperformance. Pushes managers toward conformity.
+* **Unconventionality risk** -- pain of looking different. Often the price of
+  alpha, since "unconventional" portfolios are required to outperform.
+* **Illiquidity risk** -- inability to convert an asset to cash at a fair price
+  on the schedule needed.
+
+These are not the dominant risks for a long-horizon investor with a sound
+process, but they are the risks that produce the BEHAVIORAL mistakes
+(panic-selling at lows, capitulating to bubbles, reaching for return) which
+then become permanent capital losses.
+
+### The Perversity of Risk
+
+Risk is highest when investors believe it is lowest. A widely held belief that
+"this is safe" drives prices up, drives risk premiums down, and reduces the
+margin of safety -- precisely making the asset risky. Conversely, when
+everyone agrees an asset is risky, their unwillingness to buy lowers price
+until the margin of safety becomes generous.
+
+Implications for portfolio review:
+* High-quality assets at consensus-favorite prices can be among the riskiest
+  holdings in the portfolio.
+* Low-quality, controversial, or scorned assets can be the safest holdings if
+  bought with sufficient margin of safety.
+* The temperature of the broader market matters. In late-stage bull markets
+  the same portfolio carries more risk than in depressed environments,
+  because the inputs (prices, sentiment, leverage) are themselves elevated.
+
 ### Step 0: Gather Portfolio Data
 
 Retrieve all current holdings including:
@@ -168,6 +209,67 @@ If the user relies on portfolio income:
 
 ---
 
+### 7. CORRELATION RISK / HIDDEN COMMON FACTORS
+
+Diversification is effective only when holdings respond differently to the
+same shock. A portfolio of "30 different names" can behave like a single
+position if all 30 share a hidden common factor.
+
+Look for hidden correlations that ordinary diversification analysis misses:
+
+* **Macro factor**: are most positions implicitly long the same macro variable
+  -- low interest rates, weak USD, easy credit, high oil price, or risk-on
+  sentiment?
+* **Liquidity factor**: how much of the portfolio is in instruments that
+  become illiquid simultaneously in stress (small-caps, high yield credit,
+  EM equities, certain crypto, private positions)?
+* **Leverage factor**: are multiple holdings dependent on continued access to
+  cheap credit at the corporate level? In a credit crunch they fall together.
+* **Theme factor**: nominally different companies can be the same thematic
+  bet (e.g., 8 different "AI infrastructure" plays).
+* **Investor base factor**: holdings popular with the same type of forced
+  seller move together. ETF-heavy small-caps, hedge-fund-favorite names,
+  retail momentum darlings all cluster.
+
+Stress-test correlation: in past crises, has this style of holding moved
+toward correlation 1 with other holdings in the portfolio? If yes, the
+nominal diversification overstates real diversification.
+
+Failure of imagination is the most common analytical error in portfolio
+construction. Allow explicitly for outcomes outside the recent historical
+range, including:
+* Drawdowns larger than any in the modern data
+* Correlations rising toward 1 in stress
+* Liquidity drying up across normally liquid markets
+* "Improbable disaster" events that have not occurred but could
+
+---
+
+### 8. FORCED-SELLING RISK
+
+The worst outcome in investing is being forced to sell into a depressed
+market. The absence of margin debt is necessary but not sufficient.
+
+Identify portfolio configurations that risk forced selling:
+* **Direct leverage**: margin loans, derivatives requiring collateral, debt
+  service tied to portfolio income.
+* **Liquidity mismatch**: known cash needs (tuition, home purchase, business
+  funding) within 1-3 years held in long-duration or volatile assets.
+* **Psychological breakpoint**: position size or portfolio drawdown level
+  beyond which the investor (or family / spouse / committee) will demand
+  liquidation regardless of fundamentals. This is real and must be modelled
+  honestly.
+* **Mandate / rating dependencies**: bonds that flip out of investment grade,
+  funds with redemption gates triggered by AUM thresholds, positions held
+  only because of style classifications that may shift.
+
+The defensive posture is to ensure the portfolio can ride out adverse
+conditions without any of these triggering. The aggressive flip side: be
+positioned to BE the buyer when others are forced sellers. That requires
+unencumbered capital, long-term capital, and a strong stomach.
+
+---
+
 ## PRICE DECLINES IN CONTEXT
 
 When a holding's price drops significantly:
@@ -185,6 +287,28 @@ When a holding's price drops significantly:
 Historical drawdown estimates (bear market -30%, crypto -70%, etc.) are useful
 for assessing whether the investor can psychologically and financially withstand
 price declines without being forced to sell. They are NOT measures of investment risk.
+
+---
+
+## ASYMMETRY AND THE QUALITY OF RISK BEARING
+
+The defining mark of a skillful investor is not the level of return but the
+asymmetry of return: capturing more of the upside than the downside relative
+to a passive benchmark of equivalent style.
+
+When reviewing the portfolio, ask:
+* In an adverse scenario (recession, market drawdown, sentiment shift), how
+  much would this portfolio lose relative to the broad market?
+* In a favorable scenario, how much would it gain relative to the broad
+  market?
+* Is the upside-capture greater than the downside-capture? Asymmetric
+  participation is the only reliable signature of skill.
+
+A portfolio that wins in good times and loses equally hard in bad times has
+high beta but no alpha. The risk borne is producing return, but the risk is
+not being intelligently selected. Reframe positions so that aggregate
+asymmetry is favorable -- typically by trimming the most stretched names and
+adding positions where margin of safety is widest.
 
 ---
 
@@ -227,4 +351,13 @@ Must include:
   its own sake
 * Acknowledge when the portfolio is well-positioned -- not every assessment needs
   to find problems
+* The perversity of risk: what feels safe in late-cycle exuberance often is
+  not, and what feels dangerous in panic often offers the largest margin of
+  safety. Lean against the consensus reading of risk.
+* Risk control is invisible when it is not needed. Most years are good years,
+  and risk control adds nothing in good years. Its value shows only when the
+  tide goes out. Do not abandon it because it has not been "earning its keep."
+* Ensure that for every "what could go right" scenario examined, an equally
+  rigorous "what could go wrong" scenario has been examined -- including
+  outcomes outside the recent historical range.
 """
