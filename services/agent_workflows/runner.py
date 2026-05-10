@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import time
 
 from models.agent_workflow import WorkflowResult
 from models.session import Message, MessageRole
@@ -42,6 +43,7 @@ class WorkflowRunner:
                 break
             try:
                 await self._run_workflow(workflow)
+                time.sleep(90)
             except Exception as e:
                 logger.exception(
                     "Failed to run workflow %s for user %s: %s",

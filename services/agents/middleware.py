@@ -69,6 +69,6 @@ class ToolTokenRateLimitMiddleware(AgentMiddleware):
             if tool_name in settings.TOKEN_INTENSIVE_TOOLS:
                 await asyncio.sleep(125)
             else:
-                await asyncio.sleep(65)
+                await asyncio.sleep(90)
 
         return await handler(request)
