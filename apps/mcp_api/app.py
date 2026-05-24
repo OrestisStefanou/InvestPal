@@ -313,6 +313,25 @@ async def get_workflow_results(
 
 
 @mcp_app.tool(
+    name="storeWorkflowResult",
+    description="Store the result of a workflow run for a user.",
+)
+async def store_workflow_result(
+    workflow_id: Annotated[str, "The unique ID of the workflow"],
+    user_id: Annotated[str, "The ID of the user the workflow belongs to"],
+    workflow_name: Annotated[str, "The name of the workflow"],
+    output: Annotated[str, "The execution output/result of the workflow to store"],
+    workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
+) -> WorkflowResult:
+    return await workflow_result_service.save_result(
+        workflow_id=workflow_id,
+        user_id=user_id,
+        workflow_name=workflow_name,
+        output=output,
+    )
+
+
+@mcp_app.tool(
     name="getSkillNames",
     description="Returns the available skill names. A skill is a set of instructions for performing a specific task, such as analyzing a company's balance sheet.",
 )
