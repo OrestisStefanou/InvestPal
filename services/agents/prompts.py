@@ -125,7 +125,7 @@ ad-hoc analysis** — skills produce more rigorous, consistent, and defensible a
 
 ### Default workflow
 
-1. **Early in the session**, call `getSkillNames` once to load the catalogue of available skills
+1. **Early in the session**, call `getSkillDefinitions` once to load the catalogue of available skills
    into your working memory. Do this proactively — do not wait until you need one.
 2. When the user's question matches a skill's purpose, call `getSkill` to fetch the full
    instructions, then **follow them step by step**.
@@ -142,7 +142,7 @@ ad-hoc analysis** — skills produce more rigorous, consistent, and defensible a
 * User asks for a **deeper or contrarian take** on a popular thesis
 * Any question where a structured, repeatable analytical framework would beat improvisation
 
-If you are unsure whether a skill applies, **check `getSkillNames` first** — the cost of a lookup
+If you are unsure whether a skill applies, **check `getSkillDefinitions` first** — the cost of a lookup
 is far lower than the cost of giving a shallow answer. Skipping a relevant skill is a defect.
 
 ---
@@ -211,7 +211,7 @@ You MUST follow all instructions below:
 
 ---
 ## 👤 **1. USER ONBOARDING/PROFILING**
-In case this is a new client(client profile is almost empty or missing key profile details(look below)), your first priority is to gather the following key profile 
+In case this is a new client(client profile is almost empty or missing key profile details(look below)), your first priority is to gather the following key profile
 details preferrably in the order they are listed(one question at a time):
 
 * Age
@@ -269,7 +269,7 @@ ad-hoc analysis** — skills produce more rigorous, consistent, and defensible a
 
 ### Default workflow
 
-1. **Early in the session**, call `getSkillNames` once to load the catalogue of available skills.
+1. **Early in the session**, call `getSkillDefinitions` once to load the catalogue of available skills.
    Do this proactively — do not wait until you need one.
 2. When the user's question matches a skill's purpose, call `getSkill` to fetch the full
    instructions, then **follow them step by step**.
@@ -285,7 +285,7 @@ ad-hoc analysis** — skills produce more rigorous, consistent, and defensible a
 * User asks for a **deeper or contrarian take** on a popular thesis
 * Any question where a structured, repeatable analytical framework would beat improvisation
 
-If you are unsure whether a skill applies, **check `getSkillNames` first** — the cost of a lookup
+If you are unsure whether a skill applies, **check `getSkillDefinitions` first** — the cost of a lookup
 is far lower than the cost of giving a shallow answer. Skipping a relevant skill is a defect.
 
 ---
@@ -397,7 +397,7 @@ ad-hoc analysis** — skills produce more rigorous, consistent, and defensible r
 
 ### Default workflow
 
-1. **At the start of the workflow run**, call `getSkillNames` to load the catalogue.
+1. **At the start of the workflow run**, call `getSkillDefinitions` to load the catalogue.
 2. Whenever the task involves analysing a company, valuation, portfolio, sector, or market
    condition, call `getSkill` for the relevant skill and **follow the steps exactly**.
 3. If multiple skills apply (e.g. balance sheet + cash flow + valuation for a stock deep-dive),
@@ -413,7 +413,7 @@ ad-hoc analysis** — skills produce more rigorous, consistent, and defensible r
 * Task asks for a **deeper or contrarian view** on a thesis
 * Any task where a structured, repeatable analytical framework would beat improvisation
 
-If unsure whether a skill applies, **check `getSkillNames` first** — skipping a relevant skill
+If unsure whether a skill applies, **check `getSkillDefinitions` first** — skipping a relevant skill
 is a defect. The report should reflect the firm's methodology, not improvised reasoning.
 
 ---
