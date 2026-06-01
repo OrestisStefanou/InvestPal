@@ -3,12 +3,12 @@ import logging
 from typing import Annotated
 
 from fastmcp import FastMCP
-from fastmcp.server.lifespan import lifespan
 from fastmcp.dependencies import (
-    Depends,
     CurrentContext,
+    Depends,
 )
 from fastmcp.server.context import Context
+from fastmcp.server.lifespan import lifespan
 from fastmcp.server.middleware import (
     Middleware,
     MiddlewareContext,
@@ -16,35 +16,39 @@ from fastmcp.server.middleware import (
 from pymongo import AsyncMongoClient
 
 from config import settings
-from services.user_context import (
-    MongoDBUserContextService,
-    UserContextService,
-)
-from services.agent_reminder import (
-    MongoDBAgentReminderService,
-    AgentReminderService,
-)
-from services.agent_workflows.workflow import (
-    MongoDBAgentWorkflowService,
-    AgentWorkflowService,
-)
-from services.agent_workflows.results import (
-    MongoDBWorkflowResultService,
-    WorkflowResultService,
-)
-from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
-from services.agents.skills import SkillName, skills
-from models.user_context import (
-    UserContext,
-    UserConversationNotes,
-)
 from models.agent_reminder import AgentReminder
 from models.agent_workflow import (
     AgentWorkflow,
     WorkflowResult,
     WorkflowStatus,
 )
-
+from models.user_context import (
+    UserContext,
+    UserConversationNotes,
+)
+from services.agent_reminder import (
+    AgentReminderService,
+    MongoDBAgentReminderService,
+)
+from services.agent_workflows.results import (
+    MongoDBWorkflowResultService,
+    WorkflowResultService,
+)
+from services.agent_workflows.workflow import (
+    AgentWorkflowService,
+    MongoDBAgentWorkflowService,
+)
+from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
+from services.agents.skills import (
+    SkillName,
+    skill_descriptions,
+    skills,
+)
+from services.agents.tools import SkillDefinition
+from services.user_context import (
+    MongoDBUserContextService,
+    UserContextService,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,7 +63,9 @@ class LoggingMiddleware(Middleware):
         args = context.message.arguments
         logger.info("Calling tool %s with arguments %s", tool_name, args)
         result = await call_next(context)
-        logger.info("Tool call %s with arguments %s returned result %s", tool_name, args, result)
+        logger.info(
+            "Tool call %s with arguments %s returned result %s", tool_name, args, result
+        )
         return result
 
 
@@ -85,7 +91,9 @@ def get_agent_workflow_service(ctx: Context = CurrentContext()) -> AgentWorkflow
     return MongoDBAgentWorkflowService(mongo_client=db_client)
 
 
-def get_workflow_result_service(ctx: Context = CurrentContext()) -> WorkflowResultService:
+def get_workflow_result_service(
+    ctx: Context = CurrentContext(),
+) -> WorkflowResultService:
     db_client = ctx.lifespan_context["db_client"]
     return MongoDBWorkflowResultService(mongo_client=db_client)
 
@@ -100,7 +108,10 @@ mcp_app.add_middleware(LoggingMiddleware())
 )
 async def update_user_context(
     user_id: Annotated[str, "The id of the user to update the context for"],
-    user_profile: Annotated[dict, "General information about the user. Must provide the complete user profile as it will replace the existing one."],
+    user_profile: Annotated[
+        dict,
+        "General information about the user. Must provide the complete user profile as it will replace the existing one.",
+    ],
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> UserContext:
     updated_user_context = await user_context_service.update_user_context(
@@ -115,7 +126,7 @@ async def update_user_context(
     name="getUserContext",
     description="Get the user context(for the given user_id) including user profile and portfolio holdings.",
 )
-async def update_user_context(
+async def get_user_context(
     user_id: Annotated[str, "The id of the user to get the context for"],
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> UserContext:
@@ -140,10 +151,15 @@ async def get_current_datetime() -> str:
 )
 async def get_user_conversation_notes(
     user_id: Annotated[str, "The id of the user to get conversation notes for"],
-    limit: Annotated[int | None, "Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes."] = 5,
+    limit: Annotated[
+        int | None,
+        "Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
+    ] = 5,
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> list[UserConversationNotes]:
-    return await user_context_service.get_user_conversation_notes(user_id=user_id, limit=limit)
+    return await user_context_service.get_user_conversation_notes(
+        user_id=user_id, limit=limit
+    )
 
 
 @mcp_app.tool(
@@ -157,7 +173,10 @@ async def get_user_conversation_notes(
 async def update_user_conversation_notes(
     user_id: Annotated[str, "The id of the user to update conversation notes for"],
     date: Annotated[str, "The date of the conversation in YYYY-MM-DD format"],
-    notes: Annotated[dict, "A key-value store of notes about the conversation. These will be merged with any existing notes for this date"],
+    notes: Annotated[
+        dict,
+        "A key-value store of notes about the conversation. These will be merged with any existing notes for this date",
+    ],
     user_context_service: UserContextService = Depends(get_user_context_service),
 ) -> None:
     await user_context_service.update_user_conversation_notes(
@@ -174,7 +193,9 @@ async def update_user_conversation_notes(
 async def create_agent_reminder(
     user_id: Annotated[str, "The id of the user to create the reminder for"],
     reminder_description: Annotated[str, "The description of the reminder"],
-    due_date: Annotated[str | None, "Optional due date for the reminder in YYYY-MM-DD format"] = None,
+    due_date: Annotated[
+        str | None, "Optional due date for the reminder in YYYY-MM-DD format"
+    ] = None,
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> AgentReminder:
     return await agent_reminder_service.create_agent_reminder(
@@ -202,8 +223,14 @@ async def get_agent_reminders(
 async def update_agent_reminder(
     user_id: Annotated[str, "The id of the user the reminder belongs to"],
     reminder_id: Annotated[str, "The unique id of the reminder to update"],
-    reminder_description: Annotated[str | None, "New description for the reminder. If omitted, the existing description is kept."] = None,
-    due_date: Annotated[str | None, "New due date for the reminder in YYYY-MM-DD format. If omitted, the existing due date is kept."] = None,
+    reminder_description: Annotated[
+        str | None,
+        "New description for the reminder. If omitted, the existing description is kept.",
+    ] = None,
+    due_date: Annotated[
+        str | None,
+        "New due date for the reminder in YYYY-MM-DD format. If omitted, the existing due date is kept.",
+    ] = None,
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> AgentReminder:
     return await agent_reminder_service.update_agent_reminder(
@@ -234,13 +261,18 @@ async def delete_agent_reminder(
     description="""Create a new scheduled workflow for the user. An agent will execute the description autonomously on the given schedule.
     The description must state only WHAT goal to achieve — not HOW. Do not include tool names, user data, or implementation steps.
     The execution agent has its own tools and will independently access the user's profile.
-    """
+    """,
 )
 async def create_agent_workflow(
     user_id: Annotated[str, "The id of the user to create the workflow for"],
     name: Annotated[str, "A short human-readable name for the workflow"],
-    description: Annotated[str, "Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent."],
-    schedule: Annotated[str, "Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st"],
+    description: Annotated[
+        str,
+        "Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent.",
+    ],
+    schedule: Annotated[
+        str, "Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st"
+    ],
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.create_workflow(
@@ -270,9 +302,17 @@ async def update_agent_workflow(
     user_id: Annotated[str, "The id of the user the workflow belongs to"],
     workflow_id: Annotated[str, "The unique id of the workflow to update"],
     name: Annotated[str | None, "New name. If omitted, existing name is kept."] = None,
-    description: Annotated[str | None, "Updated goal-only description. No tool names, no user data, no implementation steps. If omitted, existing description is kept."] = None,
-    schedule: Annotated[str | None, "New cron schedule. If omitted, existing schedule is kept."] = None,
-    status: Annotated[WorkflowStatus | None, "New status: 'active' or 'paused'. If omitted, existing status is kept."] = None,
+    description: Annotated[
+        str | None,
+        "Updated goal-only description. No tool names, no user data, no implementation steps. If omitted, existing description is kept.",
+    ] = None,
+    schedule: Annotated[
+        str | None, "New cron schedule. If omitted, existing schedule is kept."
+    ] = None,
+    status: Annotated[
+        WorkflowStatus | None,
+        "New status: 'active' or 'paused'. If omitted, existing status is kept.",
+    ] = None,
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.update_workflow(
@@ -306,8 +346,13 @@ async def delete_agent_workflow(
 )
 async def get_workflow_results(
     user_id: Annotated[str, "The id of the user to get workflow results for"],
-    limit: Annotated[int | None, "Maximum number of results to return. Defaults to 10. Pass None to return all."] = 10,
-    workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
+    limit: Annotated[
+        int | None,
+        "Maximum number of results to return. Defaults to 10. Pass None to return all.",
+    ] = 10,
+    workflow_result_service: WorkflowResultService = Depends(
+        get_workflow_result_service
+    ),
 ) -> list[WorkflowResult]:
     return await workflow_result_service.get_results(user_id=user_id, limit=limit)
 
@@ -321,7 +366,9 @@ async def store_workflow_result(
     user_id: Annotated[str, "The ID of the user the workflow belongs to"],
     workflow_name: Annotated[str, "The name of the workflow"],
     output: Annotated[str, "The execution output/result of the workflow to store"],
-    workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
+    workflow_result_service: WorkflowResultService = Depends(
+        get_workflow_result_service
+    ),
 ) -> WorkflowResult:
     return await workflow_result_service.save_result(
         workflow_id=workflow_id,
@@ -332,16 +379,22 @@ async def store_workflow_result(
 
 
 @mcp_app.tool(
-    name="getSkillNames",
-    description="Returns the available skill names. A skill is a set of instructions for performing a specific task, such as analyzing a company's balance sheet.",
+    name="getSkillDefinitions",
+    description="Returns the available skill names and their description. A skill is a set of instructions for performing a specific task, such as analyzing a company's balance sheet.",
 )
-async def get_skill_names() -> list[str]:
-    return [skill_name.value for skill_name in skills.keys()]
+async def get_skill_definitions() -> list[SkillDefinition]:
+    return [
+        SkillDefinition(
+            skill_name=skill_name.value,
+            skill_description=skill_descriptions[skill_name],
+        )
+        for skill_name in skills.keys()
+    ]
 
 
 @mcp_app.tool(
     name="getSkill",
-    description="Returns the instructions for a specific skill. Use getSkillNames to retrieve the list of available skill names.",
+    description="Returns the instructions for a specific skill. Use getSkillDefinitions to retrieve the list of available skill names.",
 )
 async def get_skill(
     skill_name: Annotated[str, "The name of the skill to retrieve"],
@@ -349,7 +402,7 @@ async def get_skill(
     try:
         skill_enum = SkillName(skill_name)
     except ValueError:
-        return f"Skill '{skill_name}' not found. Use getSkillNames to see available skills."
+        return f"Skill '{skill_name}' not found. Use getSkillDefinitions to see available skills."
     return skills[skill_enum]
 
 
@@ -377,7 +430,9 @@ async def multiply(
     return a * b
 
 
-@mcp_app.tool(name="divide", description="Divide a by b. Returns an error if b is zero.")
+@mcp_app.tool(
+    name="divide", description="Divide a by b. Returns an error if b is zero."
+)
 async def divide(
     a: Annotated[float, "The first operand"],
     b: Annotated[float, "The second operand"],
@@ -390,6 +445,7 @@ async def divide(
 @mcp_app.prompt
 def get_invstment_advisor_prompt(user_id: str) -> str:
     return INVESTMENT_ADVISOR_PROMPT.format(user_id=user_id)
+
 
 if __name__ == "__main__":
     mcp_app.run(transport="http", port=settings.MCP_APP_SERVER_PORT)

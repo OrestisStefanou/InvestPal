@@ -1,27 +1,30 @@
-from dataclasses import dataclass
 import datetime as dt
+from dataclasses import dataclass
 
-
+from langchain.tools import (
+    ToolRuntime,
+    tool,
+)
 from pydantic import (
     BaseModel,
     Field,
 )
-from langchain.tools import (
-    tool,
-    ToolRuntime,
-)
 
+from models.agent_reminder import AgentReminder
+from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
 from models.user_context import (
     UserContext,
     UserConversationNotes,
 )
-from models.agent_reminder import AgentReminder
-from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
-from services.user_context import UserContextService
 from services.agent_reminder import AgentReminderService
-from services.agent_workflows.workflow import AgentWorkflowService
 from services.agent_workflows.results import WorkflowResultService
-from services.agents.skills import SkillName, skills
+from services.agent_workflows.workflow import AgentWorkflowService
+from services.agents.skills import (
+    SkillName,
+    skill_descriptions,
+    skills,
+)
+from services.user_context import UserContextService
 
 
 @dataclass
@@ -46,7 +49,9 @@ class WorkflowResultsToolRuntimeContext:
 
 class UpdateUserContextToolInput(BaseModel):
     user_id: str = Field(description="The id of the user to update the context for")
-    user_profile: dict = Field(description="General information about the user. Must provide the complete user profile as it will replace the existing one.")
+    user_profile: dict = Field(
+        description="General information about the user. Must provide the complete user profile as it will replace the existing one."
+    )
 
 
 @tool(
@@ -69,7 +74,9 @@ async def update_user_context(
 
 
 @tool("getUserContext")
-async def get_user_context(runtime: ToolRuntime[UserContextToolsRuntimeContext], user_id: str) -> UserContext:
+async def get_user_context(
+    runtime: ToolRuntime[UserContextToolsRuntimeContext], user_id: str
+) -> UserContext:
     """Get the user context including user profile and portfolio holdings.
 
     Args:
@@ -110,11 +117,15 @@ async def get_user_conversation_notes(
     limit: int | None = 5,
 ) -> list[UserConversationNotes]:
     user_context_service = runtime.context.user_context_service
-    return await user_context_service.get_user_conversation_notes(user_id=user_id, limit=limit)
+    return await user_context_service.get_user_conversation_notes(
+        user_id=user_id, limit=limit
+    )
 
 
 class UpdateUserConversationNotesToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user to update conversation notes for")
+    user_id: str = Field(
+        description="The id of the user to update conversation notes for"
+    )
     date: str = Field(description="The date of the conversation in YYYY-MM-DD format")
     notes: dict = Field(
         description=(
@@ -248,26 +259,36 @@ async def delete_agent_reminder(
         reminder_id=reminder_id,
     )
 
-@tool("getSkillNames")
-async def get_skill_names() -> list[str]:
-    """
-    Returns the available skill names. A skill is a set of instructions for performing a specific task,
+
+class SkillDefinition(BaseModel):
+    skill_name: str
+    skill_description: str
+
+
+@tool("getSkillDefinitions")
+async def get_skill_definitions() -> list[SkillDefinition]:
+    """Returns the available skill names and their description.
+    A skill is a set of instructions for performing a specific task,
     such as analyzing a company's balance sheet.
     """
     return [
-        skill_name.value for skill_name in skills.keys()
+        SkillDefinition(
+            skill_name=skill_name.value,
+            skill_description=skill_descriptions[skill_name],
+        )
+        for skill_name in skills.keys()
     ]
 
 
 @tool("getSkill")
 async def get_skill(skill_name: str) -> str:
     """
-    Returns the instructions for a specific skill. Use getSkillNames to retrieve the list of available skill names.
+    Returns the instructions for a specific skill. Use getSkillDefinitions to retrieve the list of available skill names.
     """
     try:
         skill_enum = SkillName(skill_name)
     except ValueError:
-        return f"Skill '{skill_name}' not found. Use getSkillNames to see available skills."
+        return f"Skill '{skill_name}' not found. Use getSkillDefinitions to see available skills."
 
     return skills[skill_enum]
 
@@ -277,7 +298,9 @@ class MathOperationToolInput(BaseModel):
     b: float = Field(description="The second operand")
 
 
-@tool("add", args_schema=MathOperationToolInput, description="Add two numbers together.")
+@tool(
+    "add", args_schema=MathOperationToolInput, description="Add two numbers together."
+)
 async def add(a: float, b: float) -> float:
     return a + b
 
@@ -287,12 +310,20 @@ async def subtract(a: float, b: float) -> float:
     return a - b
 
 
-@tool("multiply", args_schema=MathOperationToolInput, description="Multiply two numbers together.")
+@tool(
+    "multiply",
+    args_schema=MathOperationToolInput,
+    description="Multiply two numbers together.",
+)
 async def multiply(a: float, b: float) -> float:
     return a * b
 
 
-@tool("divide", args_schema=MathOperationToolInput, description="Divide a by b. Returns an error if b is zero.")
+@tool(
+    "divide",
+    args_schema=MathOperationToolInput,
+    description="Divide a by b. Returns an error if b is zero.",
+)
 async def divide(a: float, b: float) -> float | str:
     if b == 0:
         return "Error: division by zero"
@@ -302,8 +333,12 @@ async def divide(a: float, b: float) -> float | str:
 class CreateAgentWorkflowToolInput(BaseModel):
     user_id: str = Field(description="The id of the user to create the workflow for")
     name: str = Field(description="A short human-readable name for the workflow")
-    description: str = Field(description="Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent.")
-    schedule: str = Field(description="Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st")
+    description: str = Field(
+        description="Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent."
+    )
+    schedule: str = Field(
+        description="Cron expression for the schedule, e.g. '0 0 1 * *' for monthly on the 1st"
+    )
 
 
 @tool(
@@ -345,10 +380,21 @@ async def get_agent_workflows(
 class UpdateAgentWorkflowToolInput(BaseModel):
     user_id: str = Field(description="The id of the user the workflow belongs to")
     workflow_id: str = Field(description="The unique id of the workflow to update")
-    name: str | None = Field(default=None, description="New name. If omitted, existing name is kept.")
-    description: str | None = Field(default=None, description="Updated goal-only description. No tool names, no user data, no implementation steps. If omitted, existing description is kept.")
-    schedule: str | None = Field(default=None, description="New cron schedule. If omitted, existing schedule is kept.")
-    status: WorkflowStatus | None = Field(default=None, description="New status: 'active' or 'paused'. If omitted, existing status is kept.")
+    name: str | None = Field(
+        default=None, description="New name. If omitted, existing name is kept."
+    )
+    description: str | None = Field(
+        default=None,
+        description="Updated goal-only description. No tool names, no user data, no implementation steps. If omitted, existing description is kept.",
+    )
+    schedule: str | None = Field(
+        default=None,
+        description="New cron schedule. If omitted, existing schedule is kept.",
+    )
+    status: WorkflowStatus | None = Field(
+        default=None,
+        description="New status: 'active' or 'paused'. If omitted, existing status is kept.",
+    )
 
 
 @tool(
@@ -414,4 +460,6 @@ async def get_workflow_results(
     user_id: str,
     limit: int | None = 10,
 ) -> list[WorkflowResult]:
-    return await runtime.context.workflow_result_service.get_results(user_id=user_id, limit=limit)
+    return await runtime.context.workflow_result_service.get_results(
+        user_id=user_id, limit=limit
+    )
