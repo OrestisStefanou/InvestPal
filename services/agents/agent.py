@@ -1,65 +1,62 @@
+from dataclasses import dataclass
 from typing import (
     Any,
-    Type, 
-    TypedDict,
     Mapping,
+    Type,
+    TypedDict,
 )
-from dataclasses import dataclass
 
-from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_anthropic import ChatAnthropic
 from langchain.agents import create_agent
-from langchain.tools import BaseTool
-from langchain.chat_models import BaseChatModel
 from langchain.agents.middleware import AgentMiddleware
-from pydantic import BaseModel
+from langchain.chat_models import BaseChatModel
+from langchain.tools import BaseTool
+from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
-from models.session import (
-    MessageRole,
-    Message,
-)
 from config import (
-    settings,
     LLMProvider,
+    settings,
+)
+from models.session import (
+    Message,
+    MessageRole,
 )
 from services.agents.prompts import (
     INVESTMENT_MANAGER_AGENT_PROMPT,
     USER_CONTEXT_MEMORY_MANAGER_PROMPT,
+    WORKFLOW_EXECUTION_AGENT_PROMPT,
 )
 from services.agents.tools import (
-    UserContextToolsRuntimeContext,
-    AgentWorkflowToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
+    AgentWorkflowToolsRuntimeContext,
+    UserContextToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
-    update_user_context,
-    get_user_context,
-    get_current_datetime,
-    get_user_conversation_notes,
-    update_user_conversation_notes,
-    create_agent_reminder,
-    get_agent_reminders,
-    update_agent_reminder,
-    update_agent_reminder,
-    delete_agent_reminder,
-    get_skill_names,
-    get_skill,
     add,
-    subtract,
-    multiply,
-    divide,
+    create_agent_reminder,
     create_agent_workflow,
-    get_agent_workflows,
-    update_agent_workflow,
+    delete_agent_reminder,
     delete_agent_workflow,
+    divide,
+    get_agent_reminders,
+    get_agent_workflows,
+    get_current_datetime,
+    get_skill,
+    get_skill_definitions,
+    get_user_context,
+    get_user_conversation_notes,
     get_workflow_results,
+    multiply,
+    subtract,
+    update_agent_reminder,
+    update_agent_workflow,
+    update_user_context,
+    update_user_conversation_notes,
 )
-from services.agent_workflows.workflow import AgentWorkflowService
-from services.agent_workflows.results import WorkflowResultService
-from services.agents.prompts import WORKFLOW_EXECUTION_AGENT_PROMPT
 
-# TODO: Create Agent ABC clas 
+# TODO: Create Agent ABC clas
 
 
 class Agent:
@@ -93,7 +90,7 @@ class Agent:
         messages = []
         # Keep the last settings.CONVERSATION_MESSAGES_LIMIT messages
         if len(conversation) > settings.CONVERSATION_MESSAGES_LIMIT:
-            conversation = conversation[-settings.CONVERSATION_MESSAGES_LIMIT:]
+            conversation = conversation[-settings.CONVERSATION_MESSAGES_LIMIT :]
 
         for message in conversation:
             if message.role == MessageRole.USER:
@@ -108,7 +105,9 @@ class Agent:
 
         return response["structured_response"]
 
-    def _setup_agent(self, system_prompt_placeholder_values: Mapping[str, Any] | None = None):
+    def _setup_agent(
+        self, system_prompt_placeholder_values: Mapping[str, Any] | None = None
+    ):
         model = self._setup_llm_model(self.provider, self.model_name, self.temperature)
 
         system_prompt = self.system_prompt
@@ -124,7 +123,9 @@ class Agent:
             context_schema=self.runtime_context_schema,
         )
 
-    def _setup_llm_model(self, provider: LLMProvider, model_name: str, temperature: float) -> BaseChatModel:
+    def _setup_llm_model(
+        self, provider: LLMProvider, model_name: str, temperature: float
+    ) -> BaseChatModel:
         match provider:
             case LLMProvider.OPENAI:
                 return ChatOpenAI(
@@ -152,6 +153,7 @@ class InvestmentManagerAgentResponse(BaseModel):
     """
     Schema for the structured response from the Investment Manager Agent.
     """
+
     response: str
 
 
@@ -162,6 +164,7 @@ class InvestmentManagerPromptVars(TypedDict):
     Attributes:
         client_profile: A dictionary containing the user's investment profile and context.
     """
+
     client_profile: dict[str, Any]
 
 
@@ -180,6 +183,7 @@ class InvestmentManagerAgent(Agent):
     Agent responsible for providing personalized investment management guidance.
     Note: Callers should use the create method to create an instance of this agent.
     """
+
     def __init__(
         self,
         tools: list[BaseTool],
@@ -236,7 +240,7 @@ class InvestmentManagerAgent(Agent):
             update_agent_workflow,
             delete_agent_workflow,
             get_workflow_results,
-            get_skill_names,
+            get_skill_definitions,
             get_skill,
             add,
             subtract,
@@ -244,15 +248,21 @@ class InvestmentManagerAgent(Agent):
             divide,
         ]
         if settings.MARKET_DATA_MCP_SERVER_URL:
-            market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+            market_data_tools = await mcp_client.get_tools(
+                server_name=settings.MARKET_DATA_MCP_SERVER_NAME
+            )
             tools.extend(market_data_tools)
 
         if settings.ALPACA_MCP_SERVER_URL:
-            alpaca_tools = await mcp_client.get_tools(server_name=settings.ALPACA_MCP_SERVER_NAME)
+            alpaca_tools = await mcp_client.get_tools(
+                server_name=settings.ALPACA_MCP_SERVER_NAME
+            )
             tools.extend(alpaca_tools)
-        
+
         if settings.COINBASE_MCP_SERVER_URL:
-            coinbase_tools = await mcp_client.get_tools(server_name=settings.COINBASE_MCP_SERVER_NAME)
+            coinbase_tools = await mcp_client.get_tools(
+                server_name=settings.COINBASE_MCP_SERVER_NAME
+            )
             tools.extend(coinbase_tools)
 
         return cls(tools=tools, middleware=middleware)
@@ -262,6 +272,7 @@ class UserContextMemoryManagerAgentResponse(BaseModel):
     """
     Schema for the structured response from the User Context Memory Manager Agent.
     """
+
     response: str
 
 
@@ -272,6 +283,7 @@ class UserContextMemoryManagerPromptVars(TypedDict):
     Attributes:
         user_id: The ID of the user to manage context for.
     """
+
     user_id: str
 
 
@@ -284,6 +296,7 @@ class UserContextMemoryManagerAgent(Agent):
     """
     Agent responsible for managing the user context memory.
     """
+
     def __init__(
         self,
         middleware: list[AgentMiddleware],
@@ -310,7 +323,8 @@ class UserContextMemoryManagerAgent(Agent):
         self,
         conversation: list[Message],
         runtime_context: UserContextManagerRuntimeContext,
-        system_prompt_placeholder_values: UserContextMemoryManagerPromptVars | None = None,
+        system_prompt_placeholder_values: UserContextMemoryManagerPromptVars
+        | None = None,
     ) -> UserContextMemoryManagerAgentResponse:
         return await super().generate_response(
             conversation=conversation,
@@ -379,7 +393,7 @@ class WorkflowExecutionAgent(Agent):
             get_current_datetime,
             get_user_conversation_notes,
             get_workflow_results,
-            get_skill_names,
+            get_skill_definitions,
             get_skill,
             add,
             subtract,
@@ -387,15 +401,21 @@ class WorkflowExecutionAgent(Agent):
             divide,
         ]
         if settings.MARKET_DATA_MCP_SERVER_URL:
-            market_data_tools = await mcp_client.get_tools(server_name=settings.MARKET_DATA_MCP_SERVER_NAME)
+            market_data_tools = await mcp_client.get_tools(
+                server_name=settings.MARKET_DATA_MCP_SERVER_NAME
+            )
             tools.extend(market_data_tools)
 
         if settings.ALPACA_MCP_SERVER_URL:
-            alpaca_tools = await mcp_client.get_tools(server_name=settings.ALPACA_MCP_SERVER_NAME)
+            alpaca_tools = await mcp_client.get_tools(
+                server_name=settings.ALPACA_MCP_SERVER_NAME
+            )
             tools.extend(alpaca_tools)
 
         if settings.COINBASE_MCP_SERVER_URL:
-            coinbase_tools = await mcp_client.get_tools(server_name=settings.COINBASE_MCP_SERVER_NAME)
+            coinbase_tools = await mcp_client.get_tools(
+                server_name=settings.COINBASE_MCP_SERVER_NAME
+            )
             tools.extend(coinbase_tools)
 
         return cls(tools=tools, middleware=middleware)
