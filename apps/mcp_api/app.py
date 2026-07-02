@@ -25,6 +25,7 @@ from models.agent_workflow import (
 from models.user_context import (
     UserContext,
     UserConversationNotes,
+    UserProfileNote,
 )
 from services.agent_reminder import (
     AgentReminderService,
@@ -48,7 +49,11 @@ from services.agents.tools import SkillDefinition
 from services.user_context import (
     MongoDBUserContextService,
     UserContextService,
+    UserProfileService,
 )
+from repos.user_profile_notes import UserProfileNotesTable
+from repos.db import init_db
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,6 +76,9 @@ class LoggingMiddleware(Middleware):
 
 @lifespan
 async def db_lifespan(server):
+    # Initialize Turso/SQLite database schema
+    init_db(settings.TURSO_DB_PATH)
+    
     db_client = AsyncMongoClient(settings.MONGO_URI)
     yield {"db_client": db_client}
     await db_client.close()
@@ -79,6 +87,17 @@ async def db_lifespan(server):
 def get_user_context_service(ctx: Context = CurrentContext()) -> UserContextService:
     db_client = ctx.lifespan_context["db_client"]
     return MongoDBUserContextService(mongo_client=db_client)
+
+
+def get_user_profile_notes_table(ctx: Context = CurrentContext()) -> UserProfileNotesTable:
+    return UserProfileNotesTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_user_profile_service(
+    table: UserProfileNotesTable = Depends(get_user_profile_notes_table),
+) -> UserProfileService:
+    return UserProfileService(table=table)
+
 
 
 def get_agent_reminder_service(ctx: Context = CurrentContext()) -> AgentReminderService:
@@ -100,6 +119,39 @@ def get_workflow_result_service(
 
 mcp_app = FastMCP("InvestPal MCP Server", lifespan=db_lifespan)
 mcp_app.add_middleware(LoggingMiddleware())
+
+
+@mcp_app.tool(
+    name="createUserProfileNote",
+    description="Create a new user profile note.",
+)
+async def create_user_profile_note(
+    note: Annotated[str, "The content of the note"],
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+) -> UserProfileNote:
+    return await user_profile_service.create_user_profile_note(note=note)
+
+
+@mcp_app.tool(
+    name="getUserProfileNotes",
+    description="Get the list of active user profile notes.",
+)
+async def get_user_profile_notes(
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+) -> list[UserProfileNote]:
+    return await user_profile_service.get_user_profile_notes()
+
+
+@mcp_app.tool(
+    name="markUserProfileNoteAsOutdated",
+    description="Mark a user profile note as outdated.",
+)
+async def mark_user_profile_note_as_outdated(
+    note_id: Annotated[str, "The ID of the note to mark as outdated"],
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+) -> str:
+    await user_profile_service.mark_note_as_outdated(note_id=note_id)
+    return f"Note {note_id} marked as outdated successfully"
 
 
 @mcp_app.tool(
