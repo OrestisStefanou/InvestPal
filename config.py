@@ -65,6 +65,7 @@ class Settings(BaseSettings):
 
 
     # MCP APP
+    TURSO_DB_PATH: str = "investpal.db"
     MCP_APP_SERVER_PORT: int = 9000
 
     model_config = SettingsConfigDict(env_file=".env")

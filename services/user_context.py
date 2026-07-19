@@ -1,3 +1,4 @@
+import asyncio
 from abc import ABC, abstractmethod
 import datetime as dt
 from typing import Any
@@ -12,7 +13,10 @@ from config import settings
 from models.user_context import (
     UserContext,
     UserConversationNotes,
+    UserProfileNote,
 )
+from repos.user_profile_notes import UserProfileNotesTable
+
 
 
 class UserContextAlreadyExistsError(Exception):
@@ -255,3 +259,31 @@ class MongoDBUserContextService(UserContextService):
             {"$set": update_data},
             upsert=True,
         )
+
+
+class UserProfileService:
+    def __init__(self, table: UserProfileNotesTable):
+        self.table = table
+
+    async def create_user_profile_note(self, note: str) -> UserProfileNote:
+        row = await asyncio.to_thread(self.table.create_user_profile_note, note)
+        return UserProfileNote(
+            id=row.id,
+            note=row.note,
+            created_at=row.created_at
+        )
+
+    async def get_user_profile_notes(self) -> list[UserProfileNote]:
+        rows = await asyncio.to_thread(self.table.get_user_profile_notes, False)
+        return [
+            UserProfileNote(
+                id=row.id,
+                note=row.note,
+                created_at=row.created_at
+            )
+            for row in rows
+        ]
+
+    async def mark_note_as_outdated(self, note_id: str) -> None:
+        await asyncio.to_thread(self.table.mark_as_outdated, note_id)
+

@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -12,3 +13,9 @@ class UserConversationNotes(BaseModel):
     user_id: str = Field(description="The unique identifier for the user")
     date: str = Field(description="The date in YYYY-MM-DD format")
     notes: dict = Field(description="A key-value store containing short, concise notes about the conversation on this date")
+
+
+class UserProfileNote(BaseModel):
+    id: str = Field(description="The unique identifier for the user profile note")
+    note: str = Field(description="The content of the note")
+    created_at: datetime = Field(description="The datetime when the note was created")
