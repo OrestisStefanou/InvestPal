@@ -23,7 +23,6 @@ from models.agent_workflow import (
     WorkflowStatus,
 )
 from models.user_context import (
-    UserContext,
     UserConversationNotes,
     UserProfileNote,
 )
@@ -152,38 +151,6 @@ async def mark_user_profile_note_as_outdated(
 ) -> str:
     await user_profile_service.mark_note_as_outdated(note_id=note_id)
     return f"Note {note_id} marked as outdated successfully"
-
-
-@mcp_app.tool(
-    name="updateUserContext",
-    description="Update the user context(for the given user_id) including user profile. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
-)
-async def update_user_context(
-    user_id: Annotated[str, "The id of the user to update the context for"],
-    user_profile: Annotated[
-        dict,
-        "General information about the user. Must provide the complete user profile as it will replace the existing one.",
-    ],
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> UserContext:
-    updated_user_context = await user_context_service.update_user_context(
-        user_id=user_id,
-        user_profile=user_profile,
-    )
-
-    return updated_user_context
-
-
-@mcp_app.tool(
-    name="getUserContext",
-    description="Get the user context(for the given user_id) including user profile and portfolio holdings.",
-)
-async def get_user_context(
-    user_id: Annotated[str, "The id of the user to get the context for"],
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> UserContext:
-    user_context = await user_context_service.get_user_context(user_id=user_id)
-    return user_context
 
 
 @mcp_app.tool(
