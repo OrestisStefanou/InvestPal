@@ -163,7 +163,6 @@ async def update_user_conversation_notes(
 
 
 class CreateAgentReminderToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user to create the reminder for")
     reminder_description: str = Field(description="The description of the reminder")
     due_date: str | None = Field(
         default=None,
@@ -178,13 +177,11 @@ class CreateAgentReminderToolInput(BaseModel):
 )
 async def create_agent_reminder(
     runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
-    user_id: str,
     reminder_description: str,
     due_date: str | None = None,
 ) -> AgentReminder:
     agent_reminder_service = runtime.context.agent_reminder_service
     return await agent_reminder_service.create_agent_reminder(
-        user_id=user_id,
         reminder_description=reminder_description,
         due_date=due_date,
     )
@@ -193,19 +190,13 @@ async def create_agent_reminder(
 @tool("getAgentReminders")
 async def get_agent_reminders(
     runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
-    user_id: str,
 ) -> list[AgentReminder]:
-    """Get all reminders for the given user.
-
-    Args:
-        user_id: The id of the user to get reminders for
-    """
+    """Get all reminders for the user."""
     agent_reminder_service = runtime.context.agent_reminder_service
-    return await agent_reminder_service.get_agent_reminders(user_id=user_id)
+    return await agent_reminder_service.get_agent_reminders()
 
 
 class UpdateAgentReminderToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user the reminder belongs to")
     reminder_id: str = Field(description="The unique id of the reminder to update")
     reminder_description: str | None = Field(
         default=None,
@@ -224,14 +215,12 @@ class UpdateAgentReminderToolInput(BaseModel):
 )
 async def update_agent_reminder(
     runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
-    user_id: str,
     reminder_id: str,
     reminder_description: str | None = None,
     due_date: str | None = None,
 ) -> AgentReminder:
     agent_reminder_service = runtime.context.agent_reminder_service
     return await agent_reminder_service.update_agent_reminder(
-        user_id=user_id,
         reminder_id=reminder_id,
         reminder_description=reminder_description,
         due_date=due_date,
@@ -239,7 +228,6 @@ async def update_agent_reminder(
 
 
 class DeleteAgentReminderToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user the reminder belongs to")
     reminder_id: str = Field(description="The unique id of the reminder to delete")
 
 
@@ -250,12 +238,10 @@ class DeleteAgentReminderToolInput(BaseModel):
 )
 async def delete_agent_reminder(
     runtime: ToolRuntime[AgentReminderToolsRuntimeContext],
-    user_id: str,
     reminder_id: str,
 ) -> None:
     agent_reminder_service = runtime.context.agent_reminder_service
     await agent_reminder_service.delete_agent_reminder(
-        user_id=user_id,
         reminder_id=reminder_id,
     )
 

@@ -22,4 +22,4 @@ async def main():
         print(result.structured_content)
 
 
-asyncio.run(main())
+run(main())
