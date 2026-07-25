@@ -455,8 +455,8 @@ async def divide(
 
 
 @mcp_app.prompt
-def get_invstment_advisor_prompt(user_id: str) -> str:
-    return INVESTMENT_ADVISOR_PROMPT.format(user_id=user_id)
+def get_invstment_advisor_prompt() -> str:
+    return INVESTMENT_ADVISOR_PROMPT
 
 
 if __name__ == "__main__":

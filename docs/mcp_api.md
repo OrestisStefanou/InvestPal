@@ -556,25 +556,23 @@ A result whose `workflow_id` no longer exists is still stored; there is simply n
 
 ### `get_invstment_advisor_prompt`
 
-Returns the system prompt used to configure the InvestPal investment advisor agent for a given user.
+Returns the system prompt used to configure the InvestPal investment advisor agent.
 
 **Parameters**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | The ID of the user to generate the prompt for |
+None. The server serves a single client, whose profile the agent loads through `getUserProfileNotes`.
 
 **Example call**
 
 ```python
 result = await client.get_prompt(
     name="get_invstment_advisor_prompt",
-    arguments={"user_id": "user-abc123"},
+    arguments={},
 )
 print(result.messages[0].content.text)
 ```
 
-**Returns**: The investment advisor system prompt string, personalized for the given `user_id`.
+**Returns**: The investment advisor system prompt string.
 
 ---
 
