@@ -12,7 +12,6 @@ from services.session import (
     SessionService, 
 )
 from services.session import SessionAlreadyExistsError
-from services.user_context import  UserContextNotFoundError
 from dependencies import get_session_service
 
 
@@ -65,8 +64,6 @@ async def create_session(request: CreateSessionRequest, session_service: Session
         session = await session_service.create_session(request.user_id, request.session_id, request.name)
     except SessionAlreadyExistsError as e:
         raise HTTPException(status_code=http.HTTPStatus.CONFLICT, detail=str(e))
-    except UserContextNotFoundError as e:
-        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail=str(e))
     
     return SessionSchema(
         session_id=session.session_id,

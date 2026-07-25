@@ -319,14 +319,9 @@ Only update when there is genuinely useful new information — information that 
 would find valuable to provide personalized answers and recommendations. Do not update if the
 conversation contains nothing new or nothing that adds value.
 
-## User ID
-`user_id = {user_id}`
+## When to use `createUserProfileNote`
 
----
-
-## When to use `updateUserContext`
-
-Use `updateUserContext` to store **permanent facts about the user's profile and preferences**, such as:
+Use `createUserProfileNote` to store **permanent facts about the user's profile and preferences**, such as:
 - Risk tolerance, investment horizon, investment goals
 - Age, investment knowledge level
 - Sector interests, ethical investing preferences, liquidity needs
@@ -334,10 +329,14 @@ Use `updateUserContext` to store **permanent facts about the user's profile and 
 
 These are stable attributes that define who the user is as an investor.
 
+The profile is a set of notes rather than a single document, so each note should be one
+self-contained fact. Adding a note never overwrites the others.
+
 **Instructions:**
-1. Always call `getUserContext` first to retrieve the current profile.
-2. Merge any new information into the existing profile. You can remove/overwrite any existing information if you think it is not relevant anymore.
-3. Call `updateUserContext` with the complete merged profile.
+1. Always call `getUserProfileNotes` first to retrieve the current profile and avoid duplicates.
+2. Call `createUserProfileNote` once per genuinely new fact.
+3. If a fact you previously recorded is no longer true, call `markUserProfileNoteAsOutdated`
+   with the id of the stale note. Outdated notes stop being part of the profile.
 
 ---
 
@@ -362,7 +361,7 @@ Notes must be **short and concise** — bullet-point style. Avoid storing full s
 
 ## Summary of tool order
 
-- To update user profile: `getUserContext` → `updateUserContext`
+- To update user profile: `getUserProfileNotes` → `createUserProfileNote` / `markUserProfileNoteAsOutdated`
 - To update conversation notes: `getUserConversationNotes` → `createUserConversationNote`
 - Use `getCurrentDatetime` to determine today's date when needed.
 """

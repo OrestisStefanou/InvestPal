@@ -16,7 +16,7 @@ The server exposes two categories of tools and one prompt:
 
 | Category | Tools |
 |---|---|
-| **User Context** | `updateUserContext`, `getUserContext` |
+| **User Profile** | `getUserProfileNotes`, `createUserProfileNote`, `markUserProfileNoteAsOutdated` |
 | **Conversation Memory** | `getUserConversationNotes`, `createUserConversationNote` |
 | **Reminders** | `createAgentReminder`, `getAgentReminders`, `updateAgentReminder`, `deleteAgentReminder` |
 | **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults` |
@@ -37,8 +37,8 @@ async with client:
     await client.ping()  # verify connection
 
     result = await client.call_tool(
-        name="getUserContext",
-        arguments={"user_id": "user-abc123"},
+        name="getUserProfileNotes",
+        arguments={},
     )
     print(result.structured_content)
 ```
@@ -93,80 +93,98 @@ Returned by `getUserConversationNotes` and `createUserConversationNote`.
 
 A date can hold any number of notes.
 
-### User Context Object
+### Profile Note Object
 
-Returned by `getUserContext` and `updateUserContext`.
+Returned by `getUserProfileNotes` and `createUserProfileNote`.
 
 ```json
 {
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  },
-  "created_at": "2024-01-15T10:30:00.000Z",
-  "updated_at": "2024-01-15T10:30:00.000Z"
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "note": "Moderate risk tolerance, 10 year horizon",
+  "created_at": "2024-01-15T10:30:00.000Z"
 }
 ```
 
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Unique identifier for the note (UUID) |
+| `note` | string | One self-contained fact about the user |
+| `created_at` | string | ISO 8601 timestamp of creation |
+
+The profile is the set of notes that have not been marked outdated.
+
 ---
 
-## User Context Tools
+## User Profile Tools
 
-### `updateUserContext`
+The user's profile is stored as a set of notes rather than a single document. Each note is one
+self-contained fact. The profile is injected into the investment advisor's system prompt on every
+conversation, so notes should be short.
 
-Replace the user's profile. The provided `user_profile` **completely replaces** the existing one — include all fields you want to keep.
+### `getUserProfileNotes`
+
+Retrieve the notes that make up the profile. Notes marked as outdated are not returned.
 
 **Parameters**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | The ID of the user to update |
-| `user_profile` | object | yes | The complete new user profile (replaces existing) |
+None.
 
 **Example call**
 
 ```python
 result = await client.call_tool(
-    name="updateUserContext",
-    arguments={
-        "user_id": "user-abc123",
-        "user_profile": {
-            "name": "Jane Smith",
-            "age": 36,
-            "risk_tolerance": "aggressive",
-            "investment_goals": ["retirement", "real_estate"]
-        },
-    },
+    name="getUserProfileNotes",
+    arguments={},
 )
 ```
 
-**Returns**: A [User Context Object](#user-context-object).
+**Returns**: A list of [Profile Note Objects](#profile-note-object). Returns an empty list if nothing is recorded yet.
 
 ---
 
-### `getUserContext`
+### `createUserProfileNote`
 
-Retrieve the stored context and profile for a user.
+Store a permanent fact about the user. This adds a note; it never replaces the existing ones.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user to fetch context for |
+| `note` | string | yes | One self-contained fact, e.g. risk tolerance, horizon, goals or sector interests |
 
 **Example call**
 
 ```python
 result = await client.call_tool(
-    name="getUserContext",
-    arguments={"user_id": "user-abc123"},
+    name="createUserProfileNote",
+    arguments={"note": "Moderate risk tolerance, 10 year horizon"},
 )
-print(result.structured_content)
 ```
 
-**Returns**: A [User Context Object](#user-context-object).
+**Returns**: The created [Profile Note Object](#profile-note-object).
+
+---
+
+### `markUserProfileNoteAsOutdated`
+
+Mark a note as outdated so it stops being part of the profile. Use this instead of editing when a fact stops being true.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `note_id` | string | yes | The id of the note to mark as outdated |
+
+**Example call**
+
+```python
+await client.call_tool(
+    name="markUserProfileNoteAsOutdated",
+    arguments={"note_id": "550e8400-e29b-41d4-a716-446655440000"},
+)
+```
+
+**Returns**: A confirmation string.
 
 ---
 
@@ -463,7 +481,6 @@ The MCP server propagates errors as MCP tool error responses. In the FastMCP Pyt
 
 | Cause | Description |
 |---|---|
-| User not found | The `user_id` does not exist in the database. Ensure the user context was created via the REST API first (`POST /user_context`) |
 | Invalid date format | Dates must be in `YYYY-MM-DD` format |
 | Database unavailable | The MongoDB connection failed on startup |
 

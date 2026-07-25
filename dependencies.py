@@ -28,11 +28,11 @@ from services.chat import (
     AgenticChatService,
 )
 from services.user_context import (
-    MongoDBUserContextService,
-    UserContextService,
     UserConversationNotesService,
+    UserProfileService,
 )
 from repos.user_conversation_notes import UserConversationNotesTable
+from repos.user_profile_notes import UserProfileNotesTable
 from services.agent_reminder import (
     TursoAgentReminderService,
     AgentReminderService,
@@ -103,10 +103,9 @@ def get_session_service(
     return MongoDBSessionService(mongo_client=db_client)
 
 
-def get_user_context_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-) -> UserContextService:
-    return MongoDBUserContextService(mongo_client=db_client)
+def get_user_profile_service() -> UserProfileService:
+    table = UserProfileNotesTable()
+    return UserProfileService(table=table)
 
 
 def get_user_conversation_notes_service() -> UserConversationNotesService:
@@ -157,7 +156,7 @@ async def get_workflow_runner(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
-    user_context_service: UserContextService = Depends(get_user_context_service),
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
     user_conversation_notes_service: UserConversationNotesService = Depends(get_user_conversation_notes_service),
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
     notifier: WorkflowNotifier = Depends(get_workflow_notifier),
@@ -174,7 +173,7 @@ async def get_workflow_runner(
         workflow_execution_agent=agent,
         agent_workflow_service=agent_workflow_service,
         workflow_result_service=workflow_result_service,
-        user_context_service=user_context_service,
+        user_profile_service=user_profile_service,
         user_conversation_notes_service=user_conversation_notes_service,
         agent_reminder_service=agent_reminder_service,
         notifier=notifier,
@@ -184,7 +183,7 @@ async def get_workflow_runner(
 def get_investment_manager_agent_service(
     investment_manager_agent: InvestmentManagerAgent = Depends(get_investment_manager_agent),
     user_context_memory_manager_agent: UserContextMemoryManagerAgent = Depends(get_user_context_memory_manager_agent),
-    user_context_service: UserContextService = Depends(get_user_context_service),
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
     user_conversation_notes_service: UserConversationNotesService = Depends(get_user_conversation_notes_service),
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
@@ -193,7 +192,7 @@ def get_investment_manager_agent_service(
     return InvestmentManagerAgentService(
         investment_manager_agent=investment_manager_agent,
         user_context_memory_manager_agent=user_context_memory_manager_agent,
-        user_context_service=user_context_service,
+        user_profile_service=user_profile_service,
         user_conversation_notes_service=user_conversation_notes_service,
         agent_reminder_service=agent_reminder_service,
         agent_workflow_service=agent_workflow_service,

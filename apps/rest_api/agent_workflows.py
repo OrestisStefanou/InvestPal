@@ -15,7 +15,6 @@ from services.agent_workflows.workflow import (
 from models.agent_workflow import WorkflowStatus
 from services.agent_workflows.results import WorkflowResultService
 from services.agent_workflows.runner import WorkflowRunner
-from services.user_context import UserContextNotFoundError
 
 router = APIRouter(tags=["Agent Workflows"])
 
@@ -60,15 +59,12 @@ async def create_workflow(
     body: CreateAgentWorkflowRequest,
     service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ):
-    try:
-        workflow = await service.create_workflow(
-            user_id=body.user_id,
-            name=body.name,
-            instructions=body.instructions,
-            schedule=body.schedule,
-        )
-    except UserContextNotFoundError as e:
-        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail=str(e))
+    workflow = await service.create_workflow(
+        user_id=body.user_id,
+        name=body.name,
+        instructions=body.instructions,
+        schedule=body.schedule,
+    )
     return AgentWorkflowSchema(**workflow.model_dump())
 
 

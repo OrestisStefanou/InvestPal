@@ -13,8 +13,8 @@ from pydantic import (
 from models.agent_reminder import AgentReminder
 from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
 from models.user_context import (
-    UserContext,
     UserConversationNote,
+    UserProfileNote,
 )
 from services.agent_reminder import AgentReminderService
 from services.agent_workflows.results import WorkflowResultService
@@ -25,14 +25,14 @@ from services.agents.skills import (
     skills,
 )
 from services.user_context import (
-    UserContextService,
     UserConversationNotesService,
+    UserProfileService,
 )
 
 
 @dataclass
-class UserContextToolsRuntimeContext:
-    user_context_service: UserContextService
+class UserProfileToolsRuntimeContext:
+    user_profile_service: UserProfileService
 
 
 @dataclass
@@ -55,44 +55,60 @@ class WorkflowResultsToolRuntimeContext:
     workflow_result_service: WorkflowResultService
 
 
-class UpdateUserContextToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user to update the context for")
-    user_profile: dict = Field(
-        description="General information about the user. Must provide the complete user profile as it will replace the existing one."
+@tool("getUserProfileNotes")
+async def get_user_profile_notes(
+    runtime: ToolRuntime[UserProfileToolsRuntimeContext],
+) -> list[UserProfileNote]:
+    """Get the notes that make up the user's profile, excluding outdated ones."""
+    user_profile_service = runtime.context.user_profile_service
+    return await user_profile_service.get_user_profile_notes()
+
+
+class CreateUserProfileNoteToolInput(BaseModel):
+    note: str = Field(
+        description=(
+            "A permanent fact about the user's profile or preferences, such as risk "
+            "tolerance, investment horizon, goals or sector interests. Keep it to a "
+            "single self-contained fact."
+        )
     )
 
 
 @tool(
-    "updateUserContext",
-    args_schema=UpdateUserContextToolInput,
-    description="Update the user context(for the given user_id) including user profile. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
+    "createUserProfileNote",
+    args_schema=CreateUserProfileNoteToolInput,
+    description=(
+        "Store a permanent fact about the user's profile. The profile is a set of notes, "
+        "so this adds a note rather than replacing the existing ones. When a fact stops "
+        "being true, mark the old note as outdated instead of editing it."
+    ),
 )
-async def update_user_context(
-    runtime: ToolRuntime[UserContextToolsRuntimeContext],
-    user_id: str,
-    user_profile: dict,
-) -> UserContext:
-    user_context_service = runtime.context.user_context_service
-    updated_user_context = await user_context_service.update_user_context(
-        user_id=user_id,
-        user_profile=user_profile,
-    )
-
-    return updated_user_context
+async def create_user_profile_note(
+    runtime: ToolRuntime[UserProfileToolsRuntimeContext],
+    note: str,
+) -> UserProfileNote:
+    user_profile_service = runtime.context.user_profile_service
+    return await user_profile_service.create_user_profile_note(note=note)
 
 
-@tool("getUserContext")
-async def get_user_context(
-    runtime: ToolRuntime[UserContextToolsRuntimeContext], user_id: str
-) -> UserContext:
-    """Get the user context including user profile and portfolio holdings.
+class MarkUserProfileNoteAsOutdatedToolInput(BaseModel):
+    note_id: str = Field(description="The unique id of the profile note to mark as outdated")
 
-    Args:
-        user_id: The id of the user to get the context for
-    """
-    user_context_service = runtime.context.user_context_service
-    user_context = await user_context_service.get_user_context(user_id)
-    return user_context
+
+@tool(
+    "markUserProfileNoteAsOutdated",
+    args_schema=MarkUserProfileNoteAsOutdatedToolInput,
+    description=(
+        "Mark a profile note as outdated so it stops being part of the user's profile. "
+        "Use this when a fact you previously recorded is no longer true."
+    ),
+)
+async def mark_user_profile_note_as_outdated(
+    runtime: ToolRuntime[UserProfileToolsRuntimeContext],
+    note_id: str,
+) -> None:
+    user_profile_service = runtime.context.user_profile_service
+    await user_profile_service.mark_note_as_outdated(note_id)
 
 
 @tool("getCurrentDatetime")

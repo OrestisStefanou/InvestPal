@@ -9,11 +9,11 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 - **Conversation Memory**: Agent recalls key details from past sessions via a dedicated notes system.
 - **Reminders**: Agent can create and manage time-sensitive action items for users across sessions.
 - **Agent Workflows**: Run scheduled, autonomous workflows on behalf of users (powered by cron).
-- **User Context**: Store and update user profiles to inform personalized advice.
+- **User Profile**: Build up the client's profile as a set of notes to inform personalized advice.
 - **MCP Integration**: Extensible tool system for market data, stock profiles, forecasts, and more.
 - **Alpaca Markets Integration**: Execute orders, read portfolio holdings, and manage positions.
 - **Coinbase Integration**: Manage crypto portfolios and execute trades.
-- **Internal MCP Server**: Exposes user context, conversation memory, and reminder tools to the agent.
+- **Internal MCP Server**: Exposes user profile, conversation memory, and reminder tools to the agent.
 
 ## Tech Stack
 
@@ -56,7 +56,6 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    # MongoDB
    MONGO_URI=mongodb://localhost:27017
    MONGO_DB_NAME=investpal
-   USER_CONTEXT_COLLECTION_NAME=user_contexts
    SESSION_COLLECTION_NAME=sessions
 
    # LLM (choose one provider)
@@ -106,16 +105,12 @@ Both servers share the same MongoDB database and must point to the same `MONGO_U
 
 | Document | Description |
 |---|---|
-| [docs/rest_api.md](docs/rest_api.md) | REST API — endpoints for chat, sessions, and user context |
+| [docs/rest_api.md](docs/rest_api.md) | REST API — endpoints for chat, sessions, reminders and workflows |
 | [docs/mcp_api.md](docs/mcp_api.md) | MCP API — tools and prompts for agent integrations |
 
 ### REST API quick reference
 
 ```
-POST   /user_context           Register a user (required before opening sessions)
-GET    /user_context/{user_id} Get user profile
-PUT    /user_context           Update user profile
-
 POST   /session                Create a conversation session
 GET    /session/{session_id}   Get session with full message history
 GET    /sessions/{user_id}     List all sessions for a user
@@ -131,8 +126,9 @@ POST   /workflows/check-and-run Execute due workflows (heartbeat)
 
 | Tool | Description |
 |---|---|
-| `getUserContext` | Fetch a user's profile |
-| `updateUserContext` | Replace a user's profile |
+| `getUserProfileNotes` | Fetch the notes that make up the user's profile |
+| `createUserProfileNote` | Store a permanent fact about the user |
+| `markUserProfileNoteAsOutdated` | Retire a profile fact that is no longer true |
 | `getUserConversationNotes` | Retrieve notes from past conversations |
 | `createUserConversationNote` | Store a note for a conversation date |
 | `createAgentReminder` | Create a reminder for a user |
@@ -153,14 +149,14 @@ POST   /workflows/check-and-run Execute due workflows (heartbeat)
 ├── config.py                # Settings (loaded from .env via pydantic-settings)
 ├── dependencies.py          # Dependency injection (DB client, MCP clients, services)
 ├── apps/
-│   ├── rest_api/            # REST API route handlers (chat, session, user_context)
+│   ├── rest_api/            # REST API route handlers (chat, session, reminders, workflows)
 │   └── mcp_api/             # MCP server (tools, prompts, lifespan)
 ├── services/
 │   ├── agents/              # LangChain agent definitions and prompts
 │   ├── agent_service.py     # Orchestrates agent + memory manager per request
 │   ├── chat.py              # Chat service (session + agent coordination)
 │   ├── session.py           # Session persistence
-│   ├── user_context.py      # User context and conversation notes persistence
+│   ├── user_context.py      # User profile and conversation notes persistence
 │   └── agent_reminder.py    # Reminder persistence
 ├── models/                  # Internal Pydantic data models
 └── docs/

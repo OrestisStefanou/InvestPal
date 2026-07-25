@@ -8,7 +8,6 @@ from pymongo import AsyncMongoClient, ReturnDocument
 
 from config import settings
 from models.agent_workflow import AgentWorkflow, WorkflowStatus
-from services.user_context import UserContextNotFoundError
 
 
 class AgentWorkflowNotFoundError(Exception):
@@ -102,10 +101,6 @@ class MongoDBAgentWorkflowService(AgentWorkflowService):
         description: str,
         schedule: str,
     ) -> AgentWorkflow:
-        user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
-        if not await user_context_collection.find_one({"user_id": user_id}):
-            raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
-
         now = dt.datetime.now(dt.timezone.utc)
         workflow_id = str(uuid.uuid4())
         next_run_at = self._compute_next_run_at(schedule, now)

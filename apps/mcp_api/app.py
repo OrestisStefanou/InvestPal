@@ -47,8 +47,6 @@ from services.agents.skills import (
 )
 from services.agents.tools import SkillDefinition
 from services.user_context import (
-    MongoDBUserContextService,
-    UserContextService,
     UserConversationNotesService,
     UserProfileService,
 )
@@ -84,11 +82,6 @@ async def db_lifespan(server):
     db_client = AsyncMongoClient(settings.MONGO_URI)
     yield {"db_client": db_client}
     await db_client.close()
-
-
-def get_user_context_service(ctx: Context = CurrentContext()) -> UserContextService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBUserContextService(mongo_client=db_client)
 
 
 def get_user_profile_notes_table(ctx: Context = CurrentContext()) -> UserProfileNotesTable:

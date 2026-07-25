@@ -10,11 +10,10 @@ Welcome to the InvestPal REST API reference. This document covers the HTTP endpo
 
 ## Overview
 
-The InvestPal REST API is the primary integration point for client applications. It exposes four services:
+The InvestPal REST API is the primary integration point for client applications. It exposes these services:
 
 | Service | Purpose |
 |---|---|
-| **User Context** | Register users and store profile information before starting conversations |
 | **Session** | Create and retrieve conversation sessions |
 | **Chat** | Send messages to the AI investment advisor and receive responses |
 | **Agent Reminders** | Retrieve reminders created by the agent |
@@ -23,11 +22,10 @@ The InvestPal REST API is the primary integration point for client applications.
 ### Typical integration flow
 
 ```
-1. POST /user_context        → Register the user
-2. POST /session             → Open a conversation session
-3. POST /chat (repeating)    → Exchange messages with the advisor
-4. GET  /session/{id}        → Retrieve full conversation history
-5. GET  /agent_reminders     → Retrieve reminders set by the agent
+1. POST /session             → Open a conversation session
+2. POST /chat (repeating)    → Exchange messages with the advisor
+3. GET  /session/{id}        → Retrieve full conversation history
+4. GET  /agent_reminders     → Retrieve reminders set by the agent
 ```
 
 ---
@@ -47,128 +45,6 @@ These headers are only needed on the `POST /chat` endpoint when the user's query
 
 ---
 
-## User Context Service
-
-User context stores profile information about a user. A user context **must be created before any session can be opened** for that user.
-
-### Create User Context
-
-`POST /user_context`
-
-Register a new user and optionally store their profile data.
-
-**Request Body**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | Your unique identifier for this user |
-| `user_profile` | object | no | Arbitrary key-value profile data (age, risk tolerance, etc.) |
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  }
-}
-```
-
-**Response** `201 Created`
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  },
-  "created_at": "2024-01-15T10:30:00.000Z",
-  "updated_at": "2024-01-15T10:30:00.000Z"
-}
-```
-
-**Errors**
-
-| Status | Condition |
-|---|---|
-| `409 Conflict` | A user context for this `user_id` already exists |
-| `500 Internal Server Error` | Unexpected server error |
-
----
-
-### Get User Context
-
-`GET /user_context/{user_id}`
-
-Retrieve the stored context for a user.
-
-**Path Parameters**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `user_id` | string | The unique identifier of the user |
-
-**Response** `200 OK`
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  },
-  "created_at": "2024-01-15T10:30:00.000Z",
-  "updated_at": "2024-01-15T10:30:00.000Z"
-}
-```
-
-**Errors**
-
-| Status | Condition |
-|---|---|
-| `404 Not Found` | No user context exists for the given `user_id` |
-| `500 Internal Server Error` | Unexpected server error |
-
----
-
-### Update User Context
-
-`PUT /user_context`
-
-Replace the profile data for an existing user. The entire `user_profile` object is overwritten — include all fields you want to keep.
-
-**Request Body**
-
-Same shape as `POST /user_context`. Both fields are required.
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 36,
-    "risk_tolerance": "aggressive"
-  }
-}
-```
-
-**Response** `200 OK`
-
-Same shape as `GET /user_context/{user_id}`.
-
-**Errors**
-
-| Status | Condition |
-|---|---|
-| `404 Not Found` | No user context exists for the given `user_id` |
-| `500 Internal Server Error` | Unexpected server error |
-
----
-
 ## Session Service
 
 Sessions represent individual conversation threads between a user and the AI advisor. Each session has its own isolated message history.
@@ -178,8 +54,6 @@ Sessions represent individual conversation threads between a user and the AI adv
 `POST /session`
 
 Open a new conversation session for a user.
-
-> **Note**: The user context for the given `user_id` must exist before creating a session.
 
 **Request Body**
 

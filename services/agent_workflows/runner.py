@@ -14,9 +14,8 @@ from services.agents.agent import (
 )
 from services.agent_reminder import AgentReminderService
 from services.user_context import (
-    UserContextService,
-    UserContextNotFoundError,
     UserConversationNotesService,
+    UserProfileService,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,7 +27,7 @@ class WorkflowRunner:
         workflow_execution_agent: WorkflowExecutionAgent,
         agent_workflow_service: AgentWorkflowService,
         workflow_result_service: WorkflowResultService,
-        user_context_service: UserContextService,
+        user_profile_service: UserProfileService,
         user_conversation_notes_service: UserConversationNotesService,
         agent_reminder_service: AgentReminderService,
         notifier: WorkflowNotifier,
@@ -36,7 +35,7 @@ class WorkflowRunner:
         self._agent = workflow_execution_agent
         self._workflow_service = agent_workflow_service
         self._workflow_result_service = workflow_result_service
-        self._user_context_service = user_context_service
+        self._user_profile_service = user_profile_service
         self._user_conversation_notes_service = user_conversation_notes_service
         self._agent_reminder_service = agent_reminder_service
         self._notifier = notifier
@@ -61,9 +60,7 @@ class WorkflowRunner:
                 failed_workflows.append(workflow.workflow_id)
 
     async def _run_workflow(self, workflow) -> None:
-        user_context = await self._user_context_service.get_user_context(workflow.user_id)
-        if not user_context:
-            raise UserContextNotFoundError(f"User context not found for user_id: {workflow.user_id}")
+        client_profile = await self._user_profile_service.get_client_profile()
 
         # Single-turn synthetic conversation — no history, just the workflow description
         conversation = [Message(role=MessageRole.USER, content=workflow.description)]
@@ -77,7 +74,7 @@ class WorkflowRunner:
             conversation=conversation,
             runtime_context=runtime_context,
             system_prompt_placeholder_values=WorkflowExecutionPromptVars(
-                client_profile=user_context.model_dump(),
+                client_profile=client_profile,
             ),
         )
 

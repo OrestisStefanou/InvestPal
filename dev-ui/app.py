@@ -228,21 +228,6 @@ header {visibility: hidden;}
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def ensure_user_context():
-    """Create user context if it doesn't exist yet."""
-    try:
-        r = requests.post(
-            f"{BASE_URL}/user_context",
-            json={"user_id": USER_ID},
-            timeout=5,
-        )
-        # 409 = already exists, that's fine
-        return r.status_code in (200, 201, 409)
-    except Exception as e:
-        st.error(f"Could not reach backend: {e}")
-        return False
-
-
 def create_session(session_id: str) -> bool:
     try:
         r = requests.post(
@@ -293,7 +278,6 @@ if "session_id" not in st.session_state:
     st.session_state.msg_count = 0
 
 if not st.session_state.session_ready:
-    ensure_user_context()
     ok = create_session(st.session_state.session_id)
     st.session_state.session_ready = ok
 
@@ -351,7 +335,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown('<div class="sidebar-label">Endpoints used</div>', unsafe_allow_html=True)
-    for ep in ["POST /user_context", "POST /session", "POST /chat"]:
+    for ep in ["POST /session", "POST /chat"]:
         st.markdown(
             f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.65rem;'
             f'color:#4b5563;padding:3px 0">{ep}</div>',
