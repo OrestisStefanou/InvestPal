@@ -13,8 +13,6 @@ class Settings(BaseSettings):
     MONGO_URI: str
     MONGO_DB_NAME: str
     SESSION_COLLECTION_NAME: str = "session"
-    AGENT_WORKFLOWS_COLLECTION_NAME: str = "agent_workflows"
-    WORKFLOW_RESULTS_COLLECTION_NAME: str = "workflow_results"
     # LLM
     LLM_PROVIDER: LLMProvider   # Default LLM provider
     LLM_MODEL: str              # Default LLM model

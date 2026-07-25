@@ -86,7 +86,6 @@ Open a new conversation session for a user.
 
 | Status | Condition |
 |---|---|
-| `400 Bad Request` | User context not found for the given `user_id` |
 | `409 Conflict` | A session with the provided `session_id` already exists |
 | `500 Internal Server Error` | Unexpected server error |
 
@@ -282,19 +281,17 @@ Create a new scheduled workflow.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user who owns this workflow |
 | `name` | string | yes | A human-readable name for the workflow |
-| `instructions` | string | yes | Instructions the agent should execute |
+| `description` | string | yes | Goal-only description of what the agent should achieve on each run |
 | `schedule` | string | yes | Cron expression (e.g. `0 0 * * 5` for every Friday) |
 
 **Response** `201 Created`
 
 ```json
 {
-  "workflow_id": "wf-1234",
-  "user_id": "user-abc123",
+  "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "Weekly Portfolio Review",
-  "instructions": "Review my portfolio and email me a summary",
+  "description": "Review my portfolio and summarise it",
   "schedule": "0 0 * * 5",
   "status": "active",
   "created_at": "2024-01-15T10:35:00.000Z",
@@ -307,25 +304,25 @@ Create a new scheduled workflow.
 
 ### Get Workflows
 
-`GET /workflows/{user_id}`
+`GET /workflows`
 
-Retrieve all workflows for a user.
+Retrieve all workflows.
 
 ---
 
 ### Update Workflow
 
-`PATCH /workflows/{user_id}/{workflow_id}`
+`PATCH /workflows/{workflow_id}`
 
-Update the fields of a workflow.
+Update the fields of a workflow. Only the fields provided are changed. Passing a new `schedule` re-bases `next_run_at` from now.
 
 ---
 
 ### Delete Workflow
 
-`DELETE /workflows/{user_id}/{workflow_id}`
+`DELETE /workflows/{workflow_id}`
 
-Delete a workflow.
+Delete a workflow. Results of its past runs are kept.
 
 ---
 
@@ -335,13 +332,21 @@ Delete a workflow.
 
 Heartbeat endpoint to check for and execute due workflows. Intended to be called by an external cron job.
 
+Each run is claimed atomically: the workflow flips to `running` so a concurrent heartbeat cannot pick it up. Storing the run's result is what completes the run — it records `last_run_at`, advances `next_run_at` from the cron expression and returns the status to `active`, all in one transaction. A run that fails before storing a result keeps its `next_run_at`, so it is retried on a later heartbeat.
+
 ---
 
 ### Get Workflow Results
 
-`GET /workflow_results/{user_id}`
+`GET /workflow_results`
 
-Retrieve the results of executed workflows for a user.
+Retrieve the results of executed workflows, most recent first.
+
+**Query Parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `limit` | integer | Maximum number of results to return. Defaults to `10` |
 
 ---
 

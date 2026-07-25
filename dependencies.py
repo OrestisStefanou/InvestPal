@@ -40,16 +40,17 @@ from services.agent_reminder import (
 from repos.agent_reminders import AgentRemindersTable
 from services.agent_workflows.workflow import (
     AgentWorkflowService,
-    MongoDBAgentWorkflowService,
+    TursoAgentWorkflowService,
 )
 from services.agent_workflows.results import (
     WorkflowResultService,
-    MongoDBWorkflowResultService,
+    TursoWorkflowResultService,
 )
 from services.agent_workflows.notifier import (
     WorkflowNotifier,
-    MongoDBWorkflowNotifier,
+    PersistingWorkflowNotifier,
 )
+from repos.agent_workflows import AgentWorkflowsTable
 from services.agent_workflows.runner import WorkflowRunner
 from services.agents.agent import WorkflowExecutionAgent
 
@@ -134,22 +135,26 @@ async def get_user_context_memory_manager_agent() -> UserContextMemoryManagerAge
     )
 
 
+def get_agent_workflows_table() -> AgentWorkflowsTable:
+    return AgentWorkflowsTable()
+
+
 def get_agent_workflow_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
+    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> AgentWorkflowService:
-    return MongoDBAgentWorkflowService(mongo_client=db_client)
+    return TursoAgentWorkflowService(table=table)
 
 
 def get_workflow_result_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
+    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> WorkflowResultService:
-    return MongoDBWorkflowResultService(mongo_client=db_client)
+    return TursoWorkflowResultService(table=table)
 
 
 def get_workflow_notifier(
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
 ) -> WorkflowNotifier:
-    return MongoDBWorkflowNotifier(workflow_result_service=workflow_result_service)
+    return PersistingWorkflowNotifier(workflow_result_service=workflow_result_service)
 
 
 async def get_workflow_runner(

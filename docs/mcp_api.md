@@ -19,7 +19,7 @@ The server exposes two categories of tools and one prompt:
 | **User Profile** | `getUserProfileNotes`, `createUserProfileNote`, `markUserProfileNoteAsOutdated` |
 | **Conversation Memory** | `getUserConversationNotes`, `createUserConversationNote` |
 | **Reminders** | `createAgentReminder`, `getAgentReminders`, `updateAgentReminder`, `deleteAgentReminder` |
-| **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults` |
+| **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults`, `storeWorkflowResult` |
 | **Prompts** | `get_invstment_advisor_prompt` |
 
 ---
@@ -92,6 +92,58 @@ Returned by `getUserConversationNotes` and `createUserConversationNote`.
 | `created_at` | string | ISO 8601 timestamp of creation |
 
 A date can hold any number of notes.
+
+### Workflow Object
+
+Returned by the workflow tools.
+
+```json
+{
+  "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Weekly portfolio review",
+  "description": "Review the portfolio and report anything notable",
+  "schedule": "0 0 * * 5",
+  "status": "active",
+  "created_at": "2024-01-15T10:35:00.000Z",
+  "last_run_at": null,
+  "next_run_at": "2024-01-19T00:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `workflow_id` | string | Unique identifier (UUID) |
+| `name` | string | Human-readable name |
+| `description` | string | What the agent should achieve on each run |
+| `schedule` | string | Cron expression |
+| `status` | string | `active`, `paused`, or `running` while a run is in flight |
+| `created_at` | string | ISO 8601 timestamp of creation |
+| `last_run_at` | string \| null | ISO 8601 timestamp of the last completed run |
+| `next_run_at` | string \| null | ISO 8601 timestamp of the next scheduled run |
+
+### Workflow Result Object
+
+Returned by `getWorkflowResults` and `storeWorkflowResult`.
+
+```json
+{
+  "result_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workflow_id": "661f9511-f3ac-52e5-b827-557766551111",
+  "workflow_name": "Weekly portfolio review",
+  "output": "Portfolio is up 2.1% this week, no action needed",
+  "ran_at": "2024-01-19T00:00:12.000Z"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `result_id` | string | Unique identifier (UUID) |
+| `workflow_id` | string | The workflow that produced this result |
+| `workflow_name` | string | The workflow's name at execution time |
+| `output` | string | The agent's report for this run |
+| `ran_at` | string | ISO 8601 timestamp of the run |
+
+Results outlive the workflow that produced them.
 
 ### Profile Note Object
 
@@ -412,40 +464,91 @@ Agent Workflows enable the AI advisor to autonomously execute recurring tasks on
 
 ### `createAgentWorkflow`
 
-Create a new scheduled workflow. 
+Create a new scheduled workflow. `next_run_at` is computed from the cron expression at creation.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user |
 | `name` | string | yes | A short human-readable name |
-| `instructions` | string | yes | Instructions to execute |
-| `schedule` | string | yes | Cron expression |
+| `description` | string | yes | Goal-only description of what to achieve on each run. No tool names, no user data, no implementation steps |
+| `schedule` | string | yes | Cron expression, e.g. `0 0 1 * *` for monthly on the 1st |
+
+**Returns**: A [Workflow Object](#workflow-object).
 
 ---
 
 ### `getAgentWorkflows`
 
-Retrieve all scheduled workflows for a user.
+Retrieve all scheduled workflows.
+
+**Parameters**
+
+None.
+
+**Returns**: A list of [Workflow Objects](#workflow-object).
 
 ---
 
 ### `updateAgentWorkflow`
 
-Update an existing workflow.
+Update an existing workflow. Only the fields provided are changed. Passing a new `schedule` re-bases `next_run_at` from now.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string | yes | The workflow to update |
+| `name` | string | no | New name |
+| `description` | string | no | New goal-only description |
+| `schedule` | string | no | New cron expression |
+| `status` | string | no | `active` or `paused`. A paused workflow is never claimed for a run |
+
+**Returns**: The updated [Workflow Object](#workflow-object).
 
 ---
 
 ### `deleteAgentWorkflow`
 
-Delete a workflow.
+Delete a workflow. The results of its past runs are kept.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string | yes | The workflow to delete |
 
 ---
 
 ### `getWorkflowResults`
 
-Get the results of past workflow runs for the user, ordered by most recent first.
+Get the results of past workflow runs, ordered by most recent first.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `limit` | integer \| null | no | Maximum number of results. Defaults to `10`. Pass `null` for all |
+
+**Returns**: A list of [Workflow Result Objects](#workflow-result-object).
+
+---
+
+### `storeWorkflowResult`
+
+Store the result of a workflow run. **This also completes the run**: in a single transaction it records the result, sets the workflow's `last_run_at`, advances `next_run_at` from the cron schedule and returns the status to `active`.
+
+A result whose `workflow_id` no longer exists is still stored; there is simply no schedule to advance.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string | yes | The workflow this result belongs to |
+| `workflow_name` | string | yes | The workflow's name at execution time |
+| `output` | string | yes | The agent's report for this run |
+
+**Returns**: The stored [Workflow Result Object](#workflow-result-object).
 
 ---
 

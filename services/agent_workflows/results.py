@@ -1,12 +1,20 @@
+import asyncio
 import datetime as dt
-import uuid
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
-from pymongo import AsyncMongoClient
+from models.agent_workflow import WorkflowResult, WorkflowStatus
+from repos.agent_workflows import AgentWorkflowsTable, WorkflowResultRow
+from services.agent_workflows.workflow import compute_next_run_at
 
-from config import settings
-from models.agent_workflow import WorkflowResult
+
+def _row_to_model(row: WorkflowResultRow) -> WorkflowResult:
+    return WorkflowResult(
+        result_id=row.id,
+        workflow_id=row.workflow_id,
+        workflow_name=row.workflow_name,
+        output=row.output,
+        ran_at=row.ran_at,
+    )
 
 
 class WorkflowResultService(ABC):
@@ -14,63 +22,57 @@ class WorkflowResultService(ABC):
     async def save_result(
         self,
         workflow_id: str,
-        user_id: str,
         workflow_name: str,
         output: str,
     ) -> WorkflowResult:
         pass
 
     @abstractmethod
-    async def get_results(self, user_id: str, limit: int | None = 10) -> list[WorkflowResult]:
+    async def get_results(self, limit: int | None = 10) -> list[WorkflowResult]:
         pass
 
 
-class WorkflowResultMongoDoc(BaseModel):
-    result_id: str
-    workflow_id: str
-    user_id: str
-    workflow_name: str
-    output: str
-    ran_at: str
-
-
-class MongoDBWorkflowResultService(WorkflowResultService):
-    def __init__(self, mongo_client: AsyncMongoClient):
-        self.db = mongo_client[settings.MONGO_DB_NAME]
-
-    def _doc_to_model(self, doc: dict) -> WorkflowResult:
-        return WorkflowResult(
-            result_id=doc["result_id"],
-            workflow_id=doc["workflow_id"],
-            user_id=doc["user_id"],
-            workflow_name=doc["workflow_name"],
-            output=doc["output"],
-            ran_at=doc["ran_at"],
-        )
+class TursoWorkflowResultService(WorkflowResultService):
+    def __init__(self, table: AgentWorkflowsTable):
+        self._table = table
 
     async def save_result(
         self,
         workflow_id: str,
-        user_id: str,
         workflow_name: str,
         output: str,
     ) -> WorkflowResult:
-        result_id = str(uuid.uuid4())
+        """
+        Store the result of a run and advance the workflow's schedule.
+
+        Storing a result is what marks a run as finished, so the same operation sets
+        last_run_at, computes the next next_run_at from the workflow's cron schedule
+        and releases the running lock. Both writes happen in one transaction, so a
+        stored result can never leave the workflow due to run again.
+
+        A result for a workflow that no longer exists is still stored, it just has no
+        schedule to advance.
+        """
         ran_at = dt.datetime.now(dt.timezone.utc).isoformat()
-        doc = WorkflowResultMongoDoc(
-            result_id=result_id,
+
+        workflow = await asyncio.to_thread(self._table.get_workflow, workflow_id)
+        next_run_at = (
+            compute_next_run_at(workflow.schedule, dt.datetime.fromisoformat(ran_at))
+            if workflow
+            else None
+        )
+
+        row = await asyncio.to_thread(
+            self._table.record_run,
             workflow_id=workflow_id,
-            user_id=user_id,
             workflow_name=workflow_name,
             output=output,
             ran_at=ran_at,
+            next_run_at=next_run_at,
+            active_status=WorkflowStatus.ACTIVE.value,
         )
-        collection = self.db[settings.WORKFLOW_RESULTS_COLLECTION_NAME]
-        await collection.insert_one(doc.model_dump())
-        return self._doc_to_model(doc.model_dump())
+        return _row_to_model(row)
 
-    async def get_results(self, user_id: str, limit: int | None = 10) -> list[WorkflowResult]:
-        collection = self.db[settings.WORKFLOW_RESULTS_COLLECTION_NAME]
-        cursor = collection.find({"user_id": user_id}).sort("ran_at", -1)
-        docs = await cursor.to_list(length=limit)
-        return [self._doc_to_model(doc) for doc in docs]
+    async def get_results(self, limit: int | None = 10) -> list[WorkflowResult]:
+        rows = await asyncio.to_thread(self._table.get_results, limit)
+        return [_row_to_model(row) for row in rows]

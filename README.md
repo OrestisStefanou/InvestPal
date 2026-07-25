@@ -8,7 +8,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 - **Session Management**: Persistent, per-user conversation history stored in MongoDB.
 - **Conversation Memory**: Agent recalls key details from past sessions via a dedicated notes system.
 - **Reminders**: Agent can create and manage time-sensitive action items for users across sessions.
-- **Agent Workflows**: Run scheduled, autonomous workflows on behalf of users (powered by cron).
+- **Agent Workflows**: Run scheduled, autonomous workflows on the client's behalf (powered by cron).
 - **User Profile**: Build up the client's profile as a set of notes to inform personalized advice.
 - **MCP Integration**: Extensible tool system for market data, stock profiles, forecasts, and more.
 - **Alpaca Markets Integration**: Execute orders, read portfolio holdings, and manage positions.
@@ -118,8 +118,11 @@ GET    /sessions/{user_id}     List all sessions for a user
 POST   /chat                   Send a message and receive an AI response
 
 POST   /workflows              Create a new scheduled workflow
-GET    /workflows/{user_id}    List scheduled workflows
+GET    /workflows              List scheduled workflows
+PATCH  /workflows/{id}         Update a workflow
+DELETE /workflows/{id}         Delete a workflow
 POST   /workflows/check-and-run Execute due workflows (heartbeat)
+GET    /workflow_results       Results of past workflow runs
 ```
 
 ### MCP tools quick reference
@@ -135,11 +138,12 @@ POST   /workflows/check-and-run Execute due workflows (heartbeat)
 | `getAgentReminders` | List all reminders for a user |
 | `updateAgentReminder` | Update a reminder's description or due date |
 | `deleteAgentReminder` | Delete a reminder |
-| `createAgentWorkflow` | Create a new scheduled workflow for a user |
-| `getAgentWorkflows` | List all workflows for a user |
+| `createAgentWorkflow` | Create a new scheduled workflow |
+| `getAgentWorkflows` | List all workflows |
 | `updateAgentWorkflow` | Update an existing workflow |
 | `deleteAgentWorkflow` | Delete a workflow |
 | `getWorkflowResults` | Get results of past workflow runs |
+| `storeWorkflowResult` | Store a run's result, which also advances the workflow's next run |
 
 ## Project Structure
 

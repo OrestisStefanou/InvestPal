@@ -32,13 +32,14 @@ from services.agent_reminder import (
 )
 from repos.agent_reminders import AgentRemindersTable
 from services.agent_workflows.results import (
-    MongoDBWorkflowResultService,
+    TursoWorkflowResultService,
     WorkflowResultService,
 )
 from services.agent_workflows.workflow import (
     AgentWorkflowService,
-    MongoDBAgentWorkflowService,
+    TursoAgentWorkflowService,
 )
+from repos.agent_workflows import AgentWorkflowsTable
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from services.agents.skills import (
     SkillName,
@@ -110,16 +111,20 @@ def get_agent_reminder_service() -> AgentReminderService:
     return TursoAgentReminderService(table=table)
 
 
-def get_agent_workflow_service(ctx: Context = CurrentContext()) -> AgentWorkflowService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBAgentWorkflowService(mongo_client=db_client)
+def get_agent_workflows_table() -> AgentWorkflowsTable:
+    return AgentWorkflowsTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_agent_workflow_service(
+    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
+) -> AgentWorkflowService:
+    return TursoAgentWorkflowService(table=table)
 
 
 def get_workflow_result_service(
-    ctx: Context = CurrentContext(),
+    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> WorkflowResultService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBWorkflowResultService(mongo_client=db_client)
+    return TursoWorkflowResultService(table=table)
 
 
 mcp_app = FastMCP("InvestPal MCP Server", lifespan=db_lifespan)
@@ -283,7 +288,6 @@ async def delete_agent_reminder(
     """,
 )
 async def create_agent_workflow(
-    user_id: Annotated[str, "The id of the user to create the workflow for"],
     name: Annotated[str, "A short human-readable name for the workflow"],
     description: Annotated[
         str,
@@ -295,7 +299,6 @@ async def create_agent_workflow(
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.create_workflow(
-        user_id=user_id,
         name=name,
         description=description,
         schedule=schedule,
@@ -304,13 +307,12 @@ async def create_agent_workflow(
 
 @mcp_app.tool(
     name="getAgentWorkflows",
-    description="Get all scheduled workflows for the given user.",
+    description="Get all scheduled workflows.",
 )
 async def get_agent_workflows(
-    user_id: Annotated[str, "The id of the user to get workflows for"],
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> list[AgentWorkflow]:
-    return await agent_workflow_service.get_workflows(user_id=user_id)
+    return await agent_workflow_service.get_workflows()
 
 
 @mcp_app.tool(
@@ -318,7 +320,6 @@ async def get_agent_workflows(
     description="Update an existing scheduled workflow. Only fields provided will be changed.",
 )
 async def update_agent_workflow(
-    user_id: Annotated[str, "The id of the user the workflow belongs to"],
     workflow_id: Annotated[str, "The unique id of the workflow to update"],
     name: Annotated[str | None, "New name. If omitted, existing name is kept."] = None,
     description: Annotated[
@@ -335,7 +336,6 @@ async def update_agent_workflow(
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.update_workflow(
-        user_id=user_id,
         workflow_id=workflow_id,
         name=name,
         description=description,
@@ -346,25 +346,20 @@ async def update_agent_workflow(
 
 @mcp_app.tool(
     name="deleteAgentWorkflow",
-    description="Delete a scheduled workflow for the user.",
+    description="Delete a scheduled workflow.",
 )
 async def delete_agent_workflow(
-    user_id: Annotated[str, "The id of the user the workflow belongs to"],
     workflow_id: Annotated[str, "The unique id of the workflow to delete"],
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> None:
-    await agent_workflow_service.delete_workflow(
-        user_id=user_id,
-        workflow_id=workflow_id,
-    )
+    await agent_workflow_service.delete_workflow(workflow_id=workflow_id)
 
 
 @mcp_app.tool(
     name="getWorkflowResults",
-    description="Get the results of all past workflow runs for the user, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
+    description="Get the results of all past workflow runs, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
 )
 async def get_workflow_results(
-    user_id: Annotated[str, "The id of the user to get workflow results for"],
     limit: Annotated[
         int | None,
         "Maximum number of results to return. Defaults to 10. Pass None to return all.",
@@ -373,16 +368,19 @@ async def get_workflow_results(
         get_workflow_result_service
     ),
 ) -> list[WorkflowResult]:
-    return await workflow_result_service.get_results(user_id=user_id, limit=limit)
+    return await workflow_result_service.get_results(limit=limit)
 
 
 @mcp_app.tool(
     name="storeWorkflowResult",
-    description="Store the result of a workflow run for a user.",
+    description=(
+        "Store the result of a workflow run. This also marks the run as finished: it sets "
+        "the workflow's last run, advances its next run from its cron schedule, and clears "
+        "the running lock."
+    ),
 )
 async def store_workflow_result(
     workflow_id: Annotated[str, "The unique ID of the workflow"],
-    user_id: Annotated[str, "The ID of the user the workflow belongs to"],
     workflow_name: Annotated[str, "The name of the workflow"],
     output: Annotated[str, "The execution output/result of the workflow to store"],
     workflow_result_service: WorkflowResultService = Depends(
@@ -391,7 +389,6 @@ async def store_workflow_result(
 ) -> WorkflowResult:
     return await workflow_result_service.save_result(
         workflow_id=workflow_id,
-        user_id=user_id,
         workflow_name=workflow_name,
         output=output,
     )
