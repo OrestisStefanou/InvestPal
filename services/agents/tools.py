@@ -14,7 +14,7 @@ from models.agent_reminder import AgentReminder
 from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
 from models.user_context import (
     UserContext,
-    UserConversationNotes,
+    UserConversationNote,
 )
 from services.agent_reminder import AgentReminderService
 from services.agent_workflows.results import WorkflowResultService
@@ -24,12 +24,20 @@ from services.agents.skills import (
     skill_descriptions,
     skills,
 )
-from services.user_context import UserContextService
+from services.user_context import (
+    UserContextService,
+    UserConversationNotesService,
+)
 
 
 @dataclass
 class UserContextToolsRuntimeContext:
     user_context_service: UserContextService
+
+
+@dataclass
+class UserConversationNotesToolsRuntimeContext:
+    user_conversation_notes_service: UserConversationNotesService
 
 
 @dataclass
@@ -96,10 +104,9 @@ async def get_current_datetime() -> str:
 
 
 class GetUserConversationNotesToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user to get conversation notes for")
     limit: int | None = Field(
         default=5,
-        description="Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
+        description="Maximum number of notes to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
     )
 
 
@@ -107,58 +114,53 @@ class GetUserConversationNotesToolInput(BaseModel):
     "getUserConversationNotes",
     args_schema=GetUserConversationNotesToolInput,
     description=(
-        "Retrieve conversation notes for a user, ordered by most recent date first. "
+        "Retrieve conversation notes, ordered by most recent first. "
         "Allows recalling specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
-    runtime: ToolRuntime[UserContextToolsRuntimeContext],
-    user_id: str,
+    runtime: ToolRuntime[UserConversationNotesToolsRuntimeContext],
     limit: int | None = 5,
-) -> list[UserConversationNotes]:
-    user_context_service = runtime.context.user_context_service
-    return await user_context_service.get_user_conversation_notes(
-        user_id=user_id, limit=limit
+) -> list[UserConversationNote]:
+    user_conversation_notes_service = runtime.context.user_conversation_notes_service
+    return await user_conversation_notes_service.get_user_conversation_notes(
+        limit=limit
     )
 
 
-class UpdateUserConversationNotesToolInput(BaseModel):
-    user_id: str = Field(
-        description="The id of the user to update conversation notes for"
-    )
-    date: str = Field(description="The date of the conversation in YYYY-MM-DD format")
-    notes: dict = Field(
+class CreateUserConversationNoteToolInput(BaseModel):
+    note: str = Field(
         description=(
-            "A key-value store of short, concise notes about the conversation on this date. "
-            "Notes will be MERGED into existing ones for this date (only keys provided will "
-            "be overwritten or added). Keep notes brief and focused on information useful "
-            "for future investment advice."
+            "A short, concise note about the conversation. "
+            "Keep it brief and focused on information useful for future investment advice."
         )
+    )
+    date: str | None = Field(
+        default=None,
+        description="The date of the conversation in YYYY-MM-DD format. Defaults to today, so only pass it when recording a note for a different date.",
     )
 
 
 @tool(
-    "updateUserConversationNotes",
-    args_schema=UpdateUserConversationNotesToolInput,
+    "createUserConversationNote",
+    args_schema=CreateUserConversationNoteToolInput,
     description=(
-        "Store or update conversation notes for a specific user and date. "
+        "Store a conversation note. Defaults to today's date. "
         "Use this to capture conversation-specific context such as topics discussed, "
         "questions asked, or recommendations given — information that is relevant to a particular "
         "conversation but not a permanent part of the user's profile. "
-        "Updates are additive: any keys provided will overwrite or be added to existing notes for that date."
+        "A date can hold any number of notes, so this adds a note rather than replacing existing ones."
     ),
 )
-async def update_user_conversation_notes(
-    runtime: ToolRuntime[UserContextToolsRuntimeContext],
-    user_id: str,
-    date: str,
-    notes: dict,
-) -> None:
-    user_context_service = runtime.context.user_context_service
-    await user_context_service.update_user_conversation_notes(
-        user_id=user_id,
+async def create_user_conversation_note(
+    runtime: ToolRuntime[UserConversationNotesToolsRuntimeContext],
+    note: str,
+    date: str | None = None,
+) -> UserConversationNote:
+    user_conversation_notes_service = runtime.context.user_conversation_notes_service
+    return await user_conversation_notes_service.create_user_conversation_note(
+        note=note,
         date=date,
-        notes=notes,
     )
 
 

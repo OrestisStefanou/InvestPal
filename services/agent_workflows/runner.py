@@ -13,7 +13,11 @@ from services.agents.agent import (
     WorkflowExecutionAgentRuntimeContext,
 )
 from services.agent_reminder import AgentReminderService
-from services.user_context import UserContextService, UserContextNotFoundError
+from services.user_context import (
+    UserContextService,
+    UserContextNotFoundError,
+    UserConversationNotesService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +29,7 @@ class WorkflowRunner:
         agent_workflow_service: AgentWorkflowService,
         workflow_result_service: WorkflowResultService,
         user_context_service: UserContextService,
+        user_conversation_notes_service: UserConversationNotesService,
         agent_reminder_service: AgentReminderService,
         notifier: WorkflowNotifier,
     ):
@@ -32,6 +37,7 @@ class WorkflowRunner:
         self._workflow_service = agent_workflow_service
         self._workflow_result_service = workflow_result_service
         self._user_context_service = user_context_service
+        self._user_conversation_notes_service = user_conversation_notes_service
         self._agent_reminder_service = agent_reminder_service
         self._notifier = notifier
 
@@ -64,7 +70,7 @@ class WorkflowRunner:
 
         runtime_context = WorkflowExecutionAgentRuntimeContext(
             workflow_result_service=self._workflow_result_service,
-            user_context_service=self._user_context_service,
+            user_conversation_notes_service=self._user_conversation_notes_service,
         )
 
         agent_response = await self._agent.generate_response(

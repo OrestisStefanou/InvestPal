@@ -1,7 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
 import datetime as dt
-from typing import Any
 
 from pydantic import BaseModel
 from pymongo import (
@@ -12,9 +11,10 @@ from pymongo import (
 from config import settings
 from models.user_context import (
     UserContext,
-    UserConversationNotes,
+    UserConversationNote,
     UserProfileNote,
 )
+from repos.user_conversation_notes import UserConversationNotesTable
 from repos.user_profile_notes import UserProfileNotesTable
 
 
@@ -48,35 +48,12 @@ class UserContextService(ABC):
     ) -> UserContext:
         pass
 
-    @abstractmethod
-    async def get_user_conversation_notes(
-        self,
-        user_id: str,
-        limit: int | None = None,
-    ) -> list[UserConversationNotes]:
-        pass
-
-    @abstractmethod
-    async def update_user_conversation_notes(
-        self,
-        user_id: str,
-        date: str,
-        notes: dict[str, Any],
-    ) -> None:
-        pass
-
 
 class UserContextMongoDoc(BaseModel):
     user_id: str
     user_profile: dict
     created_at: str | None = None
     updated_at: str | None = None
-
-
-class UserConversationNotesMongoDoc(BaseModel):
-    user_id: str
-    date: str
-    notes: dict
 
 
 class MongoDBUserContextService(UserContextService):
@@ -192,72 +169,68 @@ class MongoDBUserContextService(UserContextService):
             updated_at=mongo_result.updated_at,
         )
 
+
+class UserConversationNotesService:
+    def __init__(self, table: UserConversationNotesTable):
+        self.table = table
+
     async def get_user_conversation_notes(
         self,
-        user_id: str,
         limit: int | None = None,
-    ) -> list[UserConversationNotes]:
+    ) -> list[UserConversationNote]:
         """
-        Get conversation notes for the given user_id, ordered by most recent date first.
+        Get conversation notes ordered by most recent first.
 
         Args:
-            user_id: The user_id for which to get conversation notes.
-            limit: Maximum number of dates to return. If None, returns all notes.
+            limit: Maximum number of notes to return. If None, returns all notes.
 
         Returns:
-            A list of UserConversationNotes models ordered by date descending.
+            A list of UserConversationNote models ordered by date descending.
         """
-        collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
-        cursor = collection.find({"user_id": user_id}).sort("date", -1)
-        docs = await cursor.to_list(length=limit)
-
+        rows = await asyncio.to_thread(self.table.get_notes, limit)
         return [
-            UserConversationNotes(
-                user_id=doc["user_id"],
-                date=doc["date"],
-                notes=doc["notes"],
+            UserConversationNote(
+                id=row.id,
+                date=row.date,
+                note=row.note,
+                created_at=row.created_at,
             )
-            for doc in docs
+            for row in rows
         ]
 
-    async def update_user_conversation_notes(
+    async def create_user_conversation_note(
         self,
-        user_id: str,
-        date: str,
-        notes: dict[str, Any],
-    ) -> None:
+        note: str,
+        date: str | None = None,
+    ) -> UserConversationNote:
         """
-        Create or update the conversation notes for the given user_id and date.
-        The provided notes are merged with any existing ones for that date using 
-        dot notation (only keys provided will be overwritten or added).
+        Create a conversation note for the given date. A date can hold any
+        number of notes.
 
         Args:
-            user_id: The user_id for which to update conversation notes.
-            date: The date string in YYYY-MM-DD format.
-            notes: A dict containing the notes to store or merge for this date.
+            note: The note to store for this date.
+            date: The date string in YYYY-MM-DD format. Defaults to today.
+
+        Raises:
+            ValueError: If date is provided and is not in YYYY-MM-DD format.
+
+        Returns:
+            The created note.
         """
-        try:
-            dt.datetime.strptime(date, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError(f"Invalid date format: {date}. Expected YYYY-MM-DD.")
+        if date is None:
+            date = dt.date.today().isoformat()
+        else:
+            try:
+                dt.datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"Invalid date format: {date}. Expected YYYY-MM-DD.")
 
-        collection = self.db[settings.USER_CONVERSATION_NOTES_COLLECTION_NAME]
-        
-        if not notes:
-            # If notes is empty, just ensure the document exists with an empty notes object if new
-            await collection.update_one(
-                {"user_id": user_id, "date": date},
-                {"$setOnInsert": {"notes": {}}},
-                upsert=True,
-            )
-            return
-
-        # Use dot notation to update specific keys within the notes object without overwriting others
-        update_data = {f"notes.{k}": v for k, v in notes.items()}
-        await collection.update_one(
-            {"user_id": user_id, "date": date},
-            {"$set": update_data},
-            upsert=True,
+        row = await asyncio.to_thread(self.table.create_note, date, note)
+        return UserConversationNote(
+            id=row.id,
+            date=row.date,
+            note=row.note,
+            created_at=row.created_at,
         )
 
 

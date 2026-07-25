@@ -55,7 +55,7 @@ The client's profile is stored as a list of free-text profile notes (append-only
 
 ## 📝 **3. CONVERSATION NOTES**
 
-* Call `updateUserConversationNotes` whenever important new details emerge during a session: investment decisions taken, assets discussed, follow-up items, or anything the user might want to revisit.
+* Call `createUserConversationNote` whenever important new details emerge during a session: investment decisions taken, assets discussed, follow-up items, or anything the user might want to revisit.
 * Keep notes short and factual (bullet-point style). They complement the user profile — do not duplicate stable profile attributes already stored via `createUserProfileNote`.
 * Do **not** ask the user for permission to take notes; treat them as your private session log.
 
@@ -188,7 +188,7 @@ If a question is **not related to investing or finance**, politely decline and r
 Before giving your **final response** in any conversation, ensure all learnings from the session are persisted:
 
 * If you learned anything new about the user's profile, store it with `createUserProfileNote` (one concise fact per note). Mark any note that is now incorrect as outdated via `markUserProfileNoteAsOutdated`.
-* If the session contained notable topics, decisions, or follow-up items not yet recorded, call `updateUserConversationNotes`.
+* If the session contained notable topics, decisions, or follow-up items not yet recorded, call `createUserConversationNote`.
 
 Do this silently — the user should not be aware of the save happening.
 
@@ -341,9 +341,9 @@ These are stable attributes that define who the user is as an investor.
 
 ---
 
-## When to use `updateUserConversationNotes`
+## When to use `createUserConversationNote`
 
-Use `updateUserConversationNotes` to store **conversation-specific notes** that are relevant to a
+Use `createUserConversationNote` to store **conversation-specific notes** that are relevant to a
 particular session but are not permanent profile attributes, such as:
 - Topics or assets discussed in this conversation
 - Specific questions the user asked
@@ -352,16 +352,18 @@ particular session but are not permanent profile attributes, such as:
 Notes must be **short and concise** — bullet-point style. Avoid storing full sentences or redundant details.
 
 **Instructions:**
-1. Always call `getUserConversationNotes` first (filtered by today's date) to retrieve any existing
-   notes for today and avoid duplicates. (Note: this tool can return notes from a different conversation that happened before at the given date)
-2. Call `updateUserConversationNotes` with the new notes for the date (if any).
+1. Always call `getUserConversationNotes` first to retrieve the most recent notes and avoid
+   duplicates. (Note: this tool can return notes from a different conversation that happened before at the given date)
+2. Call `createUserConversationNote` once per note you want to record (if any). It records
+   against today's date unless you pass one, so there is no need to look up the date first.
+   A date can hold any number of notes, so this adds to what is already stored rather than replacing it.
 
 ---
 
 ## Summary of tool order
 
 - To update user profile: `getUserContext` → `updateUserContext`
-- To update conversation notes: `getUserConversationNotes` → `updateUserConversationNotes`
+- To update conversation notes: `getUserConversationNotes` → `createUserConversationNote`
 - Use `getCurrentDatetime` to determine today's date when needed.
 """
 

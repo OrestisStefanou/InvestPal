@@ -9,6 +9,7 @@ from models.session import Message
 from services.user_context import (
     UserContextService,
     UserContextNotFoundError,
+    UserConversationNotesService,
 )
 from services.agent_reminder import AgentReminderService
 from services.agent_workflows.workflow import AgentWorkflowService
@@ -57,6 +58,7 @@ class InvestmentManagerAgentService(TextAgentService):
         investment_manager_agent: InvestmentManagerAgent,
         user_context_memory_manager_agent: UserContextMemoryManagerAgent,
         user_context_service: UserContextService,
+        user_conversation_notes_service: UserConversationNotesService,
         agent_reminder_service: AgentReminderService,
         agent_workflow_service: AgentWorkflowService,
         workflow_result_service: WorkflowResultService,
@@ -68,11 +70,13 @@ class InvestmentManagerAgentService(TextAgentService):
             investment_manager_agent: The agent responsible for providing investment advice.
             user_context_memory_manager_agent: The agent responsible for updating user context.
             user_context_service: Service to retrieve and store user context.
+            user_conversation_notes_service: Service to retrieve and store conversation notes.
             agent_reminder_service: Service to manage agent reminders.
         """
         self._investment_manager_agent = investment_manager_agent
         self._user_context_memory_manager_agent = user_context_memory_manager_agent
         self._user_context_service = user_context_service
+        self._user_conversation_notes_service = user_conversation_notes_service
         self._agent_reminder_service = agent_reminder_service
         self._agent_workflow_service = agent_workflow_service
         self._workflow_result_service = workflow_result_service
@@ -103,7 +107,7 @@ class InvestmentManagerAgentService(TextAgentService):
         agent_response = await self._investment_manager_agent.generate_response(
             conversation=conversation,
             runtime_context=InvestmentManagerRuntimeContext(
-                user_context_service=self._user_context_service,
+                user_conversation_notes_service=self._user_conversation_notes_service,
                 agent_reminder_service=self._agent_reminder_service,
                 agent_workflow_service=self._agent_workflow_service,
                 workflow_result_service=self._workflow_result_service,
@@ -141,6 +145,7 @@ class InvestmentManagerAgentService(TextAgentService):
                 ),
                 runtime_context=UserContextManagerRuntimeContext(
                     user_context_service=self._user_context_service,
+                    user_conversation_notes_service=self._user_conversation_notes_service,
                 ),
             )
         except Exception as e:

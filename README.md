@@ -58,7 +58,6 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    MONGO_DB_NAME=investpal
    USER_CONTEXT_COLLECTION_NAME=user_contexts
    SESSION_COLLECTION_NAME=sessions
-   USER_CONVERSATION_NOTES_COLLECTION_NAME=user_conversation_notes
 
    # LLM (choose one provider)
    LLM_PROVIDER=anthropic           # openai | google | anthropic
@@ -135,7 +134,7 @@ POST   /workflows/check-and-run Execute due workflows (heartbeat)
 | `getUserContext` | Fetch a user's profile |
 | `updateUserContext` | Replace a user's profile |
 | `getUserConversationNotes` | Retrieve notes from past conversations |
-| `updateUserConversationNotes` | Store/merge notes for a conversation date |
+| `createUserConversationNote` | Store a note for a conversation date |
 | `createAgentReminder` | Create a reminder for a user |
 | `getAgentReminders` | List all reminders for a user |
 | `updateAgentReminder` | Update a reminder's description or due date |

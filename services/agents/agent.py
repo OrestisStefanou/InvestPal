@@ -33,10 +33,12 @@ from services.agents.tools import (
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
     UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
     add,
     create_agent_reminder,
     create_agent_workflow,
+    create_user_conversation_note,
     delete_agent_reminder,
     delete_agent_workflow,
     divide,
@@ -53,7 +55,6 @@ from services.agents.tools import (
     update_agent_reminder,
     update_agent_workflow,
     update_user_context,
-    update_user_conversation_notes,
 )
 
 # TODO: Create Agent ABC clas
@@ -170,7 +171,7 @@ class InvestmentManagerPromptVars(TypedDict):
 
 @dataclass
 class InvestmentManagerRuntimeContext(
-    UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
@@ -288,7 +289,10 @@ class UserContextMemoryManagerPromptVars(TypedDict):
 
 
 @dataclass
-class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+class UserContextManagerRuntimeContext(
+    UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
+):
     pass
 
 
@@ -306,7 +310,7 @@ class UserContextMemoryManagerAgent(Agent):
             get_user_context,
             get_current_datetime,
             get_user_conversation_notes,
-            update_user_conversation_notes,
+            create_user_conversation_note,
         ]
         super().__init__(
             tools=tools,
@@ -343,7 +347,7 @@ class WorkflowExecutionPromptVars(TypedDict):
 
 @dataclass
 class WorkflowExecutionAgentRuntimeContext(
-    UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
 ):
     pass
