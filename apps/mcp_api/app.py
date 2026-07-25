@@ -23,7 +23,7 @@ from models.agent_workflow import (
     WorkflowStatus,
 )
 from models.user_context import (
-    UserConversationNotes,
+    UserConversationNote,
     UserProfileNote,
 )
 from services.agent_reminder import (
@@ -47,10 +47,10 @@ from services.agents.skills import (
 )
 from services.agents.tools import SkillDefinition
 from services.user_context import (
-    MongoDBUserContextService,
-    UserContextService,
+    UserConversationNotesService,
     UserProfileService,
 )
+from repos.user_conversation_notes import UserConversationNotesTable
 from repos.user_profile_notes import UserProfileNotesTable
 from repos.db import init_db
 
@@ -84,11 +84,6 @@ async def db_lifespan(server):
     await db_client.close()
 
 
-def get_user_context_service(ctx: Context = CurrentContext()) -> UserContextService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBUserContextService(mongo_client=db_client)
-
-
 def get_user_profile_notes_table(ctx: Context = CurrentContext()) -> UserProfileNotesTable:
     return UserProfileNotesTable(db_path=settings.TURSO_DB_PATH)
 
@@ -97,6 +92,16 @@ def get_user_profile_service(
     table: UserProfileNotesTable = Depends(get_user_profile_notes_table),
 ) -> UserProfileService:
     return UserProfileService(table=table)
+
+
+def get_user_conversation_notes_table() -> UserConversationNotesTable:
+    return UserConversationNotesTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_user_conversation_notes_service(
+    table: UserConversationNotesTable = Depends(get_user_conversation_notes_table),
+) -> UserConversationNotesService:
+    return UserConversationNotesService(table=table)
 
 
 
@@ -165,44 +170,45 @@ async def get_current_datetime() -> str:
 @mcp_app.tool(
     name="getUserConversationNotes",
     description=(
-        "Retrieve conversation notes for a user, ordered by most recent date first. "
+        "Retrieve conversation notes, ordered by most recent first. "
         "Allows the agent to recall specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
-    user_id: Annotated[str, "The id of the user to get conversation notes for"],
     limit: Annotated[
         int | None,
-        "Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
+        "Maximum number of notes to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
     ] = 5,
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> list[UserConversationNotes]:
-    return await user_context_service.get_user_conversation_notes(
-        user_id=user_id, limit=limit
+    user_conversation_notes_service: UserConversationNotesService = Depends(
+        get_user_conversation_notes_service
+    ),
+) -> list[UserConversationNote]:
+    return await user_conversation_notes_service.get_user_conversation_notes(
+        limit=limit
     )
 
 
 @mcp_app.tool(
-    name="updateUserConversationNotes",
+    name="createUserConversationNote",
     description=(
-        "Store or update conversation notes for a specific user and date. "
-        "The provided notes will be MERGED with existing ones for that date (only keys "
-        "provided will be overwritten or added). Keep notes short and concise."
+        "Store a conversation note, by default against today's date. A date can hold any "
+        "number of notes, so this adds a note rather than replacing existing ones. "
+        "Keep notes short and concise."
     ),
 )
-async def update_user_conversation_notes(
-    user_id: Annotated[str, "The id of the user to update conversation notes for"],
-    date: Annotated[str, "The date of the conversation in YYYY-MM-DD format"],
-    notes: Annotated[
-        dict,
-        "A key-value store of notes about the conversation. These will be merged with any existing notes for this date",
-    ],
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> None:
-    await user_context_service.update_user_conversation_notes(
-        user_id=user_id,
+async def create_user_conversation_note(
+    note: Annotated[str, "A short, concise note about the conversation"],
+    date: Annotated[
+        str | None,
+        "The date of the conversation in YYYY-MM-DD format. Defaults to today, so only pass it when recording a note for a different date.",
+    ] = None,
+    user_conversation_notes_service: UserConversationNotesService = Depends(
+        get_user_conversation_notes_service
+    ),
+) -> UserConversationNote:
+    return await user_conversation_notes_service.create_user_conversation_note(
+        note=note,
         date=date,
-        notes=notes,
     )
 
 

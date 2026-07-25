@@ -32,11 +32,14 @@ from services.agents.prompts import (
 from services.agents.tools import (
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
-    UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
+    UserProfileToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
     add,
     create_agent_reminder,
     create_agent_workflow,
+    create_user_conversation_note,
+    create_user_profile_note,
     delete_agent_reminder,
     delete_agent_workflow,
     divide,
@@ -45,15 +48,14 @@ from services.agents.tools import (
     get_current_datetime,
     get_skill,
     get_skill_definitions,
-    get_user_context,
     get_user_conversation_notes,
+    get_user_profile_notes,
     get_workflow_results,
+    mark_user_profile_note_as_outdated,
     multiply,
     subtract,
     update_agent_reminder,
     update_agent_workflow,
-    update_user_context,
-    update_user_conversation_notes,
 )
 
 # TODO: Create Agent ABC clas
@@ -162,15 +164,15 @@ class InvestmentManagerPromptVars(TypedDict):
     Schema for placeholder values required by the Investment Manager Agent's system prompt.
 
     Attributes:
-        client_profile: A dictionary containing the user's investment profile and context.
+        client_profile: The user's profile notes, rendered as a bullet list.
     """
 
-    client_profile: dict[str, Any]
+    client_profile: str
 
 
 @dataclass
 class InvestmentManagerRuntimeContext(
-    UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
@@ -276,19 +278,11 @@ class UserContextMemoryManagerAgentResponse(BaseModel):
     response: str
 
 
-class UserContextMemoryManagerPromptVars(TypedDict):
-    """
-    Schema for placeholder values required by the User Context Memory Manager Agent's system prompt.
-
-    Attributes:
-        user_id: The ID of the user to manage context for.
-    """
-
-    user_id: str
-
-
 @dataclass
-class UserContextManagerRuntimeContext(UserContextToolsRuntimeContext):
+class UserContextManagerRuntimeContext(
+    UserProfileToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
+):
     pass
 
 
@@ -302,11 +296,12 @@ class UserContextMemoryManagerAgent(Agent):
         middleware: list[AgentMiddleware],
     ):
         tools = [
-            update_user_context,
-            get_user_context,
+            get_user_profile_notes,
+            create_user_profile_note,
+            mark_user_profile_note_as_outdated,
             get_current_datetime,
             get_user_conversation_notes,
-            update_user_conversation_notes,
+            create_user_conversation_note,
         ]
         super().__init__(
             tools=tools,
@@ -323,13 +318,10 @@ class UserContextMemoryManagerAgent(Agent):
         self,
         conversation: list[Message],
         runtime_context: UserContextManagerRuntimeContext,
-        system_prompt_placeholder_values: UserContextMemoryManagerPromptVars
-        | None = None,
     ) -> UserContextMemoryManagerAgentResponse:
         return await super().generate_response(
             conversation=conversation,
             runtime_context=runtime_context,
-            system_prompt_placeholder_values=system_prompt_placeholder_values,
         )
 
 
@@ -338,12 +330,12 @@ class WorkflowExecutionAgentResponse(BaseModel):
 
 
 class WorkflowExecutionPromptVars(TypedDict):
-    client_profile: dict[str, Any]
+    client_profile: str
 
 
 @dataclass
 class WorkflowExecutionAgentRuntimeContext(
-    UserContextToolsRuntimeContext,
+    UserConversationNotesToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
 ):
     pass

@@ -10,7 +10,6 @@ from models.session import (
     Session,
     Message,
 )
-from services.user_context import UserContextNotFoundError
 
 
 class SessionNotFoundError(Exception):
@@ -71,7 +70,6 @@ class MongoDBSessionService(SessionService):
             SessionAlreadyExistsError: If the session already exists.
         """
         session_collection = self.db[settings.SESSION_COLLECTION_NAME]
-        user_context_collection = self.db[settings.USER_CONTEXT_COLLECTION_NAME]
 
         if session_id:
             # Check if session already exists for the given id
@@ -83,11 +81,6 @@ class MongoDBSessionService(SessionService):
 
         if not name:
             name = session_id
-
-        # Check if user_id is valid
-        user_context = await user_context_collection.find_one({"user_id": user_id})
-        if not user_context:
-            raise UserContextNotFoundError(f"User context not found for user_id: {user_id}")
 
         created_at = datetime.now(timezone.utc).isoformat()
         session_doc = SessionMongoDoc(sessionID=session_id, user_id=user_id, messages=[], name=name, created_at=created_at)
