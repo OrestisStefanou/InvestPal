@@ -585,7 +585,7 @@ The MCP server propagates errors as MCP tool error responses. In the FastMCP Pyt
 | Cause | Description |
 |---|---|
 | Invalid date format | Dates must be in `YYYY-MM-DD` format |
-| Database unavailable | The MongoDB connection failed on startup |
+| Database unavailable | The turso database file could not be opened on startup |
 
 ---
 
@@ -603,5 +603,4 @@ Required environment variables (see `.env`):
 
 | Variable | Description |
 |---|---|
-| `MONGO_URI` | MongoDB connection string |
-| `MONGO_DB_NAME` | Database name |
+| `TURSO_DB_PATH` | Path to the turso/SQLite database file. Defaults to `investpal.db` |

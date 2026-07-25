@@ -1,15 +1,13 @@
-from abc import ABC, abstractmethod
+import asyncio
 import uuid
-from datetime import datetime, timezone
+from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
-from pymongo import AsyncMongoClient
-
-from config import settings
 from models.session import (
-    Session,
     Message,
+    MessageRole,
+    Session,
 )
+from repos.sessions import SessionsTable
 
 
 class SessionNotFoundError(Exception):
@@ -22,7 +20,7 @@ class SessionAlreadyExistsError(Exception):
 
 class SessionService(ABC):
     @abstractmethod
-    async def create_session(self, user_id: str, session_id: str | None = None, name: str | None = None) -> Session:
+    async def create_session(self, session_id: str | None = None, name: str | None = None) -> Session:
         pass
 
     @abstractmethod
@@ -34,132 +32,90 @@ class SessionService(ABC):
         pass
 
     @abstractmethod
-    async def get_user_sessions(self, user_id: str) -> list[Session]:
+    async def get_sessions(self) -> list[Session]:
         pass
 
 
-class MessageMongoDoc(Message):
-    pass
+class TursoSessionService(SessionService):
+    def __init__(self, table: SessionsTable):
+        self._table = table
 
-
-class SessionMongoDoc(BaseModel):
-    sessionID: str
-    user_id: str
-    messages: list[MessageMongoDoc]
-    name: str
-    created_at: str
-
-
-class MongoDBSessionService(SessionService):
-    def __init__(self, mongo_client: AsyncMongoClient):
-        self.db = mongo_client[settings.MONGO_DB_NAME]
-
-    async def create_session(self, user_id: str, session_id: str | None = None, name: str | None = None) -> Session:
+    async def create_session(self, session_id: str | None = None, name: str | None = None) -> Session:
         """
-        Create a new session for the user.
-        
+        Create a new session.
+
         Args:
-            user_id (str): The ID of the user.
-            session_id (str | None): The ID of the session. If not provided, a new ID will be generated.
-            name (str | None): The name of the session.
-        
+            session_id: The ID of the session. If not provided, a new ID will be generated.
+            name: The name of the session. Defaults to the session id.
+
         Returns:
             Session: The created session.
-        
+
         Raises:
             SessionAlreadyExistsError: If the session already exists.
         """
-        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
-
         if session_id:
-            # Check if session already exists for the given id
-            session = await self.get_session(session_id)
-            if session:
+            existing = await asyncio.to_thread(self._table.get_session, session_id)
+            if existing:
                 raise SessionAlreadyExistsError(f"Session {session_id} already exists")
         else:
             session_id = str(uuid.uuid4())
 
-        if not name:
-            name = session_id
-
-        created_at = datetime.now(timezone.utc).isoformat()
-        session_doc = SessionMongoDoc(sessionID=session_id, user_id=user_id, messages=[], name=name, created_at=created_at)
-        await session_collection.insert_one(session_doc.model_dump())
-
-        return Session(
-            session_id=session_doc.sessionID,
-            user_id=session_doc.user_id,
-            messages=[],
-            name=session_doc.name,
-            created_at=session_doc.created_at,
+        row = await asyncio.to_thread(
+            self._table.create_session, session_id, name or session_id
         )
-    
+        return Session(
+            session_id=row.id,
+            messages=[],
+            name=row.name,
+            created_at=row.created_at,
+        )
+
     async def get_session(self, session_id: str) -> Session | None:
-        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
-        doc = await session_collection.find_one({"sessionID": session_id})
-        if not doc:
+        row = await asyncio.to_thread(self._table.get_session, session_id)
+        if not row:
             return None
 
-        mongo_doc = SessionMongoDoc.model_validate(doc)
-
+        messages = await asyncio.to_thread(self._table.get_messages, session_id)
         return Session(
-            session_id=mongo_doc.sessionID,
-            user_id=mongo_doc.user_id,
+            session_id=row.id,
             messages=[
                 Message(
-                    role=msg.role,
-                    content=msg.content,
-                    created_at=msg.created_at,
+                    role=MessageRole(message.role),
+                    content=message.content,
+                    created_at=message.created_at,
                 )
-                for msg in mongo_doc.messages
+                for message in messages
             ],
-            name=mongo_doc.name,
-            created_at=mongo_doc.created_at,
+            name=row.name,
+            created_at=row.created_at,
         )
 
     async def add_message(self, session_id: str, message: Message) -> Session | None:
-        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
-
         session = await self.get_session(session_id)
         if not session:
             raise SessionNotFoundError("Session not found")
 
-        # Map Message to MessageMongoDoc
-        message_doc = MessageMongoDoc(
-            role=message.role,
+        await asyncio.to_thread(
+            self._table.add_message,
+            session_id=session_id,
+            role=MessageRole(message.role).value,
             content=message.content,
             created_at=message.created_at,
         )
 
-        await session_collection.update_one(
-            {"sessionID": session_id},
-            {"$push": {"messages": message_doc.model_dump()}}
-        )
-
         session.messages.append(message)
-
         return session
 
-    async def get_user_sessions(self, user_id: str) -> list[Session]:
-        session_collection = self.db[settings.SESSION_COLLECTION_NAME]
-        cursor = session_collection.find({"user_id": user_id})
-        sessions = []
-        async for doc in cursor:
-            mongo_doc = SessionMongoDoc.model_validate(doc)
-            sessions.append(
-                Session(
-                    session_id=mongo_doc.sessionID,
-                    user_id=mongo_doc.user_id,
-                    messages=[
-                        Message(
-                            role=msg.role,
-                            content=msg.content,
-                            created_at=msg.created_at,
-                        )
-                        for msg in mongo_doc.messages
-                    ],
-                    name=mongo_doc.name,
-                    created_at=mongo_doc.created_at,
-                )
+    async def get_sessions(self) -> list[Session]:
+        """Session summaries, most recent first. Messages are not loaded."""
+        rows = await asyncio.to_thread(self._table.get_sessions)
+        return [
+            Session(
+                session_id=row.id,
+                messages=[],
+                name=row.name,
+                created_at=row.created_at,
             )
-        return sessions
+            for row in rows
+        ]

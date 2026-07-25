@@ -1,11 +1,8 @@
 from fastapi import (
     Depends,
-    Request,
-    HTTPException,
     Header,
 )
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from pymongo import AsyncMongoClient
 
 from config import settings
 from services.agents.agent import (
@@ -20,9 +17,10 @@ from services.agents.middleware import (
 )
 from services.agent_service import InvestmentManagerAgentService
 from services.session import (
-    MongoDBSessionService, 
     SessionService,
+    TursoSessionService,
 )
+from repos.sessions import SessionsTable
 from services.chat import (
     ChatService,
     AgenticChatService,
@@ -53,12 +51,6 @@ from services.agent_workflows.notifier import (
 from repos.agent_workflows import AgentWorkflowsTable
 from services.agent_workflows.runner import WorkflowRunner
 from services.agents.agent import WorkflowExecutionAgent
-
-def get_db_client(request: Request):
-    if not hasattr(request.app.state, "mongodb_client"):
-        raise HTTPException(status_code=500, detail="Database not initialized")
-    return request.app.state.mongodb_client
-
 
 def get_mcp_client(
     alpaca_api_key: str | None = Header(None, alias="X-Alpaca-Api-Key"),
@@ -98,10 +90,8 @@ def get_mcp_client(
     return mcp_server_client
 
 
-def get_session_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-) -> SessionService:
-    return MongoDBSessionService(mongo_client=db_client)
+def get_session_service() -> SessionService:
+    return TursoSessionService(table=SessionsTable())
 
 
 def get_user_profile_service() -> UserProfileService:

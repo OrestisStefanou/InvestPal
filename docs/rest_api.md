@@ -47,25 +47,23 @@ These headers are only needed on the `POST /chat` endpoint when the user's query
 
 ## Session Service
 
-Sessions represent individual conversation threads between a user and the AI advisor. Each session has its own isolated message history.
+Sessions represent individual conversation threads with the AI advisor. Each session has its own isolated message history.
 
 ### Create Session
 
 `POST /session`
 
-Open a new conversation session for a user.
+Open a new conversation session.
 
 **Request Body**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user who owns this session |
 | `session_id` | string | no | Custom session ID. A UUID is generated if omitted |
 | `name` | string | no | Human-readable session name. Defaults to `session_id` if omitted |
 
 ```json
 {
-  "user_id": "user-abc123",
   "name": "Q1 Portfolio Review"
 }
 ```
@@ -75,7 +73,6 @@ Open a new conversation session for a user.
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "user_id": "user-abc123",
   "name": "Q1 Portfolio Review",
   "created_at": "2024-01-15T10:35:00.000Z",
   "messages": []
@@ -108,7 +105,6 @@ Retrieve the full message history of a session.
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "user_id": "user-abc123",
   "name": "Q1 Portfolio Review",
   "created_at": "2024-01-15T10:35:00.000Z",
   "messages": [
@@ -137,38 +133,30 @@ The `role` field is either `"user"` or `"agent"`.
 
 ---
 
-### List User Sessions
+### List Sessions
 
-`GET /sessions/{user_id}`
+`GET /sessions`
 
-Return all sessions for a user, without message history.
-
-**Path Parameters**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `user_id` | string | The unique identifier of the user |
+Return all sessions, most recent first, without message history.
 
 **Response** `200 OK`
 
 ```json
 [
   {
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
-    "user_id": "user-abc123",
-    "name": "Q1 Portfolio Review",
-    "created_at": "2024-01-15T10:35:00.000Z"
-  },
-  {
     "session_id": "661f9511-f30c-52e5-b827-557766551111",
-    "user_id": "user-abc123",
     "name": "Crypto Strategy",
     "created_at": "2024-01-16T09:00:00.000Z"
+  },
+  {
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Q1 Portfolio Review",
+    "created_at": "2024-01-15T10:35:00.000Z"
   }
 ]
 ```
 
-Returns an empty array `[]` if the user has no sessions.
+Returns an empty array `[]` if there are no sessions.
 
 **Errors**
 

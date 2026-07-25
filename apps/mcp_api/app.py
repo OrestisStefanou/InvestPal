@@ -13,7 +13,6 @@ from fastmcp.server.middleware import (
     Middleware,
     MiddlewareContext,
 )
-from pymongo import AsyncMongoClient
 
 from config import settings
 from models.agent_reminder import AgentReminder
@@ -79,10 +78,7 @@ class LoggingMiddleware(Middleware):
 async def db_lifespan(server):
     # Initialize Turso/SQLite database schema
     init_db(settings.TURSO_DB_PATH)
-    
-    db_client = AsyncMongoClient(settings.MONGO_URI)
-    yield {"db_client": db_client}
-    await db_client.close()
+    yield {}
 
 
 def get_user_profile_notes_table(ctx: Context = CurrentContext()) -> UserProfileNotesTable:

@@ -1,11 +1,9 @@
 import uuid
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 
-import turso
-
 from config import settings
+from repos.db import connect, first_row
 
 
 @dataclass
@@ -70,34 +68,6 @@ class AgentWorkflowsTable:
         self._table_name = "agent_workflows"
         self._results_table_name = "workflow_results"
 
-    @contextmanager
-    def _connect(self):
-        """Commit on success, roll back on error, and always close.
-
-        turso's own `with connection` commits but does not close, which leaks the
-        connection and the lock it holds.
-        """
-        conn = turso.connect(self._db_path)
-        try:
-            yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-
-    @staticmethod
-    def _first(cursor):
-        """Read one row from a RETURNING statement.
-
-        Must be fetchall, not fetchone: turso leaves an UPDATE ... RETURNING
-        statement un-finalized after fetchone, and the next commit on that
-        connection then fails with "database is locked".
-        """
-        rows = cursor.fetchall()
-        return rows[0] if rows else None
-
     def create_workflow(
         self,
         name: str,
@@ -109,7 +79,7 @@ class AgentWorkflowsTable:
         workflow_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
 
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             conn.execute(
                 f"INSERT INTO {self._table_name} "
                 "(id, name, description, schedule, status, created_at, last_run_at, next_run_at) "
@@ -129,7 +99,7 @@ class AgentWorkflowsTable:
         )
 
     def get_workflows(self) -> list[AgentWorkflowRow]:
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 f"SELECT {_WORKFLOW_COLUMNS} FROM {self._table_name} ORDER BY created_at DESC"
@@ -139,7 +109,7 @@ class AgentWorkflowsTable:
         return [_to_workflow_row(row) for row in rows]
 
     def get_workflow(self, workflow_id: str) -> AgentWorkflowRow | None:
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 f"SELECT {_WORKFLOW_COLUMNS} FROM {self._table_name} WHERE id = ?",
@@ -170,19 +140,19 @@ class AgentWorkflowsTable:
 
         select += " ORDER BY next_run_at LIMIT 1"
 
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 f"UPDATE {self._table_name} SET status = ? WHERE id = ({select}) "
                 f"RETURNING {_WORKFLOW_COLUMNS}",
                 (running_status, *params),
             )
-            row = self._first(cursor)
+            row = first_row(cursor)
 
         return _to_workflow_row(row) if row else None
 
     def release_lock(self, workflow_id: str, active_status: str, running_status: str) -> None:
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             conn.execute(
                 f"UPDATE {self._table_name} SET status = ? WHERE id = ? AND status = ?",
                 (active_status, workflow_id, running_status),
@@ -213,19 +183,19 @@ class AgentWorkflowsTable:
         if not assignments:
             return self.get_workflow(workflow_id)
 
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 f"UPDATE {self._table_name} SET {', '.join(assignments)} WHERE id = ? "
                 f"RETURNING {_WORKFLOW_COLUMNS}",
                 (*params, workflow_id),
             )
-            row = self._first(cursor)
+            row = first_row(cursor)
 
         return _to_workflow_row(row) if row else None
 
     def delete_workflow(self, workflow_id: str) -> bool:
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.execute(
                 f"DELETE FROM {self._table_name} WHERE id = ?", (workflow_id,)
             )
@@ -248,7 +218,7 @@ class AgentWorkflowsTable:
         """
         result_id = str(uuid.uuid4())
 
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             conn.execute(
                 f"INSERT INTO {self._results_table_name} ({_RESULT_COLUMNS}) "
                 "VALUES (?, ?, ?, ?, ?)",
@@ -278,7 +248,7 @@ class AgentWorkflowsTable:
             query += " LIMIT ?"
             params = (limit,)
 
-        with self._connect() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)
             rows = cursor.fetchall()

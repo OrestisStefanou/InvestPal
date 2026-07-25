@@ -9,10 +9,6 @@ class LLMProvider(str, Enum):
 
 
 class Settings(BaseSettings):
-    # MongoDB
-    MONGO_URI: str
-    MONGO_DB_NAME: str
-    SESSION_COLLECTION_NAME: str = "session"
     # LLM
     LLM_PROVIDER: LLMProvider   # Default LLM provider
     LLM_MODEL: str              # Default LLM model

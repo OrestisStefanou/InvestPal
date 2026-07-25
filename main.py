@@ -7,7 +7,6 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pymongo import AsyncMongoClient
 
 from apps.rest_api import (
     session,
@@ -29,12 +28,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     init_db(settings.TURSO_DB_PATH)
-    app.state.mongodb_client = AsyncMongoClient(settings.MONGO_URI)
     yield
-    # Shutdown
-    await app.state.mongodb_client.close()
 
 
 app = FastAPI(lifespan=lifespan)
