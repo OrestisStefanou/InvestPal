@@ -57,9 +57,8 @@ Returned by reminder tools.
 
 ```json
 {
-  "user_id": "user-abc123",
-  "reminder_id": "rem-550e8400",
-  "reminder_description": "Review Q1 earnings report for AAPL",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "description": "Review Q1 earnings report for AAPL",
   "created_at": "2024-01-15T10:30:00.000Z",
   "due_date": "2024-01-31"
 }
@@ -67,10 +66,9 @@ Returned by reminder tools.
 
 | Field | Type | Description |
 |---|---|---|
-| `user_id` | string | The user this reminder belongs to |
-| `reminder_id` | string | Unique identifier for the reminder |
-| `reminder_description` | string | Human-readable description |
-| `created_at` | string | ISO 8601 UTC timestamp of creation |
+| `id` | string | Unique identifier for the reminder (UUID) |
+| `description` | string | Human-readable description |
+| `created_at` | string | ISO 8601 timestamp of creation |
 | `due_date` | string \| null | Due date in `YYYY-MM-DD` format, or `null` if not set |
 
 ### Conversation Notes Object
@@ -253,13 +251,12 @@ Reminders allow the agent to create and manage time-sensitive action items on be
 
 ### `createAgentReminder`
 
-Create a new reminder for a user.
+Create a new reminder.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user this reminder is for |
 | `reminder_description` | string | yes | A clear description of what to be reminded about |
 | `due_date` | string | no | Optional due date in `YYYY-MM-DD` format |
 
@@ -269,7 +266,6 @@ Create a new reminder for a user.
 result = await client.call_tool(
     name="createAgentReminder",
     arguments={
-        "user_id": "user-abc123",
         "reminder_description": "Review AAPL earnings report and update portfolio allocation",
         "due_date": "2024-01-31",
     },
@@ -280,9 +276,8 @@ result = await client.call_tool(
 
 ```json
 {
-  "user_id": "user-abc123",
-  "reminder_id": "rem-550e8400",
-  "reminder_description": "Review AAPL earnings report and update portfolio allocation",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "description": "Review AAPL earnings report and update portfolio allocation",
   "created_at": "2024-01-15T10:30:00.000Z",
   "due_date": "2024-01-31"
 }
@@ -292,20 +287,18 @@ result = await client.call_tool(
 
 ### `getAgentReminders`
 
-Retrieve all reminders for a user.
+Retrieve all reminders. Deleted reminders are never returned.
 
 **Parameters**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | The ID of the user |
+None.
 
 **Example call**
 
 ```python
 result = await client.call_tool(
     name="getAgentReminders",
-    arguments={"user_id": "user-abc123"},
+    arguments={},
 )
 ```
 
@@ -314,16 +307,14 @@ result = await client.call_tool(
 ```json
 [
   {
-    "user_id": "user-abc123",
-    "reminder_id": "rem-550e8400",
-    "reminder_description": "Review AAPL earnings report",
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "description": "Review AAPL earnings report",
     "created_at": "2024-01-15T10:30:00.000Z",
     "due_date": "2024-01-31"
   },
   {
-    "user_id": "user-abc123",
-    "reminder_id": "rem-661f9511",
-    "reminder_description": "Rebalance crypto allocation",
+    "id": "661f9511-f3ac-52e5-b827-557766551111",
+    "description": "Rebalance crypto allocation",
     "created_at": "2024-01-16T09:00:00.000Z",
     "due_date": null
   }
@@ -340,7 +331,6 @@ Update the description or due date of an existing reminder. Only the fields you 
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user the reminder belongs to |
 | `reminder_id` | string | yes | The unique ID of the reminder to update |
 | `reminder_description` | string | no | New description. If omitted, the existing description is kept |
 | `due_date` | string | no | New due date in `YYYY-MM-DD` format. If omitted, the existing due date is kept |
@@ -351,8 +341,7 @@ Update the description or due date of an existing reminder. Only the fields you 
 result = await client.call_tool(
     name="updateAgentReminder",
     arguments={
-        "user_id": "user-abc123",
-        "reminder_id": "rem-550e8400",
+        "reminder_id": "550e8400-e29b-41d4-a716-446655440000",
         "due_date": "2024-02-15",
     },
 )
@@ -364,27 +353,25 @@ result = await client.call_tool(
 result = await client.call_tool(
     name="updateAgentReminder",
     arguments={
-        "user_id": "user-abc123",
-        "reminder_id": "rem-550e8400",
+        "reminder_id": "550e8400-e29b-41d4-a716-446655440000",
         "reminder_description": "Review AAPL and MSFT earnings, update allocation",
         "due_date": "2024-02-15",
     },
 )
 ```
 
-**Returns**: The updated [Reminder Object](#reminder-object), or `null` if the reminder was not found.
+**Returns**: The updated [Reminder Object](#reminder-object). Errors if no live reminder with that `reminder_id` exists.
 
 ---
 
 ### `deleteAgentReminder`
 
-Permanently delete a reminder.
+Delete a reminder. The row is soft-deleted: it is retained in storage with a `deleted_at` timestamp and is excluded from all subsequent reads.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user the reminder belongs to |
 | `reminder_id` | string | yes | The unique ID of the reminder to delete |
 
 **Example call**
@@ -393,13 +380,12 @@ Permanently delete a reminder.
 await client.call_tool(
     name="deleteAgentReminder",
     arguments={
-        "user_id": "user-abc123",
-        "reminder_id": "rem-550e8400",
+        "reminder_id": "550e8400-e29b-41d4-a716-446655440000",
     },
 )
 ```
 
-**Returns**: `null` (no body). The operation succeeds silently even if the `reminder_id` does not exist.
+**Returns**: `null` (no body). Errors if no live reminder with that `reminder_id` exists.
 
 ---
 
