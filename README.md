@@ -59,7 +59,6 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    USER_CONTEXT_COLLECTION_NAME=user_contexts
    SESSION_COLLECTION_NAME=sessions
    USER_CONVERSATION_NOTES_COLLECTION_NAME=user_conversation_notes
-   AGENT_REMINDERS_COLLECTION_NAME=agent_reminders
 
    # LLM (choose one provider)
    LLM_PROVIDER=anthropic           # openai | google | anthropic

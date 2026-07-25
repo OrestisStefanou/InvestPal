@@ -28,8 +28,9 @@ from models.user_context import (
 )
 from services.agent_reminder import (
     AgentReminderService,
-    MongoDBAgentReminderService,
+    TursoAgentReminderService,
 )
+from repos.agent_reminders import AgentRemindersTable
 from services.agent_workflows.results import (
     MongoDBWorkflowResultService,
     WorkflowResultService,
@@ -99,9 +100,9 @@ def get_user_profile_service(
 
 
 
-def get_agent_reminder_service(ctx: Context = CurrentContext()) -> AgentReminderService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBAgentReminderService(mongo_client=db_client)
+def get_agent_reminder_service() -> AgentReminderService:
+    table = AgentRemindersTable(db_path=settings.TURSO_DB_PATH)
+    return TursoAgentReminderService(table=table)
 
 
 def get_agent_workflow_service(ctx: Context = CurrentContext()) -> AgentWorkflowService:
@@ -210,7 +211,6 @@ async def update_user_conversation_notes(
     description="Create a new reminder for the user.",
 )
 async def create_agent_reminder(
-    user_id: Annotated[str, "The id of the user to create the reminder for"],
     reminder_description: Annotated[str, "The description of the reminder"],
     due_date: Annotated[
         str | None, "Optional due date for the reminder in YYYY-MM-DD format"
@@ -218,7 +218,6 @@ async def create_agent_reminder(
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> AgentReminder:
     return await agent_reminder_service.create_agent_reminder(
-        user_id=user_id,
         reminder_description=reminder_description,
         due_date=due_date,
     )
@@ -226,13 +225,12 @@ async def create_agent_reminder(
 
 @mcp_app.tool(
     name="getAgentReminders",
-    description="Get all reminders for the given user.",
+    description="Get all reminders for the user.",
 )
 async def get_agent_reminders(
-    user_id: Annotated[str, "The id of the user to get reminders for"],
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> list[AgentReminder]:
-    return await agent_reminder_service.get_agent_reminders(user_id=user_id)
+    return await agent_reminder_service.get_agent_reminders()
 
 
 @mcp_app.tool(
@@ -240,7 +238,6 @@ async def get_agent_reminders(
     description="Update an existing reminder for the user.",
 )
 async def update_agent_reminder(
-    user_id: Annotated[str, "The id of the user the reminder belongs to"],
     reminder_id: Annotated[str, "The unique id of the reminder to update"],
     reminder_description: Annotated[
         str | None,
@@ -253,7 +250,6 @@ async def update_agent_reminder(
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> AgentReminder:
     return await agent_reminder_service.update_agent_reminder(
-        user_id=user_id,
         reminder_id=reminder_id,
         reminder_description=reminder_description,
         due_date=due_date,
@@ -265,12 +261,10 @@ async def update_agent_reminder(
     description="Delete a reminder for the user.",
 )
 async def delete_agent_reminder(
-    user_id: Annotated[str, "The id of the user the reminder belongs to"],
     reminder_id: Annotated[str, "The unique id of the reminder to delete"],
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> None:
     await agent_reminder_service.delete_agent_reminder(
-        user_id=user_id,
         reminder_id=reminder_id,
     )
 

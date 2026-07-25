@@ -17,6 +17,7 @@ from apps.rest_api import (
     agent_workflows,
 )
 from config import settings
+from repos.db import init_db
 
 
 # Configure logging
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    init_db(settings.TURSO_DB_PATH)
     app.state.mongodb_client = AsyncMongoClient(settings.MONGO_URI)
     yield
     # Shutdown

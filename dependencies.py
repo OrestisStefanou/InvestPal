@@ -32,9 +32,10 @@ from services.user_context import (
     UserContextService,
 )
 from services.agent_reminder import (
-    MongoDBAgentReminderService,
+    TursoAgentReminderService,
     AgentReminderService,
 )
+from repos.agent_reminders import AgentRemindersTable
 from services.agent_workflows.workflow import (
     AgentWorkflowService,
     MongoDBAgentWorkflowService,
@@ -106,10 +107,9 @@ def get_user_context_service(
     return MongoDBUserContextService(mongo_client=db_client)
 
 
-def get_agent_reminder_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-) -> AgentReminderService:
-    return MongoDBAgentReminderService(mongo_client=db_client)
+def get_agent_reminder_service() -> AgentReminderService:
+    table = AgentRemindersTable()
+    return TursoAgentReminderService(table=table)
 
 
 async def get_investment_manager_agent(
