@@ -2,9 +2,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-import turso
-
 from config import settings
+from repos.db import connect
 
 
 @dataclass
@@ -20,9 +19,6 @@ class UserProfileNotesTable:
         self._db_path = db_path
         self._table_name = "user_profile_notes"
 
-    def _get_conn(self):
-        return turso.connect(self._db_path)
-
     def get_user_profile_notes(
         self, include_outdated: bool = False
     ) -> list[UserProfileNoteRow]:
@@ -30,7 +26,7 @@ class UserProfileNotesTable:
         if not include_outdated:
             query += " WHERE outdated = 0"
 
-        with self._get_conn() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(query)
             rows = cursor.fetchall()
@@ -53,21 +49,19 @@ class UserProfileNotesTable:
         created_at = datetime.now()
         created_at_str = created_at.isoformat()
 
-        with self._get_conn() as conn:
+        with connect(self._db_path) as conn:
             conn.execute(
                 f"INSERT INTO {self._table_name} (id, note, created_at, outdated) VALUES (?, ?, ?, 0)",
                 (note_id, note, created_at_str),
             )
-            conn.commit()
 
         return UserProfileNoteRow(
             id=note_id, note=note, created_at=created_at, outdated=False
         )
 
     def mark_as_outdated(self, note_id: str) -> bool:
-        with self._get_conn() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.execute(
                 f"UPDATE {self._table_name} SET outdated = 1 WHERE id = ?", (note_id,)
             )
-            conn.commit()
             return cursor.rowcount > 0

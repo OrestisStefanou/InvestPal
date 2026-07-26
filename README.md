@@ -1,14 +1,14 @@
 # InvestPal
 
-InvestPal is an AI-powered investment advisor service. It exposes a REST API for client applications and an MCP server for AI agent integrations. It uses FastAPI, MongoDB, LangChain, and the Model Context Protocol (MCP) to deliver personalized investment insights backed by real-time market data.
+InvestPal is an AI-powered investment advisor service. It exposes a REST API for client applications and an MCP server for AI agent integrations. It uses FastAPI, turso, LangChain, and the Model Context Protocol (MCP) to deliver personalized investment insights backed by real-time market data.
 
 ## Features
 
 - **AI Investment Advisor**: Personalized investment insights powered by state-of-the-art LLMs (OpenAI, Google, Anthropic).
-- **Session Management**: Persistent, per-user conversation history stored in MongoDB.
+- **Session Management**: Persistent conversation history stored in turso.
 - **Conversation Memory**: Agent recalls key details from past sessions via a dedicated notes system.
-- **Reminders**: Agent can create and manage time-sensitive action items for users across sessions.
-- **Agent Workflows**: Run scheduled, autonomous workflows on behalf of users (powered by cron).
+- **Reminders**: Agent can create and manage time-sensitive action items across sessions.
+- **Agent Workflows**: Run scheduled, autonomous workflows on the client's behalf (powered by cron).
 - **User Profile**: Build up the client's profile as a set of notes to inform personalized advice.
 - **MCP Integration**: Extensible tool system for market data, stock profiles, forecasts, and more.
 - **Alpaca Markets Integration**: Execute orders, read portfolio holdings, and manage positions.
@@ -20,7 +20,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 | Layer | Technology |
 |---|---|
 | REST API | [FastAPI](https://fastapi.tiangolo.com/) |
-| Database | [MongoDB](https://www.mongodb.com/) |
+| Database | [turso](https://turso.tech/) (embedded SQLite) |
 | AI Framework | [LangChain](https://www.langchain.com/) |
 | MCP Protocol | [Model Context Protocol](https://modelcontextprotocol.io/) |
 | MCP Framework | [FastMCP](https://github.com/jlowin/fastmcp) |
@@ -29,7 +29,6 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 ## Prerequisites
 
 - Python 3.13+
-- MongoDB instance (Atlas or local)
 - API key for your chosen LLM provider (OpenAI, Google, or Anthropic)
 - A running [MarketDataMcpServer](https://github.com/OrestisStefanou/MarketDataMcpServer) instance
 
@@ -53,11 +52,6 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    Create a `.env` file in the root directory:
 
    ```env
-   # MongoDB
-   MONGO_URI=mongodb://localhost:27017
-   MONGO_DB_NAME=investpal
-   SESSION_COLLECTION_NAME=sessions
-
    # LLM (choose one provider)
    LLM_PROVIDER=anthropic           # openai | google | anthropic
    LLM_MODEL=claude-sonnet-4-6
@@ -78,6 +72,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    # COINBASE_MCP_SERVER_URL=http://localhost:8102  # optional
 
    # App
+   TURSO_DB_PATH=investpal.db
    CONVERSATION_MESSAGES_LIMIT=15
    ```
 
@@ -99,7 +94,7 @@ uv run python -m apps.mcp_api.app
 
 Available at `http://localhost:9000/mcp`.
 
-Both servers share the same MongoDB database and must point to the same `MONGO_URI`.
+Both servers share the same turso database file and must point to the same `TURSO_DB_PATH`.
 
 ## API Documentation
 
@@ -113,13 +108,16 @@ Both servers share the same MongoDB database and must point to the same `MONGO_U
 ```
 POST   /session                Create a conversation session
 GET    /session/{session_id}   Get session with full message history
-GET    /sessions/{user_id}     List all sessions for a user
+GET    /sessions               List all sessions
 
 POST   /chat                   Send a message and receive an AI response
 
 POST   /workflows              Create a new scheduled workflow
-GET    /workflows/{user_id}    List scheduled workflows
+GET    /workflows              List scheduled workflows
+PATCH  /workflows/{id}         Update a workflow
+DELETE /workflows/{id}         Delete a workflow
 POST   /workflows/check-and-run Execute due workflows (heartbeat)
+GET    /workflow_results       Results of past workflow runs
 ```
 
 ### MCP tools quick reference
@@ -135,11 +133,12 @@ POST   /workflows/check-and-run Execute due workflows (heartbeat)
 | `getAgentReminders` | List all reminders for a user |
 | `updateAgentReminder` | Update a reminder's description or due date |
 | `deleteAgentReminder` | Delete a reminder |
-| `createAgentWorkflow` | Create a new scheduled workflow for a user |
-| `getAgentWorkflows` | List all workflows for a user |
+| `createAgentWorkflow` | Create a new scheduled workflow |
+| `getAgentWorkflows` | List all workflows |
 | `updateAgentWorkflow` | Update an existing workflow |
 | `deleteAgentWorkflow` | Delete a workflow |
 | `getWorkflowResults` | Get results of past workflow runs |
+| `storeWorkflowResult` | Store a run's result, which also advances the workflow's next run |
 
 ## Project Structure
 

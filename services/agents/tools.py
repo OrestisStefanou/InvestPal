@@ -335,7 +335,6 @@ async def divide(a: float, b: float) -> float | str:
 
 
 class CreateAgentWorkflowToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user to create the workflow for")
     name: str = Field(description="A short human-readable name for the workflow")
     description: str = Field(
         description="Goal-only description of what the agent should achieve on each run. No tool names, no user data, no implementation steps — just the intent."
@@ -355,13 +354,11 @@ class CreateAgentWorkflowToolInput(BaseModel):
 )
 async def create_agent_workflow(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
-    user_id: str,
     name: str,
     description: str,
     schedule: str,
 ) -> AgentWorkflow:
     return await runtime.context.agent_workflow_service.create_workflow(
-        user_id=user_id,
         name=name,
         description=description,
         schedule=schedule,
@@ -371,18 +368,12 @@ async def create_agent_workflow(
 @tool("getAgentWorkflows")
 async def get_agent_workflows(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
-    user_id: str,
 ) -> list[AgentWorkflow]:
-    """Get all scheduled workflows for the given user.
-
-    Args:
-        user_id: The id of the user to get workflows for
-    """
-    return await runtime.context.agent_workflow_service.get_workflows(user_id=user_id)
+    """Get all scheduled workflows."""
+    return await runtime.context.agent_workflow_service.get_workflows()
 
 
 class UpdateAgentWorkflowToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user the workflow belongs to")
     workflow_id: str = Field(description="The unique id of the workflow to update")
     name: str | None = Field(
         default=None, description="New name. If omitted, existing name is kept."
@@ -408,7 +399,6 @@ class UpdateAgentWorkflowToolInput(BaseModel):
 )
 async def update_agent_workflow(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
-    user_id: str,
     workflow_id: str,
     name: str | None = None,
     description: str | None = None,
@@ -416,7 +406,6 @@ async def update_agent_workflow(
     status: WorkflowStatus | None = None,
 ) -> AgentWorkflow:
     return await runtime.context.agent_workflow_service.update_workflow(
-        user_id=user_id,
         workflow_id=workflow_id,
         name=name,
         description=description,
@@ -426,7 +415,6 @@ async def update_agent_workflow(
 
 
 class DeleteAgentWorkflowToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user the workflow belongs to")
     workflow_id: str = Field(description="The unique id of the workflow to delete")
 
 
@@ -437,17 +425,14 @@ class DeleteAgentWorkflowToolInput(BaseModel):
 )
 async def delete_agent_workflow(
     runtime: ToolRuntime[AgentWorkflowToolsRuntimeContext],
-    user_id: str,
     workflow_id: str,
 ) -> None:
     await runtime.context.agent_workflow_service.delete_workflow(
-        user_id=user_id,
         workflow_id=workflow_id,
     )
 
 
 class GetWorkflowResultsToolInput(BaseModel):
-    user_id: str = Field(description="The id of the user to get workflow results for")
     limit: int | None = Field(
         default=10,
         description="Maximum number of results to return. Defaults to 10. Pass None to return all results.",
@@ -461,9 +446,6 @@ class GetWorkflowResultsToolInput(BaseModel):
 )
 async def get_workflow_results(
     runtime: ToolRuntime[WorkflowResultsToolRuntimeContext],
-    user_id: str,
     limit: int | None = 10,
 ) -> list[WorkflowResult]:
-    return await runtime.context.workflow_result_service.get_results(
-        user_id=user_id, limit=limit
-    )
+    return await runtime.context.workflow_result_service.get_results(limit=limit)

@@ -15,7 +15,6 @@ load_dotenv(env_path)
 
 # ── Config ──────────────────────────────────────────────────────────────────
 BASE_URL = "http://localhost:8000"
-USER_ID = "orestis_user_id"
 
 alpaca_api_key = os.getenv("ALPACA_MCP_SERVER_API_KEY", "")
 alpaca_api_secret = os.getenv("ALPACA_MCP_SERVER_API_SECRET", "")
@@ -232,7 +231,7 @@ def create_session(session_id: str) -> bool:
     try:
         r = requests.post(
             f"{BASE_URL}/session",
-            json={"user_id": USER_ID, "session_id": session_id},
+            json={"session_id": session_id},
             timeout=5,
         )
         return r.status_code in (200, 201)
@@ -290,15 +289,6 @@ with st.sidebar:
         f'<div class="metric-card">'
         f'<div class="metric-label">Base URL</div>'
         f'<div class="metric-value" style="font-size:0.8rem">{BASE_URL}</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="sidebar-label">User</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="metric-card">'
-        f'<div class="metric-label">User ID</div>'
-        f'<div class="metric-value" style="font-size:0.75rem">{USER_ID}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )

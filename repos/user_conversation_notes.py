@@ -2,9 +2,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-import turso
-
 from config import settings
+from repos.db import connect
 
 
 @dataclass
@@ -20,19 +19,15 @@ class UserConversationNotesTable:
         self._db_path = db_path
         self._table_name = "user_conversation_notes"
 
-    def _get_conn(self):
-        return turso.connect(self._db_path)
-
     def create_note(self, date: str, note: str) -> UserConversationNoteRow:
         note_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
 
-        with self._get_conn() as conn:
+        with connect(self._db_path) as conn:
             conn.execute(
                 f"INSERT INTO {self._table_name} (id, date, note, created_at) VALUES (?, ?, ?, ?)",
                 (note_id, date, note, created_at),
             )
-            conn.commit()
 
         return UserConversationNoteRow(
             id=note_id, date=date, note=note, created_at=created_at
@@ -48,7 +43,7 @@ class UserConversationNotesTable:
             query += " LIMIT ?"
             params = (limit,)
 
-        with self._get_conn() as conn:
+        with connect(self._db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)
             rows = cursor.fetchall()

@@ -1,24 +1,39 @@
+import asyncio
 import datetime as dt
-import uuid
 from abc import ABC, abstractmethod
 
 from croniter import croniter
-from pydantic import BaseModel
-from pymongo import AsyncMongoClient, ReturnDocument
 
-from config import settings
 from models.agent_workflow import AgentWorkflow, WorkflowStatus
+from repos.agent_workflows import AgentWorkflowRow, AgentWorkflowsTable
 
 
 class AgentWorkflowNotFoundError(Exception):
     pass
 
 
+def compute_next_run_at(schedule: str, base: dt.datetime) -> str:
+    """Return the next fire time of a cron expression after `base`, in ISO format."""
+    return croniter(schedule, base).get_next(dt.datetime).isoformat()
+
+
+def row_to_model(row: AgentWorkflowRow) -> AgentWorkflow:
+    return AgentWorkflow(
+        workflow_id=row.id,
+        name=row.name,
+        description=row.description,
+        schedule=row.schedule,
+        status=WorkflowStatus(row.status),
+        created_at=row.created_at,
+        last_run_at=row.last_run_at,
+        next_run_at=row.next_run_at,
+    )
+
+
 class AgentWorkflowService(ABC):
     @abstractmethod
     async def create_workflow(
         self,
-        user_id: str,
         name: str,
         description: str,
         schedule: str,
@@ -26,7 +41,7 @@ class AgentWorkflowService(ABC):
         pass
 
     @abstractmethod
-    async def get_workflows(self, user_id: str) -> list[AgentWorkflow]:
+    async def get_workflows(self) -> list[AgentWorkflow]:
         pass
 
     @abstractmethod
@@ -42,7 +57,6 @@ class AgentWorkflowService(ABC):
     @abstractmethod
     async def update_workflow(
         self,
-        user_id: str,
         workflow_id: str,
         name: str | None = None,
         description: str | None = None,
@@ -52,159 +66,81 @@ class AgentWorkflowService(ABC):
         pass
 
     @abstractmethod
-    async def delete_workflow(self, user_id: str, workflow_id: str) -> None:
-        pass
-
-    @abstractmethod
-    async def mark_workflow_ran(self, workflow_id: str, ran_at: str) -> None:
-        """Update last_run_at, compute next_run_at from schedule, and reset status to 'active'."""
+    async def delete_workflow(self, workflow_id: str) -> None:
         pass
 
 
-class AgentWorkflowMongoDoc(BaseModel):
-    workflow_id: str
-    user_id: str
-    name: str
-    description: str
-    schedule: str
-    status: WorkflowStatus
-    created_at: str
-    last_run_at: str | None = None
-    next_run_at: str | None = None
-
-
-class MongoDBAgentWorkflowService(AgentWorkflowService):
-    def __init__(self, mongo_client: AsyncMongoClient):
-        self.db = mongo_client[settings.MONGO_DB_NAME]
-
-    def _compute_next_run_at(self, schedule: str, base: dt.datetime) -> str:
-        cron = croniter(schedule, base)
-        return cron.get_next(dt.datetime).isoformat()
-
-    def _doc_to_model(self, doc: dict) -> AgentWorkflow:
-        return AgentWorkflow(
-            workflow_id=doc["workflow_id"],
-            user_id=doc["user_id"],
-            name=doc["name"],
-            description=doc["description"],
-            schedule=doc["schedule"],
-            status=doc["status"],
-            created_at=doc["created_at"],
-            last_run_at=doc.get("last_run_at"),
-            next_run_at=doc.get("next_run_at"),
-        )
+class TursoAgentWorkflowService(AgentWorkflowService):
+    def __init__(self, table: AgentWorkflowsTable):
+        self._table = table
 
     async def create_workflow(
         self,
-        user_id: str,
         name: str,
         description: str,
         schedule: str,
     ) -> AgentWorkflow:
         now = dt.datetime.now(dt.timezone.utc)
-        workflow_id = str(uuid.uuid4())
-        next_run_at = self._compute_next_run_at(schedule, now)
-
-        doc = AgentWorkflowMongoDoc(
-            workflow_id=workflow_id,
-            user_id=user_id,
+        row = await asyncio.to_thread(
+            self._table.create_workflow,
             name=name,
             description=description,
             schedule=schedule,
-            status=WorkflowStatus.ACTIVE,
-            created_at=now.isoformat(),
-            next_run_at=next_run_at,
+            status=WorkflowStatus.ACTIVE.value,
+            next_run_at=compute_next_run_at(schedule, now),
         )
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        await collection.insert_one(doc.model_dump())
-        return self._doc_to_model(doc.model_dump())
+        return row_to_model(row)
 
-    async def get_workflows(self, user_id: str) -> list[AgentWorkflow]:
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        cursor = collection.find({"user_id": user_id})
-        docs = await cursor.to_list(length=None)
-        return [self._doc_to_model(doc) for doc in docs]
+    async def get_workflows(self) -> list[AgentWorkflow]:
+        rows = await asyncio.to_thread(self._table.get_workflows)
+        return [row_to_model(row) for row in rows]
 
     async def claim_next_due_workflow(self, exclude_ids: list[str] | None = None) -> AgentWorkflow | None:
-        now = dt.datetime.now(dt.timezone.utc).isoformat()
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        query = {
-            "status": WorkflowStatus.ACTIVE,
-            "next_run_at": {"$lte": now},
-        }
-        if exclude_ids:
-            query["workflow_id"] = {"$nin": exclude_ids}
-
-        doc = await collection.find_one_and_update(
-            query,
-            {"$set": {"status": WorkflowStatus.RUNNING}},
-            return_document=ReturnDocument.AFTER,
+        row = await asyncio.to_thread(
+            self._table.claim_next_due_workflow,
+            now=dt.datetime.now(dt.timezone.utc).isoformat(),
+            running_status=WorkflowStatus.RUNNING.value,
+            active_status=WorkflowStatus.ACTIVE.value,
+            exclude_ids=exclude_ids,
         )
-        return self._doc_to_model(doc) if doc else None
+        return row_to_model(row) if row else None
 
     async def release_workflow_lock(self, workflow_id: str) -> None:
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        await collection.update_one(
-            {"workflow_id": workflow_id, "status": WorkflowStatus.RUNNING},
-            {"$set": {"status": WorkflowStatus.ACTIVE}}
+        await asyncio.to_thread(
+            self._table.release_lock,
+            workflow_id=workflow_id,
+            active_status=WorkflowStatus.ACTIVE.value,
+            running_status=WorkflowStatus.RUNNING.value,
         )
 
     async def update_workflow(
         self,
-        user_id: str,
         workflow_id: str,
         name: str | None = None,
         description: str | None = None,
         schedule: str | None = None,
         status: str | None = None,
     ) -> AgentWorkflow:
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        update_data: dict = {}
-        if name is not None:
-            update_data["name"] = name
-        if description is not None:
-            update_data["description"] = description
-        if status is not None:
-            update_data["status"] = status
+        # A new schedule re-bases the next run from now
+        next_run_at = None
         if schedule is not None:
-            update_data["schedule"] = schedule
-            now = dt.datetime.now(dt.timezone.utc)
-            update_data["next_run_at"] = self._compute_next_run_at(schedule, now)
+            next_run_at = compute_next_run_at(schedule, dt.datetime.now(dt.timezone.utc))
 
-        if not update_data:
-            doc = await collection.find_one({"user_id": user_id, "workflow_id": workflow_id})
-            if not doc:
-                raise AgentWorkflowNotFoundError(f"Workflow not found: {workflow_id}")
-            return self._doc_to_model(doc)
-
-        updated = await collection.find_one_and_update(
-            {"user_id": user_id, "workflow_id": workflow_id},
-            {"$set": update_data},
-            return_document=ReturnDocument.AFTER,
+        row = await asyncio.to_thread(
+            self._table.update_workflow,
+            workflow_id=workflow_id,
+            name=name,
+            description=description,
+            schedule=schedule,
+            status=WorkflowStatus(status).value if status is not None else None,
+            next_run_at=next_run_at,
         )
-        if not updated:
-            raise AgentWorkflowNotFoundError(f"Workflow not found: {workflow_id}")
-        return self._doc_to_model(updated)
-
-    async def delete_workflow(self, user_id: str, workflow_id: str) -> None:
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        result = await collection.delete_one({"user_id": user_id, "workflow_id": workflow_id})
-        if result.deleted_count == 0:
+        if not row:
             raise AgentWorkflowNotFoundError(f"Workflow not found: {workflow_id}")
 
-    async def mark_workflow_ran(self, workflow_id: str, ran_at: str) -> None:
-        collection = self.db[settings.AGENT_WORKFLOWS_COLLECTION_NAME]
-        doc = await collection.find_one({"workflow_id": workflow_id})
-        if not doc:
-            raise AgentWorkflowNotFoundError(f"Workflow not found: {workflow_id}")
+        return row_to_model(row)
 
-        base = dt.datetime.fromisoformat(ran_at)
-        next_run_at = self._compute_next_run_at(doc["schedule"], base)
-        await collection.update_one(
-            {"workflow_id": workflow_id},
-            {"$set": {
-                "last_run_at": ran_at,
-                "next_run_at": next_run_at,
-                "status": WorkflowStatus.ACTIVE
-            }},
-        )
+    async def delete_workflow(self, workflow_id: str) -> None:
+        deleted = await asyncio.to_thread(self._table.delete_workflow, workflow_id)
+        if not deleted:
+            raise AgentWorkflowNotFoundError(f"Workflow not found: {workflow_id}")
