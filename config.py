@@ -55,6 +55,14 @@ class Settings(BaseSettings):
     WORKFLOW_EXECUTION_AGENT_TEMPERATURE: float = 0.1
 
 
+    # EMBEDDINGS
+    # Local ONNX embedding model used for semantic search over conversation notes.
+    # The dimension count is not configurable here on purpose: schema.sql hardcodes
+    # F32_BLOB(384), so it lives next to that assumption in services/embeddings.py.
+    EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_CACHE_DIR: str = "~/.cache/investpal/fastembed"
+    EMBEDDING_ENABLED: bool = True
+
     # MCP APP
     TURSO_DB_PATH: str = "investpal.db"
     MCP_APP_SERVER_PORT: int = 9000

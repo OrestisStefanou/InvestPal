@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 import logging
 from typing import Annotated
@@ -23,6 +24,7 @@ from models.agent_workflow import (
 )
 from models.user_context import (
     UserConversationNote,
+    UserConversationNoteSearchResult,
     UserProfileNote,
 )
 from services.agent_reminder import (
@@ -46,6 +48,7 @@ from services.agents.skills import (
     skills,
 )
 from services.agents.tools import SkillDefinition
+from services.embeddings import get_embedder
 from services.user_context import (
     UserConversationNotesService,
     UserProfileService,
@@ -74,11 +77,31 @@ class LoggingMiddleware(Middleware):
         return result
 
 
+async def _warm_up_embedder():
+    """Load the embedding model off the startup path.
+
+    Kicked off as a background task rather than awaited: searchUserConversationNotes
+    is user-facing and synchronous, so it should not be the call that pays the
+    model load (and, on a cold cache, the download).
+    """
+    embedder = get_embedder()
+    if embedder is None:
+        return
+    try:
+        await asyncio.to_thread(embedder.warm_up)
+    except Exception:
+        logger.warning("Failed to warm up the embedding model", exc_info=True)
+
+
 @lifespan
 async def db_lifespan(server):
     # Initialize Turso/SQLite database schema
     init_db(settings.TURSO_DB_PATH)
-    yield {}
+    warm_up_task = asyncio.create_task(_warm_up_embedder())
+    try:
+        yield {}
+    finally:
+        warm_up_task.cancel()
 
 
 def get_user_profile_notes_table(ctx: Context = CurrentContext()) -> UserProfileNotesTable:
@@ -98,7 +121,9 @@ def get_user_conversation_notes_table() -> UserConversationNotesTable:
 def get_user_conversation_notes_service(
     table: UserConversationNotesTable = Depends(get_user_conversation_notes_table),
 ) -> UserConversationNotesService:
-    return UserConversationNotesService(table=table)
+    # get_embedder returns the process-wide singleton: this factory runs on
+    # every tool call and must never construct a model of its own.
+    return UserConversationNotesService(table=table, embedder=get_embedder())
 
 
 
@@ -186,6 +211,39 @@ async def get_user_conversation_notes(
 ) -> list[UserConversationNote]:
     return await user_conversation_notes_service.get_user_conversation_notes(
         limit=limit
+    )
+
+
+@mcp_app.tool(
+    name="searchUserConversationNotes",
+    description=(
+        "Search past conversation notes by meaning rather than by date. Pass a "
+        "natural-language description of what you are trying to recall and this "
+        "returns the most semantically similar notes, each with a similarity score. "
+        "Prefer this over getUserConversationNotes whenever you are looking for a "
+        "specific topic rather than simply reviewing the latest notes."
+    ),
+)
+async def search_user_conversation_notes(
+    query: Annotated[
+        str,
+        "A natural-language description of what to recall, for example 'the client's view on pension allocation'. Full sentences work better than keywords.",
+    ],
+    limit: Annotated[
+        int, "Maximum number of notes to return, most similar first. Defaults to 5."
+    ] = 5,
+    min_similarity: Annotated[
+        float | None,
+        "Optional 0.0-1.0 similarity floor. Leave unset unless you specifically want to drop weak matches; scores are relative, so it is usually better to read them and judge.",
+    ] = None,
+    user_conversation_notes_service: UserConversationNotesService = Depends(
+        get_user_conversation_notes_service
+    ),
+) -> list[UserConversationNoteSearchResult]:
+    return await user_conversation_notes_service.search_user_conversation_notes(
+        query=query,
+        limit=limit,
+        min_similarity=min_similarity,
     )
 
 

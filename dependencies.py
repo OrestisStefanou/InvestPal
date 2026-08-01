@@ -16,6 +16,7 @@ from services.agents.middleware import (
     ToolTokenRateLimitMiddleware,
 )
 from services.agent_service import InvestmentManagerAgentService
+from services.embeddings import get_embedder
 from services.session import (
     SessionService,
     TursoSessionService,
@@ -101,7 +102,9 @@ def get_user_profile_service() -> UserProfileService:
 
 def get_user_conversation_notes_service() -> UserConversationNotesService:
     table = UserConversationNotesTable()
-    return UserConversationNotesService(table=table)
+    # get_embedder returns the process-wide singleton: this factory runs on
+    # every request and must never construct a model of its own.
+    return UserConversationNotesService(table=table, embedder=get_embedder())
 
 
 def get_agent_reminder_service() -> AgentReminderService:

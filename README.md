@@ -6,7 +6,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 
 - **AI Investment Advisor**: Personalized investment insights powered by state-of-the-art LLMs (OpenAI, Google, Anthropic).
 - **Session Management**: Persistent conversation history stored in turso.
-- **Conversation Memory**: Agent recalls key details from past sessions via a dedicated notes system.
+- **Conversation Memory**: Agent recalls key details from past sessions via a dedicated notes system, either chronologically or by semantic search.
 - **Reminders**: Agent can create and manage time-sensitive action items across sessions.
 - **Agent Workflows**: Run scheduled, autonomous workflows on the client's behalf (powered by cron).
 - **User Profile**: Build up the client's profile as a set of notes to inform personalized advice.
@@ -20,7 +20,8 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 | Layer | Technology |
 |---|---|
 | REST API | [FastAPI](https://fastapi.tiangolo.com/) |
-| Database | [turso](https://turso.tech/) (embedded SQLite) |
+| Database | [turso](https://turso.tech/) (embedded SQLite, with native vector search) |
+| Embeddings | [fastembed](https://github.com/qdrant/fastembed) — `BAAI/bge-small-en-v1.5` on local ONNX runtime |
 | AI Framework | [LangChain](https://www.langchain.com/) |
 | MCP Protocol | [Model Context Protocol](https://modelcontextprotocol.io/) |
 | MCP Framework | [FastMCP](https://github.com/jlowin/fastmcp) |
@@ -96,6 +97,18 @@ Available at `http://localhost:9000/mcp`.
 
 Both servers share the same turso database file and must point to the same `TURSO_DB_PATH`.
 
+### Semantic search over conversation notes
+
+`searchUserConversationNotes` finds notes by meaning rather than by date. It runs fully locally: vectors are stored in turso and compared with its built-in `vector_distance_cos`, and embeddings come from a ~67MB ONNX model on the CPU. No note text is sent anywhere.
+
+The model is downloaded from HuggingFace on first use and cached in `EMBEDDING_CACHE_DIR` (default `~/.cache/investpal/fastembed`). Once that has happened, set `HF_HUB_OFFLINE=1` so model loads do not make a network call. Set `EMBEDDING_ENABLED=false` to skip the model altogether; notes can still be created and listed, but search returns nothing.
+
+Notes are embedded as they are created. To re-embed everything after changing `EMBEDDING_MODEL_NAME`, or to pick up notes whose embedding failed:
+
+```bash
+make backfill_embeddings
+```
+
 ## API Documentation
 
 | Document | Description |
@@ -128,6 +141,7 @@ GET    /workflow_results       Results of past workflow runs
 | `createUserProfileNote` | Store a permanent fact about the user |
 | `markUserProfileNoteAsOutdated` | Retire a profile fact that is no longer true |
 | `getUserConversationNotes` | Retrieve notes from past conversations |
+| `searchUserConversationNotes` | Search past conversation notes by meaning |
 | `createUserConversationNote` | Store a note for a conversation date |
 | `createAgentReminder` | Create a reminder for a user |
 | `getAgentReminders` | List all reminders for a user |
@@ -156,8 +170,10 @@ GET    /workflow_results       Results of past workflow runs
 │   ├── chat.py              # Chat service (session + agent coordination)
 │   ├── session.py           # Session persistence
 │   ├── user_context.py      # User profile and conversation notes persistence
+│   ├── embeddings.py        # Local ONNX embedding model for semantic search
 │   └── agent_reminder.py    # Reminder persistence
 ├── models/                  # Internal Pydantic data models
+├── scripts/                 # One-off maintenance scripts (embeddings backfill)
 └── docs/
     ├── rest_api.md          # REST API reference
     └── mcp_api.md           # MCP API reference

@@ -16,4 +16,5 @@ dependencies = [
     "fastmcp>=3.0.0b2",
     "croniter>=6.2.2",
     "pyturso>=0.6.1",
+    "fastembed>=0.8.0",
 ]
