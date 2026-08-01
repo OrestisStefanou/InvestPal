@@ -170,8 +170,10 @@ GET    /workflow_results       Results of past workflow runs
 │   ├── chat.py              # Chat service (session + agent coordination)
 │   ├── session.py           # Session persistence
 │   ├── user_context.py      # User profile and conversation notes persistence
-│   ├── embeddings.py        # Local ONNX embedding model for semantic search
 │   └── agent_reminder.py    # Reminder persistence
+├── repos/                   # One class per database table, plus shared infra
+│   ├── db.py                # Connection handling and schema init
+│   └── embeddings.py        # Local ONNX embedding model for semantic search
 ├── models/                  # Internal Pydantic data models
 ├── scripts/                 # One-off maintenance scripts (embeddings backfill)
 └── docs/

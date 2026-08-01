@@ -14,8 +14,11 @@ import logging
 
 from config import settings
 from repos.db import init_db
+from repos.embeddings import get_embedder
+from repos.user_conversation_note_embeddings import (
+    UserConversationNoteEmbeddingsTable,
+)
 from repos.user_conversation_notes import UserConversationNotesTable
-from services.embeddings import get_embedder
 from services.user_context import UserConversationNotesService
 
 
@@ -38,7 +41,9 @@ async def main() -> None:
 
     service = UserConversationNotesService(
         table=UserConversationNotesTable(db_path=settings.TURSO_DB_PATH),
-        embedder=embedder,
+        embeddings_table=UserConversationNoteEmbeddingsTable(
+            db_path=settings.TURSO_DB_PATH, embedder=embedder
+        ),
     )
 
     logger.info("Backfilling conversation note embeddings with %s", embedder.model_name)

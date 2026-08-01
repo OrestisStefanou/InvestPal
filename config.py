@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # EMBEDDINGS
     # Local ONNX embedding model used for semantic search over conversation notes.
     # The dimension count is not configurable here on purpose: schema.sql hardcodes
-    # F32_BLOB(384), so it lives next to that assumption in services/embeddings.py.
+    # F32_BLOB(384), so it lives next to that assumption in repos/embeddings.py.
     EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
     EMBEDDING_CACHE_DIR: str = "~/.cache/investpal/fastembed"
     EMBEDDING_ENABLED: bool = True

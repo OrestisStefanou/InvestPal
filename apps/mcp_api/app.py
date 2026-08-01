@@ -48,7 +48,10 @@ from services.agents.skills import (
     skills,
 )
 from services.agents.tools import SkillDefinition
-from services.embeddings import get_embedder
+from repos.embeddings import get_embedder
+from repos.user_conversation_note_embeddings import (
+    UserConversationNoteEmbeddingsTable,
+)
 from services.user_context import (
     UserConversationNotesService,
     UserProfileService,
@@ -118,12 +121,21 @@ def get_user_conversation_notes_table() -> UserConversationNotesTable:
     return UserConversationNotesTable(db_path=settings.TURSO_DB_PATH)
 
 
-def get_user_conversation_notes_service(
-    table: UserConversationNotesTable = Depends(get_user_conversation_notes_table),
-) -> UserConversationNotesService:
+def get_user_conversation_note_embeddings_table() -> UserConversationNoteEmbeddingsTable:
     # get_embedder returns the process-wide singleton: this factory runs on
     # every tool call and must never construct a model of its own.
-    return UserConversationNotesService(table=table, embedder=get_embedder())
+    return UserConversationNoteEmbeddingsTable(
+        db_path=settings.TURSO_DB_PATH, embedder=get_embedder()
+    )
+
+
+def get_user_conversation_notes_service(
+    table: UserConversationNotesTable = Depends(get_user_conversation_notes_table),
+    embeddings_table: UserConversationNoteEmbeddingsTable = Depends(
+        get_user_conversation_note_embeddings_table
+    ),
+) -> UserConversationNotesService:
+    return UserConversationNotesService(table=table, embeddings_table=embeddings_table)
 
 
 

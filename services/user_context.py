@@ -7,13 +7,11 @@ from models.user_context import (
     UserConversationNoteSearchResult,
     UserProfileNote,
 )
+from repos.user_conversation_note_embeddings import (
+    UserConversationNoteEmbeddingsTable,
+)
 from repos.user_conversation_notes import UserConversationNotesTable
 from repos.user_profile_notes import UserProfileNotesTable
-from services.embeddings import (
-    EMBEDDING_BLOB_BYTES,
-    FastEmbedEmbedder,
-    to_vector_json,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -23,10 +21,10 @@ class UserConversationNotesService:
     def __init__(
         self,
         table: UserConversationNotesTable,
-        embedder: FastEmbedEmbedder | None = None,
+        embeddings_table: UserConversationNoteEmbeddingsTable | None = None,
     ):
         self.table = table
-        self.embedder = embedder
+        self.embeddings_table = embeddings_table
 
     async def get_user_conversation_notes(
         self,
@@ -96,17 +94,11 @@ class UserConversationNotesService:
         worse than the note being temporarily unsearchable. Anything skipped
         here is picked up by `backfill_embeddings`.
         """
-        if self.embedder is None:
+        if self.embeddings_table is None:
             return
 
         try:
-            vectors = await asyncio.to_thread(self.embedder.embed_documents, [note])
-            await asyncio.to_thread(
-                self.table.upsert_embedding,
-                note_id,
-                to_vector_json(vectors[0]),
-                self.embedder.model_name,
-            )
+            await asyncio.to_thread(self.embeddings_table.store, note_id, note)
         except Exception:
             logger.warning(
                 "Failed to embed conversation note %s; it will be picked up by the "
@@ -130,27 +122,28 @@ class UserConversationNotesService:
             min_similarity: Optional 0.0-1.0 floor. Left unset by default: the
                 model packs same-domain short text into a narrow similarity
                 band, so a fixed threshold tends to return either everything or
-                nothing. Filtering happens here rather than in SQL because
-                there is no vector index to short-circuit, so it saves no work
-                in the database and relevance policy belongs in the service.
+                nothing. Filtering happens here rather than in the index
+                because relevance is a policy question, not a storage one.
 
         Returns:
             Matching notes, most similar first, each carrying its similarity.
         """
-        if self.embedder is None:
+        if self.embeddings_table is None:
             logger.warning(
                 "Conversation note search called while embeddings are disabled; "
                 "returning no results"
             )
             return []
 
-        query_vector = await asyncio.to_thread(self.embedder.embed_query, query)
+        # The index ranks note ids; the notes themselves come from their own
+        # table, so neither repo has to reach into the other's.
+        hits = await asyncio.to_thread(self.embeddings_table.search, query, limit)
+        if not hits:
+            return []
+
+        distance_by_id = dict(hits)
         rows = await asyncio.to_thread(
-            self.table.search_by_embedding,
-            to_vector_json(query_vector),
-            self.embedder.model_name,
-            EMBEDDING_BLOB_BYTES,
-            limit,
+            self.table.get_notes_by_ids, list(distance_by_id)
         )
 
         results = [
@@ -161,10 +154,12 @@ class UserConversationNotesService:
                 created_at=row.created_at,
                 # The model emits L2-normalised vectors, so cosine distance and
                 # cosine similarity are exact complements.
-                similarity=1.0 - row.distance,
+                similarity=1.0 - distance_by_id[row.id],
             )
             for row in rows
         ]
+        # get_notes_by_ids does not preserve order, so restore the ranking.
+        results.sort(key=lambda r: r.similarity, reverse=True)
 
         if min_similarity is not None:
             results = [r for r in results if r.similarity >= min_similarity]
@@ -173,35 +168,28 @@ class UserConversationNotesService:
 
     async def backfill_embeddings(self, batch_size: int = 32) -> int:
         """
-        Embed every note that has no vector or was embedded by another model.
+        Embed every note that has no vector, or whose vector is from another model.
 
         Returns:
             The number of notes embedded.
         """
-        if self.embedder is None:
+        if self.embeddings_table is None:
             raise RuntimeError(
                 "Cannot backfill embeddings while EMBEDDING_ENABLED is false."
             )
 
-        model_name = self.embedder.model_name
-        rows = await asyncio.to_thread(
-            self.table.get_notes_missing_embedding, model_name
+        notes = await asyncio.to_thread(self.table.get_notes)
+        embedded_ids = await asyncio.to_thread(
+            self.embeddings_table.get_embedded_note_ids
         )
+        pending = [(row.id, row.note) for row in notes if row.id not in embedded_ids]
 
-        for start in range(0, len(rows), batch_size):
-            batch = rows[start : start + batch_size]
-            vectors = await asyncio.to_thread(
-                self.embedder.embed_documents, [row.note for row in batch]
+        for start in range(0, len(pending), batch_size):
+            await asyncio.to_thread(
+                self.embeddings_table.store_many, pending[start : start + batch_size]
             )
-            for row, vector in zip(batch, vectors):
-                await asyncio.to_thread(
-                    self.table.upsert_embedding,
-                    row.id,
-                    to_vector_json(vector),
-                    model_name,
-                )
 
-        return len(rows)
+        return len(pending)
 
 
 class UserProfileService:

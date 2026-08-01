@@ -17,7 +17,7 @@ from apps.rest_api import (
 )
 from config import settings
 from repos.db import init_db
-from services.embeddings import get_embedder
+from repos.embeddings import get_embedder
 
 
 # Configure logging
