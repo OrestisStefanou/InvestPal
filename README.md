@@ -172,7 +172,7 @@ GET    /workflow_results       Results of past workflow runs
 │   ├── user_context.py      # User profile and conversation notes persistence
 │   └── agent_reminder.py    # Reminder persistence
 ├── repos/                   # One class per database table, plus shared infra
-│   ├── db.py                # Connection handling and schema init
+│   ├── db.py                # Connections, transactions and schema init
 │   └── embeddings.py        # Local ONNX embedding model for semantic search
 ├── models/                  # Internal Pydantic data models
 ├── scripts/                 # One-off maintenance scripts (embeddings backfill)

@@ -7,6 +7,7 @@ from models.session import (
     MessageRole,
     Session,
 )
+from repos.session_messages import SessionMessagesTable
 from repos.sessions import SessionsTable
 
 
@@ -37,8 +38,9 @@ class SessionService(ABC):
 
 
 class TursoSessionService(SessionService):
-    def __init__(self, table: SessionsTable):
+    def __init__(self, table: SessionsTable, messages_table: SessionMessagesTable):
         self._table = table
+        self._messages_table = messages_table
 
     async def create_session(self, session_id: str | None = None, name: str | None = None) -> Session:
         """
@@ -76,7 +78,9 @@ class TursoSessionService(SessionService):
         if not row:
             return None
 
-        messages = await asyncio.to_thread(self._table.get_messages, session_id)
+        messages = await asyncio.to_thread(
+            self._messages_table.get_messages, session_id
+        )
         return Session(
             session_id=row.id,
             messages=[
@@ -97,7 +101,7 @@ class TursoSessionService(SessionService):
             raise SessionNotFoundError("Session not found")
 
         await asyncio.to_thread(
-            self._table.add_message,
+            self._messages_table.add_message,
             session_id=session_id,
             role=MessageRole(message.role).value,
             content=message.content,

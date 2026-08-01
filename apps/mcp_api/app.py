@@ -41,6 +41,7 @@ from services.agent_workflows.workflow import (
     TursoAgentWorkflowService,
 )
 from repos.agent_workflows import AgentWorkflowsTable
+from repos.workflow_results import WorkflowResultsTable
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from services.agents.skills import (
     SkillName,
@@ -154,10 +155,15 @@ def get_agent_workflow_service(
     return TursoAgentWorkflowService(table=table)
 
 
+def get_workflow_results_table() -> WorkflowResultsTable:
+    return WorkflowResultsTable(db_path=settings.TURSO_DB_PATH)
+
+
 def get_workflow_result_service(
-    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
+    table: WorkflowResultsTable = Depends(get_workflow_results_table),
+    workflows_table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> WorkflowResultService:
-    return TursoWorkflowResultService(table=table)
+    return TursoWorkflowResultService(table=table, workflows_table=workflows_table)
 
 
 mcp_app = FastMCP("InvestPal MCP Server", lifespan=db_lifespan)
