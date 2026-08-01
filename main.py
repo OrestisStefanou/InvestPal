@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -16,6 +17,7 @@ from apps.rest_api import (
 )
 from config import settings
 from repos.db import init_db
+from repos.embeddings import get_embedder
 
 
 # Configure logging
@@ -26,10 +28,30 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _warm_up_embedder():
+    """Load the embedding model off the startup path.
+
+    Kicked off as a background task rather than awaited: the first embed
+    otherwise pays the model load (and, on a cold cache, the download) while a
+    user is waiting on it.
+    """
+    embedder = get_embedder()
+    if embedder is None:
+        return
+    try:
+        await asyncio.to_thread(embedder.warm_up)
+    except Exception:
+        logger.warning("Failed to warm up the embedding model", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db(settings.TURSO_DB_PATH)
-    yield
+    warm_up_task = asyncio.create_task(_warm_up_embedder())
+    try:
+        yield
+    finally:
+        warm_up_task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

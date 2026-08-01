@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime, timedelta
 
 from fastmcp import Client
 
@@ -13,13 +12,26 @@ async def main():
         await client.ping()
 
         result = await client.call_tool(
-            name="createUserProfileNote",
+            name="getUserConversationNotes",
             arguments={
-                "note": "user is a 28 year old male",
+                #"note": "user is a 28 year old male",
                 # "limit": 1,
             },
         )
         print(result.structured_content)
 
+        # Semantic search. Notes are embedded on write, so anything created
+        # before the embeddings feature existed needs `make backfill_embeddings`
+        # before it shows up here.
+        result = await client.call_tool(
+            name="searchUserConversationNotes",
+            arguments={
+                "query": "the client's view on pension allocation",
+                "limit": 3,
+                # "min_similarity": 0.7,
+            },
+        )
+        print(result.structured_content)
 
-run(main())
+
+asyncio.run(main())

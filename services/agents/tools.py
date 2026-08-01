@@ -14,6 +14,7 @@ from models.agent_reminder import AgentReminder
 from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
 from models.user_context import (
     UserConversationNote,
+    UserConversationNoteSearchResult,
     UserProfileNote,
 )
 from services.agent_reminder import AgentReminderService
@@ -141,6 +142,52 @@ async def get_user_conversation_notes(
     user_conversation_notes_service = runtime.context.user_conversation_notes_service
     return await user_conversation_notes_service.get_user_conversation_notes(
         limit=limit
+    )
+
+
+class SearchUserConversationNotesToolInput(BaseModel):
+    query: str = Field(
+        description=(
+            "A natural-language description of what to recall, for example "
+            "\"the client's view on pension allocation\". Full sentences work "
+            "better than keywords."
+        )
+    )
+    limit: int = Field(
+        default=5,
+        description="Maximum number of notes to return, most similar first. Defaults to 5.",
+    )
+    min_similarity: float | None = Field(
+        default=None,
+        description=(
+            "Optional 0.0-1.0 similarity floor. Leave unset unless you specifically "
+            "want to drop weak matches; scores are relative, so it is usually better "
+            "to read them and judge."
+        ),
+    )
+
+
+@tool(
+    "searchUserConversationNotes",
+    args_schema=SearchUserConversationNotesToolInput,
+    description=(
+        "Search past conversation notes by meaning rather than by date. "
+        "Returns the most semantically similar notes, each with a similarity score. "
+        "Prefer this over getUserConversationNotes whenever you are looking for a "
+        "specific topic rather than simply reviewing the latest notes."
+    ),
+)
+async def search_user_conversation_notes(
+    runtime: ToolRuntime[UserConversationNotesToolsRuntimeContext],
+    query: str,
+    limit: int = 5,
+    min_similarity: float | None = None,
+) -> list[UserConversationNoteSearchResult]:
+    user_conversation_notes_service = runtime.context.user_conversation_notes_service
+    return await user_conversation_notes_service.search_user_conversation_notes(
+        query=query,
+        limit=limit,
+        min_similarity=min_similarity,
     )
 
 

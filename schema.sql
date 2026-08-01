@@ -12,6 +12,21 @@ CREATE TABLE IF NOT EXISTS user_conversation_notes (
     created_at TEXT NOT NULL
 );
 
+-- Vector embeddings for semantic search over user_conversation_notes.
+-- Kept in a sidecar table rather than as a column on user_conversation_notes:
+-- init_db only ever runs CREATE TABLE IF NOT EXISTS, so a new column would
+-- never reach an already-created investpal.db. It also makes re-embedding
+-- under a different model a table-level operation.
+-- The dimension matches repos.embeddings.EMBEDDING_DIMENSIONS; changing the
+-- model means changing both and re-running the backfill.
+CREATE TABLE IF NOT EXISTS user_conversation_note_embeddings (
+    note_id TEXT PRIMARY KEY,
+    embedding F32_BLOB(384) NOT NULL,
+    model TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (note_id) REFERENCES user_conversation_notes (id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS agent_reminders (
     id TEXT PRIMARY KEY,
     description TEXT NOT NULL,

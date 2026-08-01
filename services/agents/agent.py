@@ -53,6 +53,7 @@ from services.agents.tools import (
     get_workflow_results,
     mark_user_profile_note_as_outdated,
     multiply,
+    search_user_conversation_notes,
     subtract,
     update_agent_reminder,
     update_agent_workflow,
@@ -233,6 +234,7 @@ class InvestmentManagerAgent(Agent):
         tools = [
             get_current_datetime,
             get_user_conversation_notes,
+            search_user_conversation_notes,
             create_agent_reminder,
             get_agent_reminders,
             update_agent_reminder,
@@ -301,6 +303,7 @@ class UserContextMemoryManagerAgent(Agent):
             mark_user_profile_note_as_outdated,
             get_current_datetime,
             get_user_conversation_notes,
+            search_user_conversation_notes,
             create_user_conversation_note,
         ]
         super().__init__(
@@ -384,6 +387,7 @@ class WorkflowExecutionAgent(Agent):
         tools = [
             get_current_datetime,
             get_user_conversation_notes,
+            search_user_conversation_notes,
             get_workflow_results,
             get_skill_definitions,
             get_skill,

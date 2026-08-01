@@ -33,6 +33,33 @@ class UserConversationNotesTable:
             id=note_id, date=date, note=note, created_at=created_at
         )
 
+    def get_notes_by_ids(self, note_ids: list[str]) -> list[UserConversationNoteRow]:
+        """Fetch specific notes by id, in no particular order.
+
+        Callers that care about ordering impose their own: semantic search
+        ranks ids by distance elsewhere and re-sorts these rows to match.
+        """
+        if not note_ids:
+            return []
+
+        placeholders = ",".join("?" * len(note_ids))
+        query = (
+            f"SELECT id, date, note, created_at FROM {self._table_name} "
+            f"WHERE id IN ({placeholders})"
+        )
+
+        with connect(self._db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(note_ids))
+            rows = cursor.fetchall()
+
+        return [
+            UserConversationNoteRow(
+                id=row[0], date=row[1], note=row[2], created_at=row[3]
+            )
+            for row in rows
+        ]
+
     def get_notes(self, limit: int | None = None) -> list[UserConversationNoteRow]:
         query = (
             f"SELECT id, date, note, created_at FROM {self._table_name} "

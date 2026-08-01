@@ -6,3 +6,6 @@ run_investpal_dev:
 
 run_investpal_mcp:
 	uv run python3 -m apps.mcp_api.app
+
+backfill_embeddings:
+	uv run python3 -m scripts.backfill_note_embeddings

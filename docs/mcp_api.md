@@ -17,7 +17,7 @@ The server exposes two categories of tools and one prompt:
 | Category | Tools |
 |---|---|
 | **User Profile** | `getUserProfileNotes`, `createUserProfileNote`, `markUserProfileNoteAsOutdated` |
-| **Conversation Memory** | `getUserConversationNotes`, `createUserConversationNote` |
+| **Conversation Memory** | `getUserConversationNotes`, `searchUserConversationNotes`, `createUserConversationNote` |
 | **Reminders** | `createAgentReminder`, `getAgentReminders`, `updateAgentReminder`, `deleteAgentReminder` |
 | **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults`, `storeWorkflowResult` |
 | **Prompts** | `get_invstment_advisor_prompt` |
@@ -92,6 +92,26 @@ Returned by `getUserConversationNotes` and `createUserConversationNote`.
 | `created_at` | string | ISO 8601 timestamp of creation |
 
 A date can hold any number of notes.
+
+### Conversation Note Search Result Object
+
+Returned by `searchUserConversationNotes`. A [Conversation Note Object](#conversation-note-object) with one extra field.
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "date": "2024-01-15",
+  "note": "Concerned about volatility in the tech sector",
+  "created_at": "2024-01-15T10:30:00.000Z",
+  "similarity": 0.8147
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `similarity` | number | How closely the note matches the query in meaning, from `0.0` (unrelated) to `1.0` (identical meaning) |
+
+Scores are relative, not absolute. Notes on the same broad topic typically land between `0.6` and `0.9`, so compare scores within a result set rather than against a fixed cutoff.
 
 ### Workflow Object
 
@@ -273,6 +293,35 @@ result = await client.call_tool(
 ```
 
 **Returns**: A list of [Conversation Note Objects](#conversation-note-object), ordered by date descending and then by creation time descending. Returns an empty list if no notes exist.
+
+---
+
+### `searchUserConversationNotes`
+
+Search conversation notes by meaning rather than by date. Prefer this over `getUserConversationNotes` when looking for a specific topic; use `getUserConversationNotes` when you just want to review what happened most recently.
+
+Matching is semantic, not keyword-based: a query for "retirement savings split" will surface a note about rebalancing a pension allocation even though the two share no words. Embeddings are generated locally (see [Semantic search](#semantic-search)), so note text never leaves the machine.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `query` | string | yes | A natural-language description of what to recall. Full sentences work better than keywords |
+| `limit` | integer | no | Maximum number of notes to return, most similar first. Defaults to `5` |
+| `min_similarity` | number \| null | no | Optional `0.0`-`1.0` similarity floor. Defaults to `null` (no filtering) |
+
+**Example call**
+
+```python
+result = await client.call_tool(
+    name="searchUserConversationNotes",
+    arguments={"query": "the client's view on pension allocation", "limit": 3},
+)
+```
+
+**Returns**: A list of [Conversation Note Search Result Objects](#conversation-note-search-result-object), most similar first. Returns an empty list if no notes exist, if none clear `min_similarity`, or if embeddings are disabled.
+
+> **Note**: Notes are embedded when they are created. A note whose embedding failed, or one written before the embedding model was changed, will not appear in results until `make backfill_embeddings` has been run.
 
 ---
 
@@ -602,3 +651,20 @@ Required environment variables (see `.env`):
 | Variable | Description |
 |---|---|
 | `TURSO_DB_PATH` | Path to the turso/SQLite database file. Defaults to `investpal.db` |
+| `EMBEDDING_ENABLED` | Whether to load the local embedding model. Defaults to `true` |
+| `EMBEDDING_MODEL_NAME` | fastembed model used for semantic search. Defaults to `BAAI/bge-small-en-v1.5` |
+| `EMBEDDING_CACHE_DIR` | Where the model files are cached. Defaults to `~/.cache/investpal/fastembed` |
+
+---
+
+## Semantic search
+
+`searchUserConversationNotes` runs entirely on the local machine. There is no external vector store and no embedding API.
+
+- **Vectors** live in the `user_conversation_note_embeddings` table and are compared with turso's built-in `vector_distance_cos`. The installed turso build has no ANN index, so this is a linear scan; that is intentional and comfortably fast at the scale conversation notes reach.
+- **Embeddings** come from `BAAI/bge-small-en-v1.5` (384 dimensions) running on the CPU through fastembed's ONNX runtime. The model is roughly 67MB and is downloaded from HuggingFace the first time it is used, then served from `EMBEDDING_CACHE_DIR`.
+- **After the first download**, set `HF_HUB_OFFLINE=1`. huggingface_hub otherwise makes a metadata call on every model load, which stalls startup when the machine is offline.
+- The model loads in the background at server startup, so the first search does not pay for it.
+- Set `EMBEDDING_ENABLED=false` to skip the model entirely. Notes can still be created and listed; `searchUserConversationNotes` returns an empty list.
+
+Notes are embedded as they are created. Embedding failures are logged and never block note creation, so run `make backfill_embeddings` to pick up anything that was missed, and after any change to `EMBEDDING_MODEL_NAME`.
