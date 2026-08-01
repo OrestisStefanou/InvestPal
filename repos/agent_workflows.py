@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from config import settings
-from repos.db import connect, first_row
+from repos.db import connect, connection, first_row
 
 
 @dataclass
@@ -18,19 +18,9 @@ class AgentWorkflowRow:
     next_run_at: str | None
 
 
-@dataclass
-class WorkflowResultRow:
-    id: str
-    workflow_id: str
-    workflow_name: str
-    output: str
-    ran_at: str
-
-
 _WORKFLOW_COLUMNS = (
     "id, name, description, schedule, status, created_at, last_run_at, next_run_at"
 )
-_RESULT_COLUMNS = "id, workflow_id, workflow_name, output, ran_at"
 
 
 def _to_workflow_row(row) -> AgentWorkflowRow:
@@ -46,27 +36,12 @@ def _to_workflow_row(row) -> AgentWorkflowRow:
     )
 
 
-def _to_result_row(row) -> WorkflowResultRow:
-    return WorkflowResultRow(
-        id=row[0],
-        workflow_id=row[1],
-        workflow_name=row[2],
-        output=row[3],
-        ran_at=row[4],
-    )
-
-
 class AgentWorkflowsTable:
-    """Workflows and the results of their runs.
-
-    Both tables live behind one class because recording a run touches both in a
-    single transaction.
-    """
+    """Scheduled workflows. Their run results live in `WorkflowResultsTable`."""
 
     def __init__(self, db_path: str = settings.TURSO_DB_PATH):
         self._db_path = db_path
         self._table_name = "agent_workflows"
-        self._results_table_name = "workflow_results"
 
     def create_workflow(
         self,
@@ -201,56 +176,24 @@ class AgentWorkflowsTable:
             )
             return cursor.rowcount > 0
 
-    def record_run(
+    def advance_schedule(
         self,
         workflow_id: str,
-        workflow_name: str,
-        output: str,
         ran_at: str,
-        next_run_at: str | None,
+        next_run_at: str,
         active_status: str,
-    ) -> WorkflowResultRow:
-        """Store a run's result and advance the workflow's schedule, in one transaction.
+        conn=None,
+    ) -> None:
+        """Mark a run as finished: record when it ran, when it next runs, and unlock it.
 
-        The workflow update is skipped when `next_run_at` is None, which is the case
-        when the workflow no longer exists. The result is still stored, since results
-        outlive the workflow that produced them.
+        Accepts a connection because this has to commit together with the result
+        that triggered it, otherwise a stored result could leave the workflow
+        still due and it would run again on the next tick. See
+        `WorkflowResultsTable.store_result`.
         """
-        result_id = str(uuid.uuid4())
-
-        with connect(self._db_path) as conn:
-            conn.execute(
-                f"INSERT INTO {self._results_table_name} ({_RESULT_COLUMNS}) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (result_id, workflow_id, workflow_name, output, ran_at),
+        with connection(self._db_path, conn) as c:
+            c.execute(
+                f"UPDATE {self._table_name} "
+                "SET last_run_at = ?, next_run_at = ?, status = ? WHERE id = ?",
+                (ran_at, next_run_at, active_status, workflow_id),
             )
-            if next_run_at is not None:
-                conn.execute(
-                    f"UPDATE {self._table_name} "
-                    "SET last_run_at = ?, next_run_at = ?, status = ? WHERE id = ?",
-                    (ran_at, next_run_at, active_status, workflow_id),
-                )
-
-        return WorkflowResultRow(
-            id=result_id,
-            workflow_id=workflow_id,
-            workflow_name=workflow_name,
-            output=output,
-            ran_at=ran_at,
-        )
-
-    def get_results(self, limit: int | None = None) -> list[WorkflowResultRow]:
-        query = (
-            f"SELECT {_RESULT_COLUMNS} FROM {self._results_table_name} ORDER BY ran_at DESC"
-        )
-        params: tuple = ()
-        if limit is not None:
-            query += " LIMIT ?"
-            params = (limit,)
-
-        with connect(self._db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-
-        return [_to_result_row(row) for row in rows]

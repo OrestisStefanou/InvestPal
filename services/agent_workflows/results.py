@@ -3,7 +3,8 @@ import datetime as dt
 from abc import ABC, abstractmethod
 
 from models.agent_workflow import WorkflowResult, WorkflowStatus
-from repos.agent_workflows import AgentWorkflowsTable, WorkflowResultRow
+from repos.agent_workflows import AgentWorkflowsTable
+from repos.workflow_results import WorkflowResultRow, WorkflowResultsTable
 from services.agent_workflows.workflow import compute_next_run_at
 
 
@@ -33,8 +34,13 @@ class WorkflowResultService(ABC):
 
 
 class TursoWorkflowResultService(WorkflowResultService):
-    def __init__(self, table: AgentWorkflowsTable):
+    def __init__(
+        self,
+        table: WorkflowResultsTable,
+        workflows_table: AgentWorkflowsTable,
+    ):
         self._table = table
+        self._workflows_table = workflows_table
 
     async def save_result(
         self,
@@ -55,22 +61,38 @@ class TursoWorkflowResultService(WorkflowResultService):
         """
         ran_at = dt.datetime.now(dt.timezone.utc).isoformat()
 
-        workflow = await asyncio.to_thread(self._table.get_workflow, workflow_id)
+        workflow = await asyncio.to_thread(
+            self._workflows_table.get_workflow, workflow_id
+        )
         next_run_at = (
             compute_next_run_at(workflow.schedule, dt.datetime.fromisoformat(ran_at))
             if workflow
             else None
         )
 
-        row = await asyncio.to_thread(
-            self._table.record_run,
-            workflow_id=workflow_id,
-            workflow_name=workflow_name,
-            output=output,
-            ran_at=ran_at,
-            next_run_at=next_run_at,
-            active_status=WorkflowStatus.ACTIVE.value,
-        )
+        def _store_and_advance() -> WorkflowResultRow:
+            # One transaction across both tables. Run in a single worker thread
+            # rather than two, since the connection must not be handed between
+            # them mid-transaction.
+            with self._table.transaction() as conn:
+                row = self._table.store_result(
+                    workflow_id=workflow_id,
+                    workflow_name=workflow_name,
+                    output=output,
+                    ran_at=ran_at,
+                    conn=conn,
+                )
+                if next_run_at is not None:
+                    self._workflows_table.advance_schedule(
+                        workflow_id=workflow_id,
+                        ran_at=ran_at,
+                        next_run_at=next_run_at,
+                        active_status=WorkflowStatus.ACTIVE.value,
+                        conn=conn,
+                    )
+            return row
+
+        row = await asyncio.to_thread(_store_and_advance)
         return _row_to_model(row)
 
     async def get_results(self, limit: int | None = 10) -> list[WorkflowResult]:

@@ -24,6 +24,7 @@ from services.session import (
     SessionService,
     TursoSessionService,
 )
+from repos.session_messages import SessionMessagesTable
 from repos.sessions import SessionsTable
 from services.chat import (
     ChatService,
@@ -53,6 +54,7 @@ from services.agent_workflows.notifier import (
     PersistingWorkflowNotifier,
 )
 from repos.agent_workflows import AgentWorkflowsTable
+from repos.workflow_results import WorkflowResultsTable
 from services.agent_workflows.runner import WorkflowRunner
 from services.agents.agent import WorkflowExecutionAgent
 
@@ -95,7 +97,10 @@ def get_mcp_client(
 
 
 def get_session_service() -> SessionService:
-    return TursoSessionService(table=SessionsTable())
+    return TursoSessionService(
+        table=SessionsTable(),
+        messages_table=SessionMessagesTable(),
+    )
 
 
 def get_user_profile_service() -> UserProfileService:
@@ -143,10 +148,15 @@ def get_agent_workflow_service(
     return TursoAgentWorkflowService(table=table)
 
 
+def get_workflow_results_table() -> WorkflowResultsTable:
+    return WorkflowResultsTable()
+
+
 def get_workflow_result_service(
-    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
+    table: WorkflowResultsTable = Depends(get_workflow_results_table),
+    workflows_table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> WorkflowResultService:
-    return TursoWorkflowResultService(table=table)
+    return TursoWorkflowResultService(table=table, workflows_table=workflows_table)
 
 
 def get_workflow_notifier(

@@ -26,6 +26,27 @@ def connect(db_path: str = settings.TURSO_DB_PATH):
         conn.close()
 
 
+@contextmanager
+def connection(db_path: str = settings.TURSO_DB_PATH, existing=None):
+    """Join a caller's open transaction, or own a fresh one.
+
+    Lets a repo method be called either standalone or as one step of a larger
+    transaction spanning several tables. When `existing` is passed the caller
+    owns the commit, so the connection is yielded untouched; otherwise this
+    behaves exactly like `connect`.
+
+    Forgetting to thread `existing` through fails loudly rather than silently
+    splitting the work in two: opening a second connection while the first
+    holds the write lock raises "database is locked".
+    """
+    if existing is not None:
+        yield existing
+        return
+
+    with connect(db_path) as conn:
+        yield conn
+
+
 def first_row(cursor):
     """Read a single row from a RETURNING statement, or None.
 
