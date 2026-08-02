@@ -9,6 +9,9 @@ from services.agents.skills.analyze_income_statement import (
     analyze_income_statement_skill,
 )
 from services.agents.skills.analyze_macro_impact import analyze_macro_impact_skill
+from services.agents.skills.analyze_management_commentary import (
+    analyze_management_commentary_skill,
+)
 from services.agents.skills.analyze_portfolio_risk import analyze_portfolio_risk_skill
 from services.agents.skills.analyze_stock_valuation import analyze_stock_valuation_skill
 from services.agents.skills.apply_second_level_thinking import (
@@ -20,6 +23,9 @@ from services.agents.skills.calculate_intrinsic_value import (
     calculate_intrinsic_value_skill,
 )
 from services.agents.skills.compare_sector_peers import compare_sector_peers_skill
+from services.agents.skills.evaluate_investment_theme import (
+    evaluate_investment_theme_skill,
+)
 from services.agents.skills.evaluate_margin_of_safety import (
     evaluate_margin_of_safety_skill,
 )
@@ -31,6 +37,7 @@ class SkillName(enum.Enum):
     ANALYZE_EARNINGS_QUALITY = "analyze_earnings_quality"
     ANALYZE_INCOME_STATEMENT = "analyze_income_statement"
     ANALYZE_MACRO_IMPACT = "analyze_macro_impact"
+    ANALYZE_MANAGEMENT_COMMENTARY = "analyze_management_commentary"
     ANALYZE_PORTFOLIO_RISK = "analyze_portfolio_risk"
     ANALYZE_STOCK_VALUATION = "analyze_stock_valuation"
     APPLY_SECOND_LEVEL_THINKING = "apply_second_level_thinking"
@@ -38,6 +45,7 @@ class SkillName(enum.Enum):
     ASSESS_MARKET_SENTIMENT = "assess_market_sentiment"
     CALCULATE_INTRINSIC_VALUE = "calculate_intrinsic_value"
     COMPARE_SECTOR_PEERS = "compare_sector_peers"
+    EVALUATE_INVESTMENT_THEME = "evaluate_investment_theme"
     EVALUATE_MARGIN_OF_SAFETY = "evaluate_margin_of_safety"
 
 
@@ -71,6 +79,13 @@ skill_descriptions: dict[SkillName, str] = {
         "fundamentals — calibrating whether current earnings are above or below sustainable levels, "
         "adjusting cost of capital, and checking industry viability. Use when the user asks how interest "
         "rates, recession, inflation, or the credit cycle impact a specific stock or holding."
+    ),
+    SkillName.ANALYZE_MANAGEMENT_COMMENTARY: (
+        "Interprets what management is signalling about a business — guidance architecture, tone and "
+        "language shifts, metric stability, attribution patterns, and the gap between stated priorities "
+        "and executed capital allocation — grading how strong the underlying evidence is. Use when the "
+        "user asks what management said about the quarter, how credible guidance is, or whether "
+        "management's tone or priorities have changed."
     ),
     SkillName.ANALYZE_PORTFOLIO_RISK: (
         "Evaluates a portfolio's aggregate risk of permanent capital loss across eight dimensions: "
@@ -113,6 +128,12 @@ skill_descriptions: dict[SkillName, str] = {
         "and balance sheet health, then ranks competitive standing. Use when the user asks how a company "
         "stacks up against competitors or wants to explain relative valuation premiums or discounts."
     ),
+    SkillName.EVALUATE_INVESTMENT_THEME: (
+        "Turns an investment theme into a falsifiable claim, maps its value chain to derive a candidate "
+        "set rather than recall one, tests which link actually captures the economics, and checks how "
+        "much of the theme is already in the price. Use when the user asks for investment ideas around a "
+        "trend, theme, or narrative, or asks which companies benefit from a given development."
+    ),
     SkillName.EVALUATE_MARGIN_OF_SAFETY: (
         "Applies defensive-investing discipline to a single position or proposed trade, checking margin "
         "of safety adequacy, upside/downside asymmetry (≥2:1), forced-selling resilience, tail-scenario "
@@ -129,6 +150,7 @@ skills: dict[SkillName, str] = {
     SkillName.ANALYZE_EARNINGS_QUALITY: analyze_earnings_quality_skill,
     SkillName.ANALYZE_INCOME_STATEMENT: analyze_income_statement_skill,
     SkillName.ANALYZE_MACRO_IMPACT: analyze_macro_impact_skill,
+    SkillName.ANALYZE_MANAGEMENT_COMMENTARY: analyze_management_commentary_skill,
     SkillName.ANALYZE_PORTFOLIO_RISK: analyze_portfolio_risk_skill,
     SkillName.ANALYZE_STOCK_VALUATION: analyze_stock_valuation_skill,
     SkillName.APPLY_SECOND_LEVEL_THINKING: apply_second_level_thinking_skill,
@@ -136,5 +158,6 @@ skills: dict[SkillName, str] = {
     SkillName.ASSESS_MARKET_SENTIMENT: assess_market_sentiment_skill,
     SkillName.CALCULATE_INTRINSIC_VALUE: calculate_intrinsic_value_skill,
     SkillName.COMPARE_SECTOR_PEERS: compare_sector_peers_skill,
+    SkillName.EVALUATE_INVESTMENT_THEME: evaluate_investment_theme_skill,
     SkillName.EVALUATE_MARGIN_OF_SAFETY: evaluate_margin_of_safety_skill,
 }
