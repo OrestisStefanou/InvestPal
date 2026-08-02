@@ -32,7 +32,6 @@ class Settings(BaseSettings):
         "getSkill",
         "getMarketNews",
         "getStockFinancials",
-        "getEarningsCallTranscript",
         "getInsiderTransactions",
         "getCompanyKpiMetrics",
         "getUserConversationNotes",
