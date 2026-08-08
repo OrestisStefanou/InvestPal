@@ -15,6 +15,9 @@ dependencies = [
     "langchain-anthropic>=1.2.0",
     "fastmcp>=3.0.0b2",
     "croniter>=6.2.2",
-    "pyturso>=0.6.1",
+    # Capped below 0.7: the sync engine now owns on-disk metadata next to
+    # investpal.db, and pyturso is alpha, so the engine should not change under a
+    # synced database as a side effect of `uv lock -U`. Bump deliberately.
+    "pyturso>=0.6.1,<0.7",
     "fastembed>=0.8.0",
 ]

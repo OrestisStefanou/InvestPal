@@ -75,6 +75,11 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    # App
    TURSO_DB_PATH=investpal.db
    CONVERSATION_MESSAGES_LIMIT=15
+
+   # Turso Cloud sync (optional; unset means fully local, no network)
+   # TURSO_SYNC_URL=turso://your-db-your-org.turso.io
+   # TURSO_SYNC_AUTH_TOKEN=your_token
+   # TURSO_SYNC_CLIENT_NAME=laptop        # must differ on each device
    ```
 
 ## Running the Application
@@ -109,12 +114,42 @@ Notes are embedded as they are created. To re-embed everything after changing `E
 make backfill_embeddings
 ```
 
+### Turso Cloud sync (optional)
+
+By default everything lives in one local file and never leaves the machine. Set `TURSO_SYNC_URL` and you can also keep a copy in [Turso Cloud](https://turso.tech) and move it between devices. Nothing syncs on its own: there is no sync on startup, no background timer, only the commands below.
+
+Create a database in Turso Cloud, then put its URL and a token in `.env`:
+
+```bash
+TURSO_SYNC_URL=turso://your-db-your-org.turso.io   # turso db show <name> --url
+TURSO_SYNC_AUTH_TOKEN=your_token                   # turso db tokens create <name>
+TURSO_SYNC_CLIENT_NAME=laptop                      # must differ on each device
+```
+
+Then, depending on where you are starting from:
+
+| Situation | Command |
+|---|---|
+| You already have a populated `investpal.db` and an empty cloud database | `make turso_first_push` |
+| New device, no local database yet | `make turso_first_pull` |
+| Send local changes to the cloud | `make turso_push` |
+| Apply cloud changes locally | `make turso_pull` |
+| Where am I, and what comes next | `make turso_status` |
+| Compare local against the cloud copy | `make turso_verify` |
+
+`make turso_first_push` is not the same as `make turso_push`: rows written before sync was switched on are invisible to the sync engine, so the first push has to rebuild the local file as a sync database and replay every row into it. It backs the original up first and reconciles row counts against the cloud when it finishes.
+
+Once `TURSO_SYNC_URL` is set, both servers refuse to start until `make turso_first_push` or `make turso_first_pull` has run, because writes made in between would never reach the cloud. Stop both servers before running anything other than `status`, `verify` and `push`.
+
+See [docs/turso_sync.md](docs/turso_sync.md) for the full runbook: conflict behaviour, the sidecar files, recovery, and how to rehearse it all against a local sync server without a Turso account.
+
 ## API Documentation
 
 | Document | Description |
 |---|---|
 | [docs/rest_api.md](docs/rest_api.md) | REST API — endpoints for chat, sessions, reminders and workflows |
 | [docs/mcp_api.md](docs/mcp_api.md) | MCP API — tools and prompts for agent integrations |
+| [docs/turso_sync.md](docs/turso_sync.md) | Turso Cloud sync — pushing and pulling the database between devices |
 
 ### REST API quick reference
 
@@ -175,7 +210,7 @@ GET    /workflow_results       Results of past workflow runs
 │   ├── db.py                # Connections, transactions and schema init
 │   └── embeddings.py        # Local ONNX embedding model for semantic search
 ├── models/                  # Internal Pydantic data models
-├── scripts/                 # One-off maintenance scripts (embeddings backfill)
+├── scripts/                 # One-off maintenance scripts (embeddings backfill, cloud sync)
 └── docs/
     ├── rest_api.md          # REST API reference
     └── mcp_api.md           # MCP API reference
