@@ -654,6 +654,11 @@ Required environment variables (see `.env`):
 | `EMBEDDING_ENABLED` | Whether to load the local embedding model. Defaults to `true` |
 | `EMBEDDING_MODEL_NAME` | fastembed model used for semantic search. Defaults to `BAAI/bge-small-en-v1.5` |
 | `EMBEDDING_CACHE_DIR` | Where the model files are cached. Defaults to `~/.cache/investpal/fastembed` |
+| `TURSO_SYNC_URL` | Optional Turso Cloud database to sync with. Unset means fully local. See [turso_sync.md](turso_sync.md) |
+| `TURSO_SYNC_AUTH_TOKEN` | Token for that database |
+| `TURSO_SYNC_CLIENT_NAME` | This device's sync identity. Must differ per device. Defaults to `investpal-<hostname>` |
+
+With `TURSO_SYNC_URL` set, the server refuses to start until the local database has been initialised for sync with `make turso_first_push` or `make turso_first_pull`, because writes made before that would never reach the cloud.
 
 ---
 

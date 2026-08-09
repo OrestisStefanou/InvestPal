@@ -1,3 +1,4 @@
+import platform
 from enum import Enum
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -66,6 +67,42 @@ class Settings(BaseSettings):
     TURSO_DB_PATH: str = "investpal.db"
     MCP_APP_SERVER_PORT: int = 9000
 
+    # TURSO CLOUD SYNC (optional)
+    # Leave TURSO_SYNC_URL unset and the app stays fully local: plain turso file,
+    # no sync engine, no network. Setting it turns every database connection into
+    # a sync connection, so the local file must first be initialised with
+    # `make turso_first_push` or `make turso_first_pull`.
+    TURSO_SYNC_URL: str | None = None
+    TURSO_SYNC_AUTH_TOKEN: str | None = None
+    # Must differ per device: the remote tracks the last pushed change per
+    # client_id, so two devices sharing a name lose each other's changes.
+    TURSO_SYNC_CLIENT_NAME: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env")
+
+    @property
+    def turso_cloud_enabled(self) -> bool:
+        return bool(self.TURSO_SYNC_URL)
+
+    @property
+    def turso_sync_url(self) -> str | None:
+        """The remote URL in a scheme the sync engine can actually dial.
+
+        `turso db show --url` prints turso://, the dashboard sometimes prints
+        libsql://, and pyturso 0.6.1 only rewrites the latter. An unrewritten
+        turso:// reaches urllib and fails with "unknown url type", so both are
+        normalised here and the .env can hold whichever form was copied.
+        """
+        url = self.TURSO_SYNC_URL
+        if url is None:
+            return None
+        for scheme in ("turso://", "libsql://", "wss://", "ws://"):
+            if url.startswith(scheme):
+                return "https://" + url[len(scheme):]
+        return url
+
+    @property
+    def turso_sync_client_name(self) -> str:
+        return self.TURSO_SYNC_CLIENT_NAME or f"investpal-{platform.node() or 'unknown'}"
 
 settings = Settings()
