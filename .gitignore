@@ -2,3 +2,12 @@
 .venv
 .idea
 __pycache__
+investpal.db
+investpal.db-wal
+investpal.db-info
+investpal.db-changes
+investpal.db-wal-revert
+investpal.db.sync.lock
+investpal.db.pre-sync-*.bak
+investpal.db.pre-sync-*.bak-wal
+investpal.db.adopt-source-*

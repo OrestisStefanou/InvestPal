@@ -10,24 +10,22 @@ Welcome to the InvestPal REST API reference. This document covers the HTTP endpo
 
 ## Overview
 
-The InvestPal REST API is the primary integration point for client applications. It exposes four services:
+The InvestPal REST API is the primary integration point for client applications. It exposes these services:
 
 | Service | Purpose |
 |---|---|
-| **User Context** | Register users and store profile information before starting conversations |
 | **Session** | Create and retrieve conversation sessions |
 | **Chat** | Send messages to the AI investment advisor and receive responses |
-| **Agent Reminders** | Retrieve reminders created by the agent for a user |
+| **Agent Reminders** | Retrieve reminders created by the agent |
 | **Agent Workflows** | Manage scheduled, autonomous workflows and retrieve their execution results |
 
 ### Typical integration flow
 
 ```
-1. POST /user_context        → Register the user
-2. POST /session             → Open a conversation session
-3. POST /chat (repeating)    → Exchange messages with the advisor
-4. GET  /session/{id}        → Retrieve full conversation history
-5. GET  /agent_reminders/{user_id} → Retrieve reminders set by the agent
+1. POST /session             → Open a conversation session
+2. POST /chat (repeating)    → Exchange messages with the advisor
+3. GET  /session/{id}        → Retrieve full conversation history
+4. GET  /agent_reminders     → Retrieve reminders set by the agent
 ```
 
 ---
@@ -47,151 +45,25 @@ These headers are only needed on the `POST /chat` endpoint when the user's query
 
 ---
 
-## User Context Service
-
-User context stores profile information about a user. A user context **must be created before any session can be opened** for that user.
-
-### Create User Context
-
-`POST /user_context`
-
-Register a new user and optionally store their profile data.
-
-**Request Body**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | Your unique identifier for this user |
-| `user_profile` | object | no | Arbitrary key-value profile data (age, risk tolerance, etc.) |
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  }
-}
-```
-
-**Response** `201 Created`
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  },
-  "created_at": "2024-01-15T10:30:00.000Z",
-  "updated_at": "2024-01-15T10:30:00.000Z"
-}
-```
-
-**Errors**
-
-| Status | Condition |
-|---|---|
-| `409 Conflict` | A user context for this `user_id` already exists |
-| `500 Internal Server Error` | Unexpected server error |
-
----
-
-### Get User Context
-
-`GET /user_context/{user_id}`
-
-Retrieve the stored context for a user.
-
-**Path Parameters**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `user_id` | string | The unique identifier of the user |
-
-**Response** `200 OK`
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  },
-  "created_at": "2024-01-15T10:30:00.000Z",
-  "updated_at": "2024-01-15T10:30:00.000Z"
-}
-```
-
-**Errors**
-
-| Status | Condition |
-|---|---|
-| `404 Not Found` | No user context exists for the given `user_id` |
-| `500 Internal Server Error` | Unexpected server error |
-
----
-
-### Update User Context
-
-`PUT /user_context`
-
-Replace the profile data for an existing user. The entire `user_profile` object is overwritten — include all fields you want to keep.
-
-**Request Body**
-
-Same shape as `POST /user_context`. Both fields are required.
-
-```json
-{
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 36,
-    "risk_tolerance": "aggressive"
-  }
-}
-```
-
-**Response** `200 OK`
-
-Same shape as `GET /user_context/{user_id}`.
-
-**Errors**
-
-| Status | Condition |
-|---|---|
-| `404 Not Found` | No user context exists for the given `user_id` |
-| `500 Internal Server Error` | Unexpected server error |
-
----
-
 ## Session Service
 
-Sessions represent individual conversation threads between a user and the AI advisor. Each session has its own isolated message history.
+Sessions represent individual conversation threads with the AI advisor. Each session has its own isolated message history.
 
 ### Create Session
 
 `POST /session`
 
-Open a new conversation session for a user.
-
-> **Note**: The user context for the given `user_id` must exist before creating a session.
+Open a new conversation session.
 
 **Request Body**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user who owns this session |
 | `session_id` | string | no | Custom session ID. A UUID is generated if omitted |
 | `name` | string | no | Human-readable session name. Defaults to `session_id` if omitted |
 
 ```json
 {
-  "user_id": "user-abc123",
   "name": "Q1 Portfolio Review"
 }
 ```
@@ -201,7 +73,6 @@ Open a new conversation session for a user.
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "user_id": "user-abc123",
   "name": "Q1 Portfolio Review",
   "created_at": "2024-01-15T10:35:00.000Z",
   "messages": []
@@ -212,7 +83,6 @@ Open a new conversation session for a user.
 
 | Status | Condition |
 |---|---|
-| `400 Bad Request` | User context not found for the given `user_id` |
 | `409 Conflict` | A session with the provided `session_id` already exists |
 | `500 Internal Server Error` | Unexpected server error |
 
@@ -235,7 +105,6 @@ Retrieve the full message history of a session.
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "user_id": "user-abc123",
   "name": "Q1 Portfolio Review",
   "created_at": "2024-01-15T10:35:00.000Z",
   "messages": [
@@ -264,38 +133,30 @@ The `role` field is either `"user"` or `"agent"`.
 
 ---
 
-### List User Sessions
+### List Sessions
 
-`GET /sessions/{user_id}`
+`GET /sessions`
 
-Return all sessions for a user, without message history.
-
-**Path Parameters**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `user_id` | string | The unique identifier of the user |
+Return all sessions, most recent first, without message history.
 
 **Response** `200 OK`
 
 ```json
 [
   {
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
-    "user_id": "user-abc123",
-    "name": "Q1 Portfolio Review",
-    "created_at": "2024-01-15T10:35:00.000Z"
-  },
-  {
     "session_id": "661f9511-f30c-52e5-b827-557766551111",
-    "user_id": "user-abc123",
     "name": "Crypto Strategy",
     "created_at": "2024-01-16T09:00:00.000Z"
+  },
+  {
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Q1 Portfolio Review",
+    "created_at": "2024-01-15T10:35:00.000Z"
   }
 ]
 ```
 
-Returns an empty array `[]` if the user has no sessions.
+Returns an empty array `[]` if there are no sessions.
 
 **Errors**
 
@@ -359,38 +220,30 @@ Agent reminders are notes or follow-up actions the AI advisor creates on behalf 
 
 ### Get Agent Reminders
 
-`GET /agent_reminders/{user_id}`
+`GET /agent_reminders`
 
-Retrieve all reminders for a user.
-
-**Path Parameters**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `user_id` | string | The unique identifier of the user |
+Retrieve all reminders.
 
 **Response** `200 OK`
 
 ```json
 [
   {
-    "user_id": "user-abc123",
-    "reminder_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "reminder_description": "Review the Q1 earnings report for AAPL before next session",
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Review the Q1 earnings report for AAPL before next session",
     "created_at": "2024-01-15T10:40:00.000Z",
     "due_date": "2024-01-22"
   },
   {
-    "user_id": "user-abc123",
-    "reminder_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-    "reminder_description": "Check crypto allocation after BTC halving",
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "description": "Check crypto allocation after BTC halving",
     "created_at": "2024-01-15T11:00:00.000Z",
     "due_date": null
   }
 ]
 ```
 
-Returns an empty array `[]` if the user has no reminders.
+Returns an empty array `[]` if there are no reminders. Deleted reminders are soft-deleted and never appear in the response.
 
 The `due_date` field is in `YYYY-MM-DD` format and may be `null` if no due date was set.
 
@@ -398,7 +251,6 @@ The `due_date` field is in `YYYY-MM-DD` format and may be `null` if no due date 
 
 | Status | Condition |
 |---|---|
-| `404 Not Found` | No user context exists for the given `user_id` |
 | `500 Internal Server Error` | Unexpected server error |
 
 ---
@@ -417,19 +269,17 @@ Create a new scheduled workflow.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user who owns this workflow |
 | `name` | string | yes | A human-readable name for the workflow |
-| `instructions` | string | yes | Instructions the agent should execute |
+| `description` | string | yes | Goal-only description of what the agent should achieve on each run |
 | `schedule` | string | yes | Cron expression (e.g. `0 0 * * 5` for every Friday) |
 
 **Response** `201 Created`
 
 ```json
 {
-  "workflow_id": "wf-1234",
-  "user_id": "user-abc123",
+  "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "Weekly Portfolio Review",
-  "instructions": "Review my portfolio and email me a summary",
+  "description": "Review my portfolio and summarise it",
   "schedule": "0 0 * * 5",
   "status": "active",
   "created_at": "2024-01-15T10:35:00.000Z",
@@ -442,25 +292,25 @@ Create a new scheduled workflow.
 
 ### Get Workflows
 
-`GET /workflows/{user_id}`
+`GET /workflows`
 
-Retrieve all workflows for a user.
+Retrieve all workflows.
 
 ---
 
 ### Update Workflow
 
-`PATCH /workflows/{user_id}/{workflow_id}`
+`PATCH /workflows/{workflow_id}`
 
-Update the fields of a workflow.
+Update the fields of a workflow. Only the fields provided are changed. Passing a new `schedule` re-bases `next_run_at` from now.
 
 ---
 
 ### Delete Workflow
 
-`DELETE /workflows/{user_id}/{workflow_id}`
+`DELETE /workflows/{workflow_id}`
 
-Delete a workflow.
+Delete a workflow. Results of its past runs are kept.
 
 ---
 
@@ -470,13 +320,21 @@ Delete a workflow.
 
 Heartbeat endpoint to check for and execute due workflows. Intended to be called by an external cron job.
 
+Each run is claimed atomically: the workflow flips to `running` so a concurrent heartbeat cannot pick it up. Storing the run's result is what completes the run — it records `last_run_at`, advances `next_run_at` from the cron expression and returns the status to `active`, all in one transaction. A run that fails before storing a result keeps its `next_run_at`, so it is retried on a later heartbeat.
+
 ---
 
 ### Get Workflow Results
 
-`GET /workflow_results/{user_id}`
+`GET /workflow_results`
 
-Retrieve the results of executed workflows for a user.
+Retrieve the results of executed workflows, most recent first.
+
+**Query Parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `limit` | integer | Maximum number of results to return. Defaults to `10` |
 
 ---
 

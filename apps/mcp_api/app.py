@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 import logging
 from typing import Annotated
@@ -13,7 +14,6 @@ from fastmcp.server.middleware import (
     Middleware,
     MiddlewareContext,
 )
-from pymongo import AsyncMongoClient
 
 from config import settings
 from models.agent_reminder import AgentReminder
@@ -23,21 +23,25 @@ from models.agent_workflow import (
     WorkflowStatus,
 )
 from models.user_context import (
-    UserContext,
-    UserConversationNotes,
+    UserConversationNote,
+    UserConversationNoteSearchResult,
+    UserProfileNote,
 )
 from services.agent_reminder import (
     AgentReminderService,
-    MongoDBAgentReminderService,
+    TursoAgentReminderService,
 )
+from repos.agent_reminders import AgentRemindersTable
 from services.agent_workflows.results import (
-    MongoDBWorkflowResultService,
+    TursoWorkflowResultService,
     WorkflowResultService,
 )
 from services.agent_workflows.workflow import (
     AgentWorkflowService,
-    MongoDBAgentWorkflowService,
+    TursoAgentWorkflowService,
 )
+from repos.agent_workflows import AgentWorkflowsTable
+from repos.workflow_results import WorkflowResultsTable
 from services.agents.prompts import INVESTMENT_ADVISOR_PROMPT
 from services.agents.skills import (
     SkillName,
@@ -45,10 +49,18 @@ from services.agents.skills import (
     skills,
 )
 from services.agents.tools import SkillDefinition
-from services.user_context import (
-    MongoDBUserContextService,
-    UserContextService,
+from repos.embeddings import get_embedder
+from repos.user_conversation_note_embeddings import (
+    UserConversationNoteEmbeddingsTable,
 )
+from services.user_context import (
+    UserConversationNotesService,
+    UserProfileService,
+)
+from repos.user_conversation_notes import UserConversationNotesTable
+from repos.user_profile_notes import UserProfileNotesTable
+from repos.db import init_db
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,33 +81,89 @@ class LoggingMiddleware(Middleware):
         return result
 
 
+async def _warm_up_embedder():
+    """Load the embedding model off the startup path.
+
+    Kicked off as a background task rather than awaited: searchUserConversationNotes
+    is user-facing and synchronous, so it should not be the call that pays the
+    model load (and, on a cold cache, the download).
+    """
+    embedder = get_embedder()
+    if embedder is None:
+        return
+    try:
+        await asyncio.to_thread(embedder.warm_up)
+    except Exception:
+        logger.warning("Failed to warm up the embedding model", exc_info=True)
+
+
 @lifespan
 async def db_lifespan(server):
-    db_client = AsyncMongoClient(settings.MONGO_URI)
-    yield {"db_client": db_client}
-    await db_client.close()
+    # Initialize Turso/SQLite database schema
+    init_db(settings.TURSO_DB_PATH)
+    warm_up_task = asyncio.create_task(_warm_up_embedder())
+    try:
+        yield {}
+    finally:
+        warm_up_task.cancel()
 
 
-def get_user_context_service(ctx: Context = CurrentContext()) -> UserContextService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBUserContextService(mongo_client=db_client)
+def get_user_profile_notes_table(ctx: Context = CurrentContext()) -> UserProfileNotesTable:
+    return UserProfileNotesTable(db_path=settings.TURSO_DB_PATH)
 
 
-def get_agent_reminder_service(ctx: Context = CurrentContext()) -> AgentReminderService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBAgentReminderService(mongo_client=db_client)
+def get_user_profile_service(
+    table: UserProfileNotesTable = Depends(get_user_profile_notes_table),
+) -> UserProfileService:
+    return UserProfileService(table=table)
 
 
-def get_agent_workflow_service(ctx: Context = CurrentContext()) -> AgentWorkflowService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBAgentWorkflowService(mongo_client=db_client)
+def get_user_conversation_notes_table() -> UserConversationNotesTable:
+    return UserConversationNotesTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_user_conversation_note_embeddings_table() -> UserConversationNoteEmbeddingsTable:
+    # get_embedder returns the process-wide singleton: this factory runs on
+    # every tool call and must never construct a model of its own.
+    return UserConversationNoteEmbeddingsTable(
+        db_path=settings.TURSO_DB_PATH, embedder=get_embedder()
+    )
+
+
+def get_user_conversation_notes_service(
+    table: UserConversationNotesTable = Depends(get_user_conversation_notes_table),
+    embeddings_table: UserConversationNoteEmbeddingsTable = Depends(
+        get_user_conversation_note_embeddings_table
+    ),
+) -> UserConversationNotesService:
+    return UserConversationNotesService(table=table, embeddings_table=embeddings_table)
+
+
+
+def get_agent_reminder_service() -> AgentReminderService:
+    table = AgentRemindersTable(db_path=settings.TURSO_DB_PATH)
+    return TursoAgentReminderService(table=table)
+
+
+def get_agent_workflows_table() -> AgentWorkflowsTable:
+    return AgentWorkflowsTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_agent_workflow_service(
+    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
+) -> AgentWorkflowService:
+    return TursoAgentWorkflowService(table=table)
+
+
+def get_workflow_results_table() -> WorkflowResultsTable:
+    return WorkflowResultsTable(db_path=settings.TURSO_DB_PATH)
 
 
 def get_workflow_result_service(
-    ctx: Context = CurrentContext(),
+    table: WorkflowResultsTable = Depends(get_workflow_results_table),
+    workflows_table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> WorkflowResultService:
-    db_client = ctx.lifespan_context["db_client"]
-    return MongoDBWorkflowResultService(mongo_client=db_client)
+    return TursoWorkflowResultService(table=table, workflows_table=workflows_table)
 
 
 mcp_app = FastMCP("InvestPal MCP Server", lifespan=db_lifespan)
@@ -103,35 +171,36 @@ mcp_app.add_middleware(LoggingMiddleware())
 
 
 @mcp_app.tool(
-    name="updateUserContext",
-    description="Update the user context(for the given user_id) including user profile. Note: The provided context will completely replace the existing one, so the entire updated object must be provided.",
+    name="createUserProfileNote",
+    description="Create a new user profile note.",
 )
-async def update_user_context(
-    user_id: Annotated[str, "The id of the user to update the context for"],
-    user_profile: Annotated[
-        dict,
-        "General information about the user. Must provide the complete user profile as it will replace the existing one.",
-    ],
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> UserContext:
-    updated_user_context = await user_context_service.update_user_context(
-        user_id=user_id,
-        user_profile=user_profile,
-    )
-
-    return updated_user_context
+async def create_user_profile_note(
+    note: Annotated[str, "The content of the note"],
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+) -> UserProfileNote:
+    return await user_profile_service.create_user_profile_note(note=note)
 
 
 @mcp_app.tool(
-    name="getUserContext",
-    description="Get the user context(for the given user_id) including user profile and portfolio holdings.",
+    name="getUserProfileNotes",
+    description="Get the list of active user profile notes.",
 )
-async def get_user_context(
-    user_id: Annotated[str, "The id of the user to get the context for"],
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> UserContext:
-    user_context = await user_context_service.get_user_context(user_id=user_id)
-    return user_context
+async def get_user_profile_notes(
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+) -> list[UserProfileNote]:
+    return await user_profile_service.get_user_profile_notes()
+
+
+@mcp_app.tool(
+    name="markUserProfileNoteAsOutdated",
+    description="Mark a user profile note as outdated.",
+)
+async def mark_user_profile_note_as_outdated(
+    note_id: Annotated[str, "The ID of the note to mark as outdated"],
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+) -> str:
+    await user_profile_service.mark_note_as_outdated(note_id=note_id)
+    return f"Note {note_id} marked as outdated successfully"
 
 
 @mcp_app.tool(
@@ -145,44 +214,78 @@ async def get_current_datetime() -> str:
 @mcp_app.tool(
     name="getUserConversationNotes",
     description=(
-        "Retrieve conversation notes for a user, ordered by most recent date first. "
+        "Retrieve conversation notes, ordered by most recent first. "
         "Allows the agent to recall specific details from past conversations."
     ),
 )
 async def get_user_conversation_notes(
-    user_id: Annotated[str, "The id of the user to get conversation notes for"],
     limit: Annotated[
         int | None,
-        "Maximum number of dates to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
+        "Maximum number of notes to return, ordered by most recent first. Defaults to 5. Pass None to return all notes.",
     ] = 5,
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> list[UserConversationNotes]:
-    return await user_context_service.get_user_conversation_notes(
-        user_id=user_id, limit=limit
+    user_conversation_notes_service: UserConversationNotesService = Depends(
+        get_user_conversation_notes_service
+    ),
+) -> list[UserConversationNote]:
+    return await user_conversation_notes_service.get_user_conversation_notes(
+        limit=limit
     )
 
 
 @mcp_app.tool(
-    name="updateUserConversationNotes",
+    name="searchUserConversationNotes",
     description=(
-        "Store or update conversation notes for a specific user and date. "
-        "The provided notes will be MERGED with existing ones for that date (only keys "
-        "provided will be overwritten or added). Keep notes short and concise."
+        "Search past conversation notes by meaning rather than by date. Pass a "
+        "natural-language description of what you are trying to recall and this "
+        "returns the most semantically similar notes, each with a similarity score. "
+        "Prefer this over getUserConversationNotes whenever you are looking for a "
+        "specific topic rather than simply reviewing the latest notes."
     ),
 )
-async def update_user_conversation_notes(
-    user_id: Annotated[str, "The id of the user to update conversation notes for"],
-    date: Annotated[str, "The date of the conversation in YYYY-MM-DD format"],
-    notes: Annotated[
-        dict,
-        "A key-value store of notes about the conversation. These will be merged with any existing notes for this date",
+async def search_user_conversation_notes(
+    query: Annotated[
+        str,
+        "A natural-language description of what to recall, for example 'the client's view on pension allocation'. Full sentences work better than keywords.",
     ],
-    user_context_service: UserContextService = Depends(get_user_context_service),
-) -> None:
-    await user_context_service.update_user_conversation_notes(
-        user_id=user_id,
+    limit: Annotated[
+        int, "Maximum number of notes to return, most similar first. Defaults to 5."
+    ] = 5,
+    min_similarity: Annotated[
+        float | None,
+        "Optional 0.0-1.0 similarity floor. Leave unset unless you specifically want to drop weak matches; scores are relative, so it is usually better to read them and judge.",
+    ] = None,
+    user_conversation_notes_service: UserConversationNotesService = Depends(
+        get_user_conversation_notes_service
+    ),
+) -> list[UserConversationNoteSearchResult]:
+    return await user_conversation_notes_service.search_user_conversation_notes(
+        query=query,
+        limit=limit,
+        min_similarity=min_similarity,
+    )
+
+
+@mcp_app.tool(
+    name="createUserConversationNote",
+    description=(
+        "Store a conversation note, by default against today's date. A date can hold any "
+        "number of notes, so this adds a note rather than replacing existing ones. "
+        "Keep notes short and concise."
+    ),
+)
+async def create_user_conversation_note(
+    note: Annotated[str, "A short, concise note about the conversation"],
+    date: Annotated[
+        str | None,
+        "The date of the conversation in YYYY-MM-DD format. Defaults to today, so only pass it when recording a note for a different date.",
+    ] = None,
+    user_conversation_notes_service: UserConversationNotesService = Depends(
+        get_user_conversation_notes_service
+    ),
+) -> UserConversationNote:
+    return await user_conversation_notes_service.create_user_conversation_note(
+        note=note,
         date=date,
-        notes=notes,
     )
 
 
@@ -191,7 +294,6 @@ async def update_user_conversation_notes(
     description="Create a new reminder for the user.",
 )
 async def create_agent_reminder(
-    user_id: Annotated[str, "The id of the user to create the reminder for"],
     reminder_description: Annotated[str, "The description of the reminder"],
     due_date: Annotated[
         str | None, "Optional due date for the reminder in YYYY-MM-DD format"
@@ -199,7 +301,6 @@ async def create_agent_reminder(
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> AgentReminder:
     return await agent_reminder_service.create_agent_reminder(
-        user_id=user_id,
         reminder_description=reminder_description,
         due_date=due_date,
     )
@@ -207,13 +308,12 @@ async def create_agent_reminder(
 
 @mcp_app.tool(
     name="getAgentReminders",
-    description="Get all reminders for the given user.",
+    description="Get all reminders for the user.",
 )
 async def get_agent_reminders(
-    user_id: Annotated[str, "The id of the user to get reminders for"],
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> list[AgentReminder]:
-    return await agent_reminder_service.get_agent_reminders(user_id=user_id)
+    return await agent_reminder_service.get_agent_reminders()
 
 
 @mcp_app.tool(
@@ -221,7 +321,6 @@ async def get_agent_reminders(
     description="Update an existing reminder for the user.",
 )
 async def update_agent_reminder(
-    user_id: Annotated[str, "The id of the user the reminder belongs to"],
     reminder_id: Annotated[str, "The unique id of the reminder to update"],
     reminder_description: Annotated[
         str | None,
@@ -234,7 +333,6 @@ async def update_agent_reminder(
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> AgentReminder:
     return await agent_reminder_service.update_agent_reminder(
-        user_id=user_id,
         reminder_id=reminder_id,
         reminder_description=reminder_description,
         due_date=due_date,
@@ -246,12 +344,10 @@ async def update_agent_reminder(
     description="Delete a reminder for the user.",
 )
 async def delete_agent_reminder(
-    user_id: Annotated[str, "The id of the user the reminder belongs to"],
     reminder_id: Annotated[str, "The unique id of the reminder to delete"],
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
 ) -> None:
     await agent_reminder_service.delete_agent_reminder(
-        user_id=user_id,
         reminder_id=reminder_id,
     )
 
@@ -264,7 +360,6 @@ async def delete_agent_reminder(
     """,
 )
 async def create_agent_workflow(
-    user_id: Annotated[str, "The id of the user to create the workflow for"],
     name: Annotated[str, "A short human-readable name for the workflow"],
     description: Annotated[
         str,
@@ -276,7 +371,6 @@ async def create_agent_workflow(
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.create_workflow(
-        user_id=user_id,
         name=name,
         description=description,
         schedule=schedule,
@@ -285,13 +379,12 @@ async def create_agent_workflow(
 
 @mcp_app.tool(
     name="getAgentWorkflows",
-    description="Get all scheduled workflows for the given user.",
+    description="Get all scheduled workflows.",
 )
 async def get_agent_workflows(
-    user_id: Annotated[str, "The id of the user to get workflows for"],
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> list[AgentWorkflow]:
-    return await agent_workflow_service.get_workflows(user_id=user_id)
+    return await agent_workflow_service.get_workflows()
 
 
 @mcp_app.tool(
@@ -299,7 +392,6 @@ async def get_agent_workflows(
     description="Update an existing scheduled workflow. Only fields provided will be changed.",
 )
 async def update_agent_workflow(
-    user_id: Annotated[str, "The id of the user the workflow belongs to"],
     workflow_id: Annotated[str, "The unique id of the workflow to update"],
     name: Annotated[str | None, "New name. If omitted, existing name is kept."] = None,
     description: Annotated[
@@ -316,7 +408,6 @@ async def update_agent_workflow(
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> AgentWorkflow:
     return await agent_workflow_service.update_workflow(
-        user_id=user_id,
         workflow_id=workflow_id,
         name=name,
         description=description,
@@ -327,25 +418,20 @@ async def update_agent_workflow(
 
 @mcp_app.tool(
     name="deleteAgentWorkflow",
-    description="Delete a scheduled workflow for the user.",
+    description="Delete a scheduled workflow.",
 )
 async def delete_agent_workflow(
-    user_id: Annotated[str, "The id of the user the workflow belongs to"],
     workflow_id: Annotated[str, "The unique id of the workflow to delete"],
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
 ) -> None:
-    await agent_workflow_service.delete_workflow(
-        user_id=user_id,
-        workflow_id=workflow_id,
-    )
+    await agent_workflow_service.delete_workflow(workflow_id=workflow_id)
 
 
 @mcp_app.tool(
     name="getWorkflowResults",
-    description="Get the results of all past workflow runs for the user, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
+    description="Get the results of all past workflow runs, ordered by most recent first. Use this when the user asks what the agent has done on their behalf since the last conversation.",
 )
 async def get_workflow_results(
-    user_id: Annotated[str, "The id of the user to get workflow results for"],
     limit: Annotated[
         int | None,
         "Maximum number of results to return. Defaults to 10. Pass None to return all.",
@@ -354,16 +440,19 @@ async def get_workflow_results(
         get_workflow_result_service
     ),
 ) -> list[WorkflowResult]:
-    return await workflow_result_service.get_results(user_id=user_id, limit=limit)
+    return await workflow_result_service.get_results(limit=limit)
 
 
 @mcp_app.tool(
     name="storeWorkflowResult",
-    description="Store the result of a workflow run for a user.",
+    description=(
+        "Store the result of a workflow run. This also marks the run as finished: it sets "
+        "the workflow's last run, advances its next run from its cron schedule, and clears "
+        "the running lock."
+    ),
 )
 async def store_workflow_result(
     workflow_id: Annotated[str, "The unique ID of the workflow"],
-    user_id: Annotated[str, "The ID of the user the workflow belongs to"],
     workflow_name: Annotated[str, "The name of the workflow"],
     output: Annotated[str, "The execution output/result of the workflow to store"],
     workflow_result_service: WorkflowResultService = Depends(
@@ -372,7 +461,6 @@ async def store_workflow_result(
 ) -> WorkflowResult:
     return await workflow_result_service.save_result(
         workflow_id=workflow_id,
-        user_id=user_id,
         workflow_name=workflow_name,
         output=output,
     )
@@ -443,8 +531,8 @@ async def divide(
 
 
 @mcp_app.prompt
-def get_invstment_advisor_prompt(user_id: str) -> str:
-    return INVESTMENT_ADVISOR_PROMPT.format(user_id=user_id)
+def get_invstment_advisor_prompt() -> str:
+    return INVESTMENT_ADVISOR_PROMPT
 
 
 if __name__ == "__main__":

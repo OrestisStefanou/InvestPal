@@ -1,11 +1,8 @@
 from fastapi import (
     Depends,
-    Request,
-    HTTPException,
     Header,
 )
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from pymongo import AsyncMongoClient
 
 from config import settings
 from services.agents.agent import (
@@ -19,42 +16,47 @@ from services.agents.middleware import (
     ToolTokenRateLimitMiddleware,
 )
 from services.agent_service import InvestmentManagerAgentService
-from services.session import (
-    MongoDBSessionService, 
-    SessionService,
+from repos.embeddings import get_embedder
+from repos.user_conversation_note_embeddings import (
+    UserConversationNoteEmbeddingsTable,
 )
+from services.session import (
+    SessionService,
+    TursoSessionService,
+)
+from repos.session_messages import SessionMessagesTable
+from repos.sessions import SessionsTable
 from services.chat import (
     ChatService,
     AgenticChatService,
 )
 from services.user_context import (
-    MongoDBUserContextService,
-    UserContextService,
+    UserConversationNotesService,
+    UserProfileService,
 )
+from repos.user_conversation_notes import UserConversationNotesTable
+from repos.user_profile_notes import UserProfileNotesTable
 from services.agent_reminder import (
-    MongoDBAgentReminderService,
+    TursoAgentReminderService,
     AgentReminderService,
 )
+from repos.agent_reminders import AgentRemindersTable
 from services.agent_workflows.workflow import (
     AgentWorkflowService,
-    MongoDBAgentWorkflowService,
+    TursoAgentWorkflowService,
 )
 from services.agent_workflows.results import (
     WorkflowResultService,
-    MongoDBWorkflowResultService,
+    TursoWorkflowResultService,
 )
 from services.agent_workflows.notifier import (
     WorkflowNotifier,
-    MongoDBWorkflowNotifier,
+    PersistingWorkflowNotifier,
 )
+from repos.agent_workflows import AgentWorkflowsTable
+from repos.workflow_results import WorkflowResultsTable
 from services.agent_workflows.runner import WorkflowRunner
 from services.agents.agent import WorkflowExecutionAgent
-
-def get_db_client(request: Request):
-    if not hasattr(request.app.state, "mongodb_client"):
-        raise HTTPException(status_code=500, detail="Database not initialized")
-    return request.app.state.mongodb_client
-
 
 def get_mcp_client(
     alpaca_api_key: str | None = Header(None, alias="X-Alpaca-Api-Key"),
@@ -94,22 +96,30 @@ def get_mcp_client(
     return mcp_server_client
 
 
-def get_session_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-) -> SessionService:
-    return MongoDBSessionService(mongo_client=db_client)
+def get_session_service() -> SessionService:
+    return TursoSessionService(
+        table=SessionsTable(),
+        messages_table=SessionMessagesTable(),
+    )
 
 
-def get_user_context_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-) -> UserContextService:
-    return MongoDBUserContextService(mongo_client=db_client)
+def get_user_profile_service() -> UserProfileService:
+    table = UserProfileNotesTable()
+    return UserProfileService(table=table)
 
 
-def get_agent_reminder_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
-) -> AgentReminderService:
-    return MongoDBAgentReminderService(mongo_client=db_client)
+def get_user_conversation_notes_service() -> UserConversationNotesService:
+    return UserConversationNotesService(
+        table=UserConversationNotesTable(),
+        # get_embedder returns the process-wide singleton: this factory runs on
+        # every request and must never construct a model of its own.
+        embeddings_table=UserConversationNoteEmbeddingsTable(embedder=get_embedder()),
+    )
+
+
+def get_agent_reminder_service() -> AgentReminderService:
+    table = AgentRemindersTable()
+    return TursoAgentReminderService(table=table)
 
 
 async def get_investment_manager_agent(
@@ -128,29 +138,39 @@ async def get_user_context_memory_manager_agent() -> UserContextMemoryManagerAge
     )
 
 
+def get_agent_workflows_table() -> AgentWorkflowsTable:
+    return AgentWorkflowsTable()
+
+
 def get_agent_workflow_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
+    table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> AgentWorkflowService:
-    return MongoDBAgentWorkflowService(mongo_client=db_client)
+    return TursoAgentWorkflowService(table=table)
+
+
+def get_workflow_results_table() -> WorkflowResultsTable:
+    return WorkflowResultsTable()
 
 
 def get_workflow_result_service(
-    db_client: AsyncMongoClient = Depends(get_db_client),
+    table: WorkflowResultsTable = Depends(get_workflow_results_table),
+    workflows_table: AgentWorkflowsTable = Depends(get_agent_workflows_table),
 ) -> WorkflowResultService:
-    return MongoDBWorkflowResultService(mongo_client=db_client)
+    return TursoWorkflowResultService(table=table, workflows_table=workflows_table)
 
 
 def get_workflow_notifier(
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
 ) -> WorkflowNotifier:
-    return MongoDBWorkflowNotifier(workflow_result_service=workflow_result_service)
+    return PersistingWorkflowNotifier(workflow_result_service=workflow_result_service)
 
 
 async def get_workflow_runner(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
-    user_context_service: UserContextService = Depends(get_user_context_service),
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+    user_conversation_notes_service: UserConversationNotesService = Depends(get_user_conversation_notes_service),
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
     notifier: WorkflowNotifier = Depends(get_workflow_notifier),
 ) -> WorkflowRunner:
@@ -166,7 +186,8 @@ async def get_workflow_runner(
         workflow_execution_agent=agent,
         agent_workflow_service=agent_workflow_service,
         workflow_result_service=workflow_result_service,
-        user_context_service=user_context_service,
+        user_profile_service=user_profile_service,
+        user_conversation_notes_service=user_conversation_notes_service,
         agent_reminder_service=agent_reminder_service,
         notifier=notifier,
     )
@@ -175,7 +196,8 @@ async def get_workflow_runner(
 def get_investment_manager_agent_service(
     investment_manager_agent: InvestmentManagerAgent = Depends(get_investment_manager_agent),
     user_context_memory_manager_agent: UserContextMemoryManagerAgent = Depends(get_user_context_memory_manager_agent),
-    user_context_service: UserContextService = Depends(get_user_context_service),
+    user_profile_service: UserProfileService = Depends(get_user_profile_service),
+    user_conversation_notes_service: UserConversationNotesService = Depends(get_user_conversation_notes_service),
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
@@ -183,7 +205,8 @@ def get_investment_manager_agent_service(
     return InvestmentManagerAgentService(
         investment_manager_agent=investment_manager_agent,
         user_context_memory_manager_agent=user_context_memory_manager_agent,
-        user_context_service=user_context_service,
+        user_profile_service=user_profile_service,
+        user_conversation_notes_service=user_conversation_notes_service,
         agent_reminder_service=agent_reminder_service,
         agent_workflow_service=agent_workflow_service,
         workflow_result_service=workflow_result_service,

@@ -16,10 +16,10 @@ The server exposes two categories of tools and one prompt:
 
 | Category | Tools |
 |---|---|
-| **User Context** | `updateUserContext`, `getUserContext` |
-| **Conversation Memory** | `getUserConversationNotes`, `updateUserConversationNotes` |
+| **User Profile** | `getUserProfileNotes`, `createUserProfileNote`, `markUserProfileNoteAsOutdated` |
+| **Conversation Memory** | `getUserConversationNotes`, `searchUserConversationNotes`, `createUserConversationNote` |
 | **Reminders** | `createAgentReminder`, `getAgentReminders`, `updateAgentReminder`, `deleteAgentReminder` |
-| **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults` |
+| **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults`, `storeWorkflowResult` |
 | **Prompts** | `get_invstment_advisor_prompt` |
 
 ---
@@ -37,8 +37,8 @@ async with client:
     await client.ping()  # verify connection
 
     result = await client.call_tool(
-        name="getUserContext",
-        arguments={"user_id": "user-abc123"},
+        name="getUserProfileNotes",
+        arguments={},
     )
     print(result.structured_content)
 ```
@@ -57,9 +57,8 @@ Returned by reminder tools.
 
 ```json
 {
-  "user_id": "user-abc123",
-  "reminder_id": "rem-550e8400",
-  "reminder_description": "Review Q1 earnings report for AAPL",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "description": "Review Q1 earnings report for AAPL",
   "created_at": "2024-01-15T10:30:00.000Z",
   "due_date": "2024-01-31"
 }
@@ -67,108 +66,197 @@ Returned by reminder tools.
 
 | Field | Type | Description |
 |---|---|---|
-| `user_id` | string | The user this reminder belongs to |
-| `reminder_id` | string | Unique identifier for the reminder |
-| `reminder_description` | string | Human-readable description |
-| `created_at` | string | ISO 8601 UTC timestamp of creation |
+| `id` | string | Unique identifier for the reminder (UUID) |
+| `description` | string | Human-readable description |
+| `created_at` | string | ISO 8601 timestamp of creation |
 | `due_date` | string \| null | Due date in `YYYY-MM-DD` format, or `null` if not set |
 
-### Conversation Notes Object
+### Conversation Note Object
 
-Returned by `getUserConversationNotes`.
+Returned by `getUserConversationNotes` and `createUserConversationNote`.
 
 ```json
 {
-  "user_id": "user-abc123",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "date": "2024-01-15",
-  "notes": {
-    "discussed_stocks": "AAPL, MSFT",
-    "user_concern": "volatility in tech sector",
-    "action_item": "send rebalancing summary next session"
-  }
+  "note": "Concerned about volatility in the tech sector",
+  "created_at": "2024-01-15T10:30:00.000Z"
 }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `user_id` | string | The user these notes belong to |
+| `id` | string | Unique identifier for the note (UUID) |
 | `date` | string | Date the conversation took place (`YYYY-MM-DD`) |
-| `notes` | object | Free-form key-value pairs of notes |
+| `note` | string | The note text |
+| `created_at` | string | ISO 8601 timestamp of creation |
 
-### User Context Object
+A date can hold any number of notes.
 
-Returned by `getUserContext` and `updateUserContext`.
+### Conversation Note Search Result Object
+
+Returned by `searchUserConversationNotes`. A [Conversation Note Object](#conversation-note-object) with one extra field.
 
 ```json
 {
-  "user_id": "user-abc123",
-  "user_profile": {
-    "name": "Jane Smith",
-    "age": 35,
-    "risk_tolerance": "moderate"
-  },
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "date": "2024-01-15",
+  "note": "Concerned about volatility in the tech sector",
   "created_at": "2024-01-15T10:30:00.000Z",
-  "updated_at": "2024-01-15T10:30:00.000Z"
+  "similarity": 0.8147
 }
 ```
 
+| Field | Type | Description |
+|---|---|---|
+| `similarity` | number | How closely the note matches the query in meaning, from `0.0` (unrelated) to `1.0` (identical meaning) |
+
+Scores are relative, not absolute. Notes on the same broad topic typically land between `0.6` and `0.9`, so compare scores within a result set rather than against a fixed cutoff.
+
+### Workflow Object
+
+Returned by the workflow tools.
+
+```json
+{
+  "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Weekly portfolio review",
+  "description": "Review the portfolio and report anything notable",
+  "schedule": "0 0 * * 5",
+  "status": "active",
+  "created_at": "2024-01-15T10:35:00.000Z",
+  "last_run_at": null,
+  "next_run_at": "2024-01-19T00:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `workflow_id` | string | Unique identifier (UUID) |
+| `name` | string | Human-readable name |
+| `description` | string | What the agent should achieve on each run |
+| `schedule` | string | Cron expression |
+| `status` | string | `active`, `paused`, or `running` while a run is in flight |
+| `created_at` | string | ISO 8601 timestamp of creation |
+| `last_run_at` | string \| null | ISO 8601 timestamp of the last completed run |
+| `next_run_at` | string \| null | ISO 8601 timestamp of the next scheduled run |
+
+### Workflow Result Object
+
+Returned by `getWorkflowResults` and `storeWorkflowResult`.
+
+```json
+{
+  "result_id": "550e8400-e29b-41d4-a716-446655440000",
+  "workflow_id": "661f9511-f3ac-52e5-b827-557766551111",
+  "workflow_name": "Weekly portfolio review",
+  "output": "Portfolio is up 2.1% this week, no action needed",
+  "ran_at": "2024-01-19T00:00:12.000Z"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `result_id` | string | Unique identifier (UUID) |
+| `workflow_id` | string | The workflow that produced this result |
+| `workflow_name` | string | The workflow's name at execution time |
+| `output` | string | The agent's report for this run |
+| `ran_at` | string | ISO 8601 timestamp of the run |
+
+Results outlive the workflow that produced them.
+
+### Profile Note Object
+
+Returned by `getUserProfileNotes` and `createUserProfileNote`.
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "note": "Moderate risk tolerance, 10 year horizon",
+  "created_at": "2024-01-15T10:30:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Unique identifier for the note (UUID) |
+| `note` | string | One self-contained fact about the user |
+| `created_at` | string | ISO 8601 timestamp of creation |
+
+The profile is the set of notes that have not been marked outdated.
+
 ---
 
-## User Context Tools
+## User Profile Tools
 
-### `updateUserContext`
+The user's profile is stored as a set of notes rather than a single document. Each note is one
+self-contained fact. The profile is injected into the investment advisor's system prompt on every
+conversation, so notes should be short.
 
-Replace the user's profile. The provided `user_profile` **completely replaces** the existing one — include all fields you want to keep.
+### `getUserProfileNotes`
+
+Retrieve the notes that make up the profile. Notes marked as outdated are not returned.
 
 **Parameters**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | The ID of the user to update |
-| `user_profile` | object | yes | The complete new user profile (replaces existing) |
+None.
 
 **Example call**
 
 ```python
 result = await client.call_tool(
-    name="updateUserContext",
-    arguments={
-        "user_id": "user-abc123",
-        "user_profile": {
-            "name": "Jane Smith",
-            "age": 36,
-            "risk_tolerance": "aggressive",
-            "investment_goals": ["retirement", "real_estate"]
-        },
-    },
+    name="getUserProfileNotes",
+    arguments={},
 )
 ```
 
-**Returns**: A [User Context Object](#user-context-object).
+**Returns**: A list of [Profile Note Objects](#profile-note-object). Returns an empty list if nothing is recorded yet.
 
 ---
 
-### `getUserContext`
+### `createUserProfileNote`
 
-Retrieve the stored context and profile for a user.
+Store a permanent fact about the user. This adds a note; it never replaces the existing ones.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user to fetch context for |
+| `note` | string | yes | One self-contained fact, e.g. risk tolerance, horizon, goals or sector interests |
 
 **Example call**
 
 ```python
 result = await client.call_tool(
-    name="getUserContext",
-    arguments={"user_id": "user-abc123"},
+    name="createUserProfileNote",
+    arguments={"note": "Moderate risk tolerance, 10 year horizon"},
 )
-print(result.structured_content)
 ```
 
-**Returns**: A [User Context Object](#user-context-object).
+**Returns**: The created [Profile Note Object](#profile-note-object).
+
+---
+
+### `markUserProfileNoteAsOutdated`
+
+Mark a note as outdated so it stops being part of the profile. Use this instead of editing when a fact stops being true.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `note_id` | string | yes | The id of the note to mark as outdated |
+
+**Example call**
+
+```python
+await client.call_tool(
+    name="markUserProfileNoteAsOutdated",
+    arguments={"note_id": "550e8400-e29b-41d4-a716-446655440000"},
+)
+```
+
+**Returns**: A confirmation string.
 
 ---
 
@@ -178,72 +266,100 @@ These tools give the agent the ability to persist and recall key details from pa
 
 ### `getUserConversationNotes`
 
-Retrieve conversation notes for a user, optionally filtered to a specific date. Use this to recall what was discussed in past sessions.
+Retrieve conversation notes, ordered by most recent first. Use this to recall what was discussed in past sessions.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user |
-| `date` | string | no | Filter by date in `YYYY-MM-DD` format. If omitted, notes for all dates are returned |
+| `limit` | integer \| null | no | Maximum number of notes to return, most recent first. Defaults to `5`. Pass `null` to return all notes |
 
-**Example call — all notes**
-
-```python
-result = await client.call_tool(
-    name="getUserConversationNotes",
-    arguments={"user_id": "user-abc123"},
-)
-```
-
-**Example call — notes for a specific date**
+**Example call — the 5 most recent notes**
 
 ```python
 result = await client.call_tool(
     name="getUserConversationNotes",
-    arguments={
-        "user_id": "user-abc123",
-        "date": "2024-01-15",
-    },
+    arguments={},
 )
 ```
 
-**Returns**: A list of [Conversation Notes Objects](#conversation-notes-object). Returns an empty list if no notes exist.
+**Example call — every note on record**
+
+```python
+result = await client.call_tool(
+    name="getUserConversationNotes",
+    arguments={"limit": None},
+)
+```
+
+**Returns**: A list of [Conversation Note Objects](#conversation-note-object), ordered by date descending and then by creation time descending. Returns an empty list if no notes exist.
 
 ---
 
-### `updateUserConversationNotes`
+### `searchUserConversationNotes`
 
-Store or update conversation notes for a user on a given date. Notes are **merged** with any existing notes for that date — only the keys you provide are added or overwritten; other existing keys are preserved.
+Search conversation notes by meaning rather than by date. Prefer this over `getUserConversationNotes` when looking for a specific topic; use `getUserConversationNotes` when you just want to review what happened most recently.
+
+Matching is semantic, not keyword-based: a query for "retirement savings split" will surface a note about rebalancing a pension allocation even though the two share no words. Embeddings are generated locally (see [Semantic search](#semantic-search)), so note text never leaves the machine.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user |
-| `date` | string | yes | The conversation date in `YYYY-MM-DD` format |
-| `notes` | object | yes | Key-value pairs to merge into the notes for this date |
-
-> **Tip**: Keep note values short and concise — they are loaded into the agent's context on every conversation.
+| `query` | string | yes | A natural-language description of what to recall. Full sentences work better than keywords |
+| `limit` | integer | no | Maximum number of notes to return, most similar first. Defaults to `5` |
+| `min_similarity` | number \| null | no | Optional `0.0`-`1.0` similarity floor. Defaults to `null` (no filtering) |
 
 **Example call**
 
 ```python
+result = await client.call_tool(
+    name="searchUserConversationNotes",
+    arguments={"query": "the client's view on pension allocation", "limit": 3},
+)
+```
+
+**Returns**: A list of [Conversation Note Search Result Objects](#conversation-note-search-result-object), most similar first. Returns an empty list if no notes exist, if none clear `min_similarity`, or if embeddings are disabled.
+
+> **Note**: Notes are embedded when they are created. A note whose embedding failed, or one written before the embedding model was changed, will not appear in results until `make backfill_embeddings` has been run.
+
+---
+
+### `createUserConversationNote`
+
+Store a conversation note. A date can hold any number of notes, so this adds a note rather than replacing what is already stored.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `note` | string | yes | The note text |
+| `date` | string \| null | no | The conversation date in `YYYY-MM-DD` format. Defaults to today. Rejected if provided and not `YYYY-MM-DD` |
+
+> **Tip**: Keep notes short and concise — they are loaded into the agent's context on every conversation.
+
+**Example call — today**
+
+```python
 await client.call_tool(
-    name="updateUserConversationNotes",
+    name="createUserConversationNote",
+    arguments={"note": "Concerned about the inflation impact on growth stocks"},
+)
+```
+
+**Example call — a specific date**
+
+```python
+await client.call_tool(
+    name="createUserConversationNote",
     arguments={
-        "user_id": "user-abc123",
+        "note": "Concerned about the inflation impact on growth stocks",
         "date": "2024-01-15",
-        "notes": {
-            "discussed_stocks": "AAPL, TSLA",
-            "user_concern": "inflation impact on growth stocks",
-            "follow_up": "check TSLA earnings next week",
-        },
     },
 )
 ```
 
-**Returns**: `null` (no body). The operation is idempotent — calling it again with the same keys will overwrite those keys.
+**Returns**: The created [Conversation Note Object](#conversation-note-object). This operation is not idempotent — calling it twice with the same text stores two separate notes.
 
 ---
 
@@ -253,13 +369,12 @@ Reminders allow the agent to create and manage time-sensitive action items on be
 
 ### `createAgentReminder`
 
-Create a new reminder for a user.
+Create a new reminder.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user this reminder is for |
 | `reminder_description` | string | yes | A clear description of what to be reminded about |
 | `due_date` | string | no | Optional due date in `YYYY-MM-DD` format |
 
@@ -269,7 +384,6 @@ Create a new reminder for a user.
 result = await client.call_tool(
     name="createAgentReminder",
     arguments={
-        "user_id": "user-abc123",
         "reminder_description": "Review AAPL earnings report and update portfolio allocation",
         "due_date": "2024-01-31",
     },
@@ -280,9 +394,8 @@ result = await client.call_tool(
 
 ```json
 {
-  "user_id": "user-abc123",
-  "reminder_id": "rem-550e8400",
-  "reminder_description": "Review AAPL earnings report and update portfolio allocation",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "description": "Review AAPL earnings report and update portfolio allocation",
   "created_at": "2024-01-15T10:30:00.000Z",
   "due_date": "2024-01-31"
 }
@@ -292,20 +405,18 @@ result = await client.call_tool(
 
 ### `getAgentReminders`
 
-Retrieve all reminders for a user.
+Retrieve all reminders. Deleted reminders are never returned.
 
 **Parameters**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | The ID of the user |
+None.
 
 **Example call**
 
 ```python
 result = await client.call_tool(
     name="getAgentReminders",
-    arguments={"user_id": "user-abc123"},
+    arguments={},
 )
 ```
 
@@ -314,16 +425,14 @@ result = await client.call_tool(
 ```json
 [
   {
-    "user_id": "user-abc123",
-    "reminder_id": "rem-550e8400",
-    "reminder_description": "Review AAPL earnings report",
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "description": "Review AAPL earnings report",
     "created_at": "2024-01-15T10:30:00.000Z",
     "due_date": "2024-01-31"
   },
   {
-    "user_id": "user-abc123",
-    "reminder_id": "rem-661f9511",
-    "reminder_description": "Rebalance crypto allocation",
+    "id": "661f9511-f3ac-52e5-b827-557766551111",
+    "description": "Rebalance crypto allocation",
     "created_at": "2024-01-16T09:00:00.000Z",
     "due_date": null
   }
@@ -340,7 +449,6 @@ Update the description or due date of an existing reminder. Only the fields you 
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user the reminder belongs to |
 | `reminder_id` | string | yes | The unique ID of the reminder to update |
 | `reminder_description` | string | no | New description. If omitted, the existing description is kept |
 | `due_date` | string | no | New due date in `YYYY-MM-DD` format. If omitted, the existing due date is kept |
@@ -351,8 +459,7 @@ Update the description or due date of an existing reminder. Only the fields you 
 result = await client.call_tool(
     name="updateAgentReminder",
     arguments={
-        "user_id": "user-abc123",
-        "reminder_id": "rem-550e8400",
+        "reminder_id": "550e8400-e29b-41d4-a716-446655440000",
         "due_date": "2024-02-15",
     },
 )
@@ -364,27 +471,25 @@ result = await client.call_tool(
 result = await client.call_tool(
     name="updateAgentReminder",
     arguments={
-        "user_id": "user-abc123",
-        "reminder_id": "rem-550e8400",
+        "reminder_id": "550e8400-e29b-41d4-a716-446655440000",
         "reminder_description": "Review AAPL and MSFT earnings, update allocation",
         "due_date": "2024-02-15",
     },
 )
 ```
 
-**Returns**: The updated [Reminder Object](#reminder-object), or `null` if the reminder was not found.
+**Returns**: The updated [Reminder Object](#reminder-object). Errors if no live reminder with that `reminder_id` exists.
 
 ---
 
 ### `deleteAgentReminder`
 
-Permanently delete a reminder.
+Delete a reminder. The row is soft-deleted: it is retained in storage with a `deleted_at` timestamp and is excluded from all subsequent reads.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user the reminder belongs to |
 | `reminder_id` | string | yes | The unique ID of the reminder to delete |
 
 **Example call**
@@ -393,13 +498,12 @@ Permanently delete a reminder.
 await client.call_tool(
     name="deleteAgentReminder",
     arguments={
-        "user_id": "user-abc123",
-        "reminder_id": "rem-550e8400",
+        "reminder_id": "550e8400-e29b-41d4-a716-446655440000",
     },
 )
 ```
 
-**Returns**: `null` (no body). The operation succeeds silently even if the `reminder_id` does not exist.
+**Returns**: `null` (no body). Errors if no live reminder with that `reminder_id` exists.
 
 ---
 
@@ -409,40 +513,91 @@ Agent Workflows enable the AI advisor to autonomously execute recurring tasks on
 
 ### `createAgentWorkflow`
 
-Create a new scheduled workflow. 
+Create a new scheduled workflow. `next_run_at` is computed from the cron expression at creation.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `user_id` | string | yes | The ID of the user |
 | `name` | string | yes | A short human-readable name |
-| `instructions` | string | yes | Instructions to execute |
-| `schedule` | string | yes | Cron expression |
+| `description` | string | yes | Goal-only description of what to achieve on each run. No tool names, no user data, no implementation steps |
+| `schedule` | string | yes | Cron expression, e.g. `0 0 1 * *` for monthly on the 1st |
+
+**Returns**: A [Workflow Object](#workflow-object).
 
 ---
 
 ### `getAgentWorkflows`
 
-Retrieve all scheduled workflows for a user.
+Retrieve all scheduled workflows.
+
+**Parameters**
+
+None.
+
+**Returns**: A list of [Workflow Objects](#workflow-object).
 
 ---
 
 ### `updateAgentWorkflow`
 
-Update an existing workflow.
+Update an existing workflow. Only the fields provided are changed. Passing a new `schedule` re-bases `next_run_at` from now.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string | yes | The workflow to update |
+| `name` | string | no | New name |
+| `description` | string | no | New goal-only description |
+| `schedule` | string | no | New cron expression |
+| `status` | string | no | `active` or `paused`. A paused workflow is never claimed for a run |
+
+**Returns**: The updated [Workflow Object](#workflow-object).
 
 ---
 
 ### `deleteAgentWorkflow`
 
-Delete a workflow.
+Delete a workflow. The results of its past runs are kept.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string | yes | The workflow to delete |
 
 ---
 
 ### `getWorkflowResults`
 
-Get the results of past workflow runs for the user, ordered by most recent first.
+Get the results of past workflow runs, ordered by most recent first.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `limit` | integer \| null | no | Maximum number of results. Defaults to `10`. Pass `null` for all |
+
+**Returns**: A list of [Workflow Result Objects](#workflow-result-object).
+
+---
+
+### `storeWorkflowResult`
+
+Store the result of a workflow run. **This also completes the run**: in a single transaction it records the result, sets the workflow's `last_run_at`, advances `next_run_at` from the cron schedule and returns the status to `active`.
+
+A result whose `workflow_id` no longer exists is still stored; there is simply no schedule to advance.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `workflow_id` | string | yes | The workflow this result belongs to |
+| `workflow_name` | string | yes | The workflow's name at execution time |
+| `output` | string | yes | The agent's report for this run |
+
+**Returns**: The stored [Workflow Result Object](#workflow-result-object).
 
 ---
 
@@ -450,25 +605,23 @@ Get the results of past workflow runs for the user, ordered by most recent first
 
 ### `get_invstment_advisor_prompt`
 
-Returns the system prompt used to configure the InvestPal investment advisor agent for a given user.
+Returns the system prompt used to configure the InvestPal investment advisor agent.
 
 **Parameters**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `user_id` | string | yes | The ID of the user to generate the prompt for |
+None. The server serves a single client, whose profile the agent loads through `getUserProfileNotes`.
 
 **Example call**
 
 ```python
 result = await client.get_prompt(
     name="get_invstment_advisor_prompt",
-    arguments={"user_id": "user-abc123"},
+    arguments={},
 )
 print(result.messages[0].content.text)
 ```
 
-**Returns**: The investment advisor system prompt string, personalized for the given `user_id`.
+**Returns**: The investment advisor system prompt string.
 
 ---
 
@@ -478,9 +631,8 @@ The MCP server propagates errors as MCP tool error responses. In the FastMCP Pyt
 
 | Cause | Description |
 |---|---|
-| User not found | The `user_id` does not exist in the database. Ensure the user context was created via the REST API first (`POST /user_context`) |
 | Invalid date format | Dates must be in `YYYY-MM-DD` format |
-| Database unavailable | The MongoDB connection failed on startup |
+| Database unavailable | The turso database file could not be opened on startup |
 
 ---
 
@@ -498,5 +650,26 @@ Required environment variables (see `.env`):
 
 | Variable | Description |
 |---|---|
-| `MONGO_URI` | MongoDB connection string |
-| `MONGO_DB_NAME` | Database name |
+| `TURSO_DB_PATH` | Path to the turso/SQLite database file. Defaults to `investpal.db` |
+| `EMBEDDING_ENABLED` | Whether to load the local embedding model. Defaults to `true` |
+| `EMBEDDING_MODEL_NAME` | fastembed model used for semantic search. Defaults to `BAAI/bge-small-en-v1.5` |
+| `EMBEDDING_CACHE_DIR` | Where the model files are cached. Defaults to `~/.cache/investpal/fastembed` |
+| `TURSO_SYNC_URL` | Optional Turso Cloud database to sync with. Unset means fully local. See [turso_sync.md](turso_sync.md) |
+| `TURSO_SYNC_AUTH_TOKEN` | Token for that database |
+| `TURSO_SYNC_CLIENT_NAME` | This device's sync identity. Must differ per device. Defaults to `investpal-<hostname>` |
+
+With `TURSO_SYNC_URL` set, the server refuses to start until the local database has been initialised for sync with `make turso_first_push` or `make turso_first_pull`, because writes made before that would never reach the cloud.
+
+---
+
+## Semantic search
+
+`searchUserConversationNotes` runs entirely on the local machine. There is no external vector store and no embedding API.
+
+- **Vectors** live in the `user_conversation_note_embeddings` table and are compared with turso's built-in `vector_distance_cos`. The installed turso build has no ANN index, so this is a linear scan; that is intentional and comfortably fast at the scale conversation notes reach.
+- **Embeddings** come from `BAAI/bge-small-en-v1.5` (384 dimensions) running on the CPU through fastembed's ONNX runtime. The model is roughly 67MB and is downloaded from HuggingFace the first time it is used, then served from `EMBEDDING_CACHE_DIR`.
+- **After the first download**, set `HF_HUB_OFFLINE=1`. huggingface_hub otherwise makes a metadata call on every model load, which stalls startup when the machine is offline.
+- The model loads in the background at server startup, so the first search does not pay for it.
+- Set `EMBEDDING_ENABLED=false` to skip the model entirely. Notes can still be created and listed; `searchUserConversationNotes` returns an empty list.
+
+Notes are embedded as they are created. Embedding failures are logged and never block note creation, so run `make backfill_embeddings` to pick up anything that was missed, and after any change to `EMBEDDING_MODEL_NAME`.

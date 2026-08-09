@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,16 +8,16 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pymongo import AsyncMongoClient
 
 from apps.rest_api import (
     session,
-    user_context,
     chat,
     agent_reminders,
     agent_workflows,
 )
 from config import settings
+from repos.db import init_db
+from repos.embeddings import get_embedder
 
 
 # Configure logging
@@ -27,13 +28,30 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _warm_up_embedder():
+    """Load the embedding model off the startup path.
+
+    Kicked off as a background task rather than awaited: the first embed
+    otherwise pays the model load (and, on a cold cache, the download) while a
+    user is waiting on it.
+    """
+    embedder = get_embedder()
+    if embedder is None:
+        return
+    try:
+        await asyncio.to_thread(embedder.warm_up)
+    except Exception:
+        logger.warning("Failed to warm up the embedding model", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    app.state.mongodb_client = AsyncMongoClient(settings.MONGO_URI)
-    yield
-    # Shutdown
-    await app.state.mongodb_client.close()
+    init_db(settings.TURSO_DB_PATH)
+    warm_up_task = asyncio.create_task(_warm_up_embedder())
+    try:
+        yield
+    finally:
+        warm_up_task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -70,7 +88,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(session.router)
-app.include_router(user_context.router)
 app.include_router(chat.router)
 app.include_router(agent_reminders.router)
 app.include_router(agent_workflows.router)

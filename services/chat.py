@@ -30,10 +30,9 @@ class AgenticChatService(ChatService):
             raise SessionNotFoundError(f"Session {session_id} not found")
         
         conversation = session.messages
-        user_id = session.user_id
         conversation.append(Message(role=MessageRole.USER, content=message))
 
-        agent_response = await self._agent_service.generate_agent_text_response(user_id, conversation)
+        agent_response = await self._agent_service.generate_agent_text_response(conversation)
 
         # Store the message and response in the session
         await self._session_service.add_message(
