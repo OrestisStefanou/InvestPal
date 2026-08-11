@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import (
@@ -24,8 +25,12 @@ from repos.embeddings import get_embedder
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
+
+# Reduce noise from httpx while keeping errors
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 async def _warm_up_embedder():
