@@ -57,8 +57,11 @@ COPY_BATCH = 500
 # 384 float32s: repos.embeddings.EMBEDDING_DIMENSIONS against schema.sql's F32_BLOB(384).
 EMBEDDING_BLOB_BYTES = 384 * 4
 
-# Everything the sync engine keeps next to the main file.
-SIDECAR_SUFFIXES = ("-info", "-changes", "-wal", "-wal-revert")
+# Everything that can sit next to the main file: the four the sync engine keeps,
+# plus the -shm index any WAL reader builds. -shm is here so that moving or
+# removing a database set leaves nothing of the old one behind for the new file
+# to inherit.
+SIDECAR_SUFFIXES = ("-info", "-changes", "-wal", "-wal-revert", "-shm")
 
 
 # --------------------------------------------------------------------------- #
@@ -103,13 +106,15 @@ def db_state(db_path: str) -> str:
 STATE_HELP = {
     "fresh": "no local database yet -> run `make turso_first_pull`",
     "local_only": (
-        "local database that has never been synced -> run `make turso_first_push` "
-        "(the servers refuse to start until then)"
+        "local database that has never been synced. Seed the cloud from it with "
+        "`make turso_first_push`, or discard it and take the cloud copy with "
+        "`make turso_first_pull FORCE=1` (which moves it aside rather than "
+        "deleting it). The servers refuse to start until one of those has run"
     ),
     "synced": "synced database -> use `make turso_push` / `make turso_pull`",
     "broken": (
-        "sync metadata without a database file. Move the leftover sidecars aside "
-        "by hand, then run `make turso_first_pull`"
+        "sync metadata without a database file -> run `make turso_first_pull`, "
+        "which moves the leftover sidecars aside for you"
     ),
 }
 
@@ -248,6 +253,44 @@ def move_with_wal(src: str, dst: str) -> None:
     os.rename(src, dst)
     if os.path.exists(f"{src}-wal"):
         os.rename(f"{src}-wal", f"{dst}-wal")
+
+
+def move_db_set(src: str, dst: str) -> list[str]:
+    """Move a database and every sidecar it happens to have, keeping all of them.
+
+    Its own inverse: pass the two paths the other way round to undo it.
+    """
+    moved = []
+    for suffix in ("", *SIDECAR_SUFFIXES):
+        if os.path.exists(f"{src}{suffix}"):
+            os.rename(f"{src}{suffix}", f"{dst}{suffix}")
+            moved.append(os.path.basename(f"{src}{suffix}"))
+    return moved
+
+
+def set_aside(db_path: str) -> str:
+    """Move the whole database set out of the way and return where it went.
+
+    Nothing here deletes: the point is that a command needing the path free can
+    take it without the client having to `rm` anything by hand.
+    """
+    dst = f"{db_path}.replaced-{timestamp()}"
+    moved = move_db_set(db_path, dst)
+    logger.info("Moved %s aside to %s*", ", ".join(moved), os.path.basename(dst))
+    return dst
+
+
+def is_empty(db_path: str) -> bool:
+    """True when the file holds no application rows at all.
+
+    A database the servers created on first start and nobody has written to is
+    worth nothing, but is indistinguishable from a populated one by file
+    existence — which is what db_state() decides on. Without this, a plain
+    `make setup` followed by turning sync on left first-pull permanently
+    unreachable, with a manual `rm` as the only way out.
+    """
+    with read_only(db_path) as conn:
+        return not any(count for count in table_counts(conn).values())
 
 
 def remove_db_files(db_path: str) -> None:
@@ -460,33 +503,76 @@ def cmd_first_push(args) -> None:
 
 
 def cmd_first_pull(args) -> None:
-    """Case 2: a device with no local database, pulling the cloud one down."""
+    """Case 2: a device pulling the cloud database down for the first time.
+
+    Not only a device with nothing local. The common way to arrive here is a
+    machine that ran the servers once before sync was turned on and so has an
+    empty file sitting in the way; that file is moved aside for you. One with
+    rows in it is a real decision, so it needs --force, and is moved aside too.
+    """
     require_enabled()
     db_path = args.db_path
-    require_state(db_path, "fresh")
+    state = db_state(db_path)
+
+    if state == "synced":
+        raise SystemExit(f"{db_path}: {STATE_HELP[state]}")
+
+    displaced = ""
+    if state == "local_only":
+        if is_empty(db_path):
+            displaced = (
+                f"  - {os.path.basename(db_path)} already exists but is empty; it is "
+                "moved aside, not deleted\n"
+            )
+        elif args.force:
+            displaced = (
+                f"  - {os.path.basename(db_path)} HAS ROWS IN IT and is being "
+                "replaced by the cloud copy. It is moved aside, not deleted\n"
+            )
+        else:
+            with read_only(db_path) as conn:
+                print_counts(f"rows in {db_path}", table_counts(conn))
+            raise SystemExit(f"\n{db_path}: {STATE_HELP['local_only']}")
+    elif state == "broken":
+        displaced = (
+            "  - the sidecars left behind by an earlier database are moved aside "
+            "first\n"
+        )
 
     confirm(
         f"\nAbout to create {db_path} by downloading the cloud database at "
-        f"{remote_host()}.\n  - stop `make run_investpal` and `make run_investpal_mcp` "
-        "first\n",
+        f"{remote_host()}.\n{displaced}"
+        "  - stop `make run_investpal` and `make run_investpal_mcp` first\n",
         args.yes,
     )
 
-    conn = open_sync(db_path, bootstrap_if_empty=True)
+    aside = set_aside(db_path) if state != "fresh" else None
+
     try:
-        # Covers a cloud database created before a table was added to schema.sql.
-        conn.executescript(schema_sql())
-        conn.commit()
-        conn.checkpoint()
-        log_stats(conn, "after bootstrap")
-        print_counts(f"rows now in {db_path}", table_counts(conn))
-    finally:
-        conn.close()
+        conn = open_sync(db_path, bootstrap_if_empty=True)
+        try:
+            # Covers a cloud database created before a table was added to schema.sql.
+            conn.executescript(schema_sql())
+            conn.commit()
+            conn.checkpoint()
+            log_stats(conn, "after bootstrap")
+            print_counts(f"rows now in {db_path}", table_counts(conn))
+        finally:
+            conn.close()
+    except Exception:
+        if aside:
+            logger.error("Download failed, putting the previous files back")
+            remove_db_files(db_path)
+            move_db_set(aside, db_path)
+            logger.error("Restored %s as it was.", db_path)
+        raise
 
     print(
         f"\n{db_path} is ready. Keep TURSO_SYNC_CLIENT_NAME distinct from your other "
         f"devices (currently {settings.turso_sync_client_name})."
     )
+    if aside:
+        print(f"Previous files: {aside}*  (not deleted; remove them when satisfied)")
 
 
 def cmd_push(args) -> None:
@@ -599,6 +685,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     first_pull = sub.add_parser(
         "first-pull", parents=[common], help="create the local database from the cloud one"
+    )
+    first_pull.add_argument(
+        "--force",
+        action="store_true",
+        help="replace a local database that has rows in it (moved aside, not deleted). "
+        "An empty one is moved aside without this.",
     )
     first_pull.set_defaults(func=cmd_first_pull)
 

@@ -46,11 +46,20 @@ Which commands are allowed depends only on which files exist:
 | `investpal.db` | `investpal.db-info` | State | Do this |
 |---|---|---|---|
 | absent | absent | fresh device | `make turso_first_pull` |
-| present | absent | local database, never synced | `make turso_first_push` |
+| present | absent | local database, never synced | `make turso_first_push`, or `make turso_first_pull` to take the cloud copy instead |
 | present | present | synced | `make turso_push` / `make turso_pull` |
-| absent | present | leftover metadata | move the sidecars aside, then `make turso_first_pull` |
+| absent | present | leftover metadata | `make turso_first_pull` |
 
 Anything you run in the wrong state refuses and names the right command. `make turso_status` prints the state and the row counts without touching the network.
+
+### A local database in the way of a first pull
+
+The common route into the second row is a machine that ran the servers once before sync was turned on: the first start creates `investpal.db`, and file existence alone cannot tell an empty file from a full one. So `first-pull` looks at the rows:
+
+- **Empty** — moved aside to `investpal.db.replaced-<timestamp>*` and the pull continues. Nothing is asked beyond the usual confirmation, because there is nothing to lose.
+- **Has rows** — refused, with both routes named. `make turso_first_pull FORCE=1` discards it for the cloud copy; it is moved aside the same way, never deleted.
+
+Leftover sidecars with no database (the fourth row) are moved aside by the same mechanism. If the download fails at any point, the files that were moved aside are put back exactly as they were.
 
 ## Why the first push is a separate command
 
