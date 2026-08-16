@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config import settings
 from repos.db import connect
@@ -46,7 +46,7 @@ class UserProfileNotesTable:
 
     def create_user_profile_note(self, note: str) -> UserProfileNoteRow:
         note_id = str(uuid.uuid4())
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         created_at_str = created_at.isoformat()
 
         with connect(self._db_path) as conn:

@@ -201,7 +201,7 @@ class UserProfileService:
         return UserProfileNote(
             id=row.id,
             note=row.note,
-            created_at=row.created_at
+            created_at=row.created_at.isoformat()
         )
 
     async def get_user_profile_notes(self) -> list[UserProfileNote]:
@@ -210,7 +210,7 @@ class UserProfileService:
             UserProfileNote(
                 id=row.id,
                 note=row.note,
-                created_at=row.created_at
+                created_at=row.created_at.isoformat()
             )
             for row in rows
         ]
