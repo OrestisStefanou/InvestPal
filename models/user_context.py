@@ -1,4 +1,3 @@
-from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -23,4 +22,4 @@ class UserConversationNoteSearchResult(UserConversationNote):
 class UserProfileNote(BaseModel):
     id: str = Field(description="The unique identifier for the user profile note")
     note: str = Field(description="The content of the note")
-    created_at: datetime = Field(description="The datetime when the note was created")
+    created_at: str = Field(description="The ISO timestamp when the note was created")
