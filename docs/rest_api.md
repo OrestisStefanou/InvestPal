@@ -32,16 +32,12 @@ The InvestPal REST API is the primary integration point for client applications.
 
 ## Authentication & Headers
 
-Most endpoints require no authentication headers. The following **optional** headers are forwarded to the relevant brokerage integrations when provided:
+No endpoint requires authentication headers.
 
-| Header | Required for |
-|---|---|
-| `X-Alpaca-Api-Key` | Alpaca-related tools (portfolio data, trading) |
-| `X-Alpaca-Api-Secret` | Alpaca-related tools |
-| `X-Coinbase-Api-Key` | Coinbase-related tools |
-| `X-Coinbase-Api-Secret` | Coinbase-related tools — **must be the base64-encoded version of the raw secret key** |
-
-These headers are only needed on the `POST /chat` endpoint when the user's query requires accessing brokerage data.
+Brokerage credentials are not passed per request. Each broker MCP server reads its own
+credentials from its process environment, so a request that ends up touching Alpaca or
+Coinbase carries nothing extra. See the setup guide for the Alpaca and Coinbase MCP
+servers.
 
 ---
 
@@ -173,15 +169,6 @@ Returns an empty array `[]` if there are no sessions.
 `POST /chat`
 
 Send a user message to the AI investment advisor and receive a response. The message is appended to the session's history, and the agent's reply is returned synchronously.
-
-**Optional Headers** — include only when the user's query requires brokerage access:
-
-```
-X-Alpaca-Api-Key: <alpaca-key-id>
-X-Alpaca-Api-Secret: <alpaca-secret-key>
-X-Coinbase-Api-Key: <coinbase-key>
-X-Coinbase-Api-Secret: <base64-encoded-coinbase-secret>
-```
 
 **Request Body**
 

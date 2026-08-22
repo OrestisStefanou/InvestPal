@@ -1,7 +1,4 @@
-from fastapi import (
-    Depends,
-    Header,
-)
+from fastapi import Depends
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from config import settings
@@ -58,12 +55,11 @@ from repos.workflow_results import WorkflowResultsTable
 from services.agent_workflows.runner import WorkflowRunner
 from services.agents.agent import WorkflowExecutionAgent
 
-def get_mcp_client(
-    alpaca_api_key: str | None = Header(None, alias="X-Alpaca-Api-Key"),
-    alpaca_api_secret: str | None = Header(None, alias="X-Alpaca-Api-Secret"),
-    coinbase_api_key: str | None = Header(None, alias="X-Coinbase-Api-Key"),
-    coinbase_api_secret: str | None = Header(None, alias="X-Coinbase-Api-Secret"),  # base64 encoded
-):
+def get_mcp_client():
+    # Brokerage credentials are configured on the broker MCP servers themselves,
+    # so nothing here is request-scoped. That is also why the cron-driven
+    # /workflows/check-and-run endpoint can reach the broker tools at all: it
+    # carries no headers to forward.
     connections = {
         settings.MARKET_DATA_MCP_SERVER_NAME: {
             "transport": "streamable_http",
@@ -75,20 +71,12 @@ def get_mcp_client(
         connections[settings.ALPACA_MCP_SERVER_NAME] = {
             "transport": "streamable_http",
             "url": settings.ALPACA_MCP_SERVER_URL,
-            "headers": {
-                "X-Alpaca-Api-Key": alpaca_api_key or "",
-                "X-Alpaca-Api-Secret": alpaca_api_secret or "",
-            }
         }
     
     if settings.COINBASE_MCP_SERVER_URL:
         connections[settings.COINBASE_MCP_SERVER_NAME] = {
             "transport": "streamable_http",
             "url": settings.COINBASE_MCP_SERVER_URL,
-            "headers": {
-                "X-Coinbase-Api-Key": coinbase_api_key or "",
-                "X-Coinbase-Api-Secret": coinbase_api_secret or "",
-            }
         }
 
     mcp_server_client = MultiServerMCPClient(connections)
