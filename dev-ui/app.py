@@ -1,13 +1,7 @@
-import base64
-import os
 import streamlit as st
 import requests
 import uuid
 import time
-from dotenv import load_dotenv
-
-env_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(env_path)
 
 # How to run this
 # 1. Activate the virtual environment
@@ -15,14 +9,6 @@ load_dotenv(env_path)
 
 # ── Config ──────────────────────────────────────────────────────────────────
 BASE_URL = "http://localhost:8000"
-
-alpaca_api_key = os.getenv("ALPACA_MCP_SERVER_API_KEY", "")
-alpaca_api_secret = os.getenv("ALPACA_MCP_SERVER_API_SECRET", "")
-coinbase_api_key = os.getenv("COINBASE_MCP_SERVER_API_KEY", "")
-coinbase_api_secret = os.getenv("COINBASE_MCP_SERVER_API_SECRET", "")
-encoded_coinbase_secret = base64.b64encode(
-    coinbase_api_secret.encode()
-).decode()
 
 st.set_page_config(
     page_title="InvestPal · Dev Console",
@@ -246,12 +232,6 @@ def send_message(session_id: str, message: str) -> str | None:
             f"{BASE_URL}/chat",
             json={"session_id": session_id, "message": message},
             timeout=600,
-            headers={
-                "X-Alpaca-Api-Key": alpaca_api_key,
-                "X-Alpaca-Api-Secret": alpaca_api_secret,
-                "X-Coinbase-Api-Key": coinbase_api_key,
-                "X-Coinbase-Api-Secret": encoded_coinbase_secret,
-            }
         )
         if r.status_code == 200:
             return r.json().get("response", "")
