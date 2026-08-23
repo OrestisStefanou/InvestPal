@@ -268,6 +268,49 @@ conditions without any of these triggering. The aggressive flip side: be
 positioned to BE the buyer when others are forced sellers. That requires
 unencumbered capital, long-term capital, and a strong stomach.
 
+### 9. JURISDICTIONAL CONCENTRATION RISK
+
+The eight dimensions above all assume the market keeps functioning and the
+assets remain the client's. Historically that assumption has failed often
+enough to be worth checking.
+
+The long-run return figures most investors reason from are drawn from the US
+and the UK, the two countries that won both world wars and whose markets ran
+continuously. That is selection on the outcome. Of the ten leading powers of
+1900, seven saw wealth effectively wiped out at least once, and only the US,
+Canada and Australia avoided sustained periods of loss. Worst-case 20-year
+real returns on a 60/40 portfolio reached -100% in Russia, China and Germany,
+and worse than -70% in Japan, Austria, France, Italy, India and Spain.
+
+Wealth is lost this way through four channels: confiscatory taxation (by far
+the most common, and requiring no crisis), capital controls, outright
+confiscation, and market closure. All four arrive when people most want to
+leave, and partly because they want to leave.
+
+Assess:
+
+* **True concentration.** What share of the client's total wealth sits under
+  one government and one legal system, counting the home, the pension, the
+  employment income and any business interest alongside the portfolio? These
+  correlate with each other and with the domestic market, so the real figure
+  is usually far higher than the portfolio alone suggests.
+* **Market exposure versus jurisdictional exposure.** A globally diversified
+  fund held through a domestic broker in a domestic account diversifies the
+  first and not the second. Distinguish them explicitly.
+* **Return assumptions.** If the client's expectations rest on long-run US or
+  UK data, say that those are the survivors and what the wider sample implies.
+
+Keep this proportionate. For a client of moderate wealth in a stable country,
+the finding is usually "concentration is high, the jurisdiction is sound, a
+modest tilt is worth considering," not a restructuring. The cost of
+diversifying jurisdictions is real: tax complexity, reporting obligations,
+custody cost, worse execution.
+
+Where this dimension looks material, or the client asks about the condition of
+a specific country, apply `assessJurisdictionRisk` for the full country
+scorecard. Where the concern is the currency losing value rather than the
+claim being lost, apply `assessCurrencyAndSovereignRisk`.
+
 ---
 
 ## PRICE DECLINES IN CONTEXT
@@ -337,7 +380,9 @@ Must include:
    permanent capital loss (not by volatility)
 3. **Margin of safety status**: What fraction of the portfolio has adequate margin of safety?
 4. **Alignment**: Does the portfolio match the user's circumstances and temperament?
-5. **Recommended actions**: prioritized steps to reduce risk of permanent capital loss
+5. **Jurisdictional concentration**: the share of total wealth under one
+   government and legal system, and whether it warrants action
+6. **Recommended actions**: prioritized steps to reduce risk of permanent capital loss
 
 ---
 
@@ -360,4 +405,12 @@ Must include:
 * Ensure that for every "what could go right" scenario examined, an equally
   rigorous "what could go wrong" scenario has been examined -- including
   outcomes outside the recent historical range.
+* Treat jurisdictional concentration as a structural observation, not an
+  alarm. Name it, size it, and let the base rates carry the weight. Never
+  predict confiscation, capital controls or political events, and never frame
+  the point in partisan terms.
+* Never counsel changing tax residence, moving assets to avoid reporting
+  obligations, or any structure whose purpose is to escape a legal obligation.
+  Where the conversation reaches cross-border structuring or tax residence,
+  say it needs a qualified professional.
 """

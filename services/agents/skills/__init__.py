@@ -18,6 +18,12 @@ from services.agents.skills.apply_second_level_thinking import (
     apply_second_level_thinking_skill,
 )
 from services.agents.skills.assess_competitive_moat import assess_competitive_moat_skill
+from services.agents.skills.assess_currency_and_sovereign_risk import (
+    assess_currency_and_sovereign_risk_skill,
+)
+from services.agents.skills.assess_jurisdiction_risk import (
+    assess_jurisdiction_risk_skill,
+)
 from services.agents.skills.assess_market_sentiment import assess_market_sentiment_skill
 from services.agents.skills.calculate_intrinsic_value import (
     calculate_intrinsic_value_skill,
@@ -28,6 +34,9 @@ from services.agents.skills.evaluate_investment_theme import (
 )
 from services.agents.skills.evaluate_margin_of_safety import (
     evaluate_margin_of_safety_skill,
+)
+from services.agents.skills.locate_debt_cycle_stage import (
+    locate_debt_cycle_stage_skill,
 )
 
 
@@ -42,11 +51,14 @@ class SkillName(enum.Enum):
     ANALYZE_STOCK_VALUATION = "analyze_stock_valuation"
     APPLY_SECOND_LEVEL_THINKING = "apply_second_level_thinking"
     ASSESS_COMPETITIVE_MOAT = "assess_competitive_moat"
+    ASSESS_CURRENCY_AND_SOVEREIGN_RISK = "assess_currency_and_sovereign_risk"
+    ASSESS_JURISDICTION_RISK = "assess_jurisdiction_risk"
     ASSESS_MARKET_SENTIMENT = "assess_market_sentiment"
     CALCULATE_INTRINSIC_VALUE = "calculate_intrinsic_value"
     COMPARE_SECTOR_PEERS = "compare_sector_peers"
     EVALUATE_INVESTMENT_THEME = "evaluate_investment_theme"
     EVALUATE_MARGIN_OF_SAFETY = "evaluate_margin_of_safety"
+    LOCATE_DEBT_CYCLE_STAGE = "locate_debt_cycle_stage"
 
 
 # Description should be short, it should contain what the skill is and when to use
@@ -88,10 +100,11 @@ skill_descriptions: dict[SkillName, str] = {
         "management's tone or priorities have changed."
     ),
     SkillName.ANALYZE_PORTFOLIO_RISK: (
-        "Evaluates a portfolio's aggregate risk of permanent capital loss across eight dimensions: "
+        "Evaluates a portfolio's aggregate risk of permanent capital loss across nine dimensions: "
         "margin of safety, business quality, leverage, concentration, liquidity, income risk, hidden "
-        "correlations, and forced-selling exposure. Use when the user asks about their overall portfolio "
-        "risk, whether they are properly diversified, or how the portfolio would survive a downturn."
+        "correlations, forced-selling exposure, and jurisdictional concentration. Use when the user "
+        "asks about their overall portfolio risk, whether they are properly diversified, or how the "
+        "portfolio would survive a downturn."
     ),
     SkillName.ANALYZE_STOCK_VALUATION: (
         "Triangulates asset reproduction value, EPV, multiples, PEG, FCF yield, and (cautiously) DCF "
@@ -111,11 +124,31 @@ skill_descriptions: dict[SkillName, str] = {
         "rate. Use when the user asks about a company's competitive advantages, moat strength, or "
         "whether its growth will create or destroy value."
     ),
+    SkillName.ASSESS_CURRENCY_AND_SOVEREIGN_RISK: (
+        "Assesses the risk that a currency the client is exposed to depreciates sharply, and what that "
+        "would do to their portfolio: a six-criterion vulnerability screen, the five stages of a "
+        "currency crisis (including why currency defenses fail and what a devaluation does to assets), "
+        "and the markers that separate a transitory inflationary depression from a hyperinflation "
+        "spiral. Use when the user holds assets denominated in a currency other than the one they "
+        "spend in, asks about currency or emerging-market risk, inflation hedging or gold, or when a "
+        "country's debt is largely denominated in a foreign currency."
+    ),
+    SkillName.ASSESS_JURISDICTION_RISK: (
+        "Assesses how much of a client's wealth sits under a single government and legal system, and "
+        "what condition that country is in over a decade-long horizon, using a three-layer country "
+        "scorecard, the six-stage internal order cycle, and the historical base rates for severe "
+        "internal conflict. Corrects long-run return expectations for the survivorship bias in US and "
+        "UK data. Use when the client's assets are concentrated in one country, when they ask about "
+        "home-country bias or geographic diversification, when they cite long-run historical returns, "
+        "or when they ask whether a country is a safe place to hold wealth."
+    ),
     SkillName.ASSESS_MARKET_SENTIMENT: (
         "Diagnoses broad market-wide temperature by tracking the economic cycle, credit cycle, investor "
-        "psychology pendulum, and bull/bear market stages using a 22-item heated-vs-cold checklist. "
-        "Use when the user asks about overall market conditions, whether it's a good time to invest, or "
-        "how to position between defensive and aggressive stances."
+        "psychology pendulum, and bull/bear market stages using a 22-item heated-vs-cold checklist, plus "
+        "a seven-characteristic measurable bubble test for individual stretched markets. "
+        "Use when the user asks about overall market conditions, whether it's a good time to invest, "
+        "whether a specific market is in a bubble, or how to position between defensive and aggressive "
+        "stances."
     ),
     SkillName.CALCULATE_INTRINSIC_VALUE: (
         "Performs deep Graham & Dodd valuation: calculates net asset reproduction/liquidation value, "
@@ -141,6 +174,14 @@ skill_descriptions: dict[SkillName, str] = {
         "trade idea is safe enough, wants to stress-test a position, or needs to validate entry price "
         "discipline."
     ),
+    SkillName.LOCATE_DEBT_CYCLE_STAGE: (
+        "Locates an economy in the seven stages of the long-term debt cycle against historical "
+        "archetype magnitudes, reads which policy levers are being pulled and whether the response "
+        "looks well or poorly managed, and converts both into a portfolio posture. Distinguishes a "
+        "recession from a depression by whether the interest-rate lever still works. Use when the user "
+        "asks about debt levels, a credit crunch, deleveraging, central bank policy and money printing, "
+        "or where the wider economy stands rather than how one company is affected."
+    ),
 }
 
 
@@ -155,9 +196,12 @@ skills: dict[SkillName, str] = {
     SkillName.ANALYZE_STOCK_VALUATION: analyze_stock_valuation_skill,
     SkillName.APPLY_SECOND_LEVEL_THINKING: apply_second_level_thinking_skill,
     SkillName.ASSESS_COMPETITIVE_MOAT: assess_competitive_moat_skill,
+    SkillName.ASSESS_CURRENCY_AND_SOVEREIGN_RISK: assess_currency_and_sovereign_risk_skill,
+    SkillName.ASSESS_JURISDICTION_RISK: assess_jurisdiction_risk_skill,
     SkillName.ASSESS_MARKET_SENTIMENT: assess_market_sentiment_skill,
     SkillName.CALCULATE_INTRINSIC_VALUE: calculate_intrinsic_value_skill,
     SkillName.COMPARE_SECTOR_PEERS: compare_sector_peers_skill,
     SkillName.EVALUATE_INVESTMENT_THEME: evaluate_investment_theme_skill,
     SkillName.EVALUATE_MARGIN_OF_SAFETY: evaluate_margin_of_safety_skill,
+    SkillName.LOCATE_DEBT_CYCLE_STAGE: locate_debt_cycle_stage_skill,
 }
