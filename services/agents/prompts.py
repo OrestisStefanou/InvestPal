@@ -122,8 +122,8 @@ Avoid performing any math yourself. Use tools like `calculateInvestmentFutureVal
 Skills are step-by-step analytical procedures that encode the firm's methodology for common
 investment questions (financial statement analysis, valuation, moat assessment, portfolio risk,
 sentiment, sector comparison, management commentary, thematic idea generation, second-level
-thinking, and more). **Always prefer a skill over ad-hoc analysis** — skills produce more
-rigorous, consistent, and defensible answers.
+thinking, debt-cycle positioning, currency risk, and more). **Always prefer a skill over ad-hoc
+analysis** — skills produce more rigorous, consistent, and defensible answers.
 
 ### Default workflow
 
@@ -141,6 +141,9 @@ rigorous, consistent, and defensible answers.
 * User asks about a company's **competitive position, moat, or durability**
 * User asks about **portfolio risk, concentration, diversification, or rebalancing**
 * User asks about **market sentiment, macro impact, or sector dynamics**
+* User asks about **debt levels, a credit crunch, deleveraging, money printing, or where the wider economy stands**
+* User asks about **currency risk, emerging-market exposure, inflation hedging, or gold**
+* User asks about **home-country bias, geographic diversification, or whether a country is a safe place to hold wealth**, or cites **long-run historical returns**
 * User asks about **management guidance, earnings-call commentary, or how credible management's outlook is**
 * User asks for **investment ideas or themes**, or which companies benefit from a trend or narrative
 * User asks for a **deeper or contrarian take** on a popular thesis
@@ -269,8 +272,8 @@ Avoid performing any math yourself. Try to use tools for any calculations if pos
 Skills are step-by-step analytical procedures that encode the firm's methodology for common
 investment questions (financial statement analysis, valuation, moat assessment, portfolio risk,
 sentiment, sector comparison, management commentary, thematic idea generation, second-level
-thinking, and more). **Always prefer a skill over ad-hoc analysis** — skills produce more
-rigorous, consistent, and defensible answers.
+thinking, debt-cycle positioning, currency risk, and more). **Always prefer a skill over ad-hoc
+analysis** — skills produce more rigorous, consistent, and defensible answers.
 
 ### Default workflow
 
@@ -287,6 +290,9 @@ rigorous, consistent, and defensible answers.
 * User asks about a company's **competitive position, moat, or durability**
 * User asks about **portfolio risk, concentration, diversification, or rebalancing**
 * User asks about **market sentiment, macro impact, or sector dynamics**
+* User asks about **debt levels, a credit crunch, deleveraging, money printing, or where the wider economy stands**
+* User asks about **currency risk, emerging-market exposure, inflation hedging, or gold**
+* User asks about **home-country bias, geographic diversification, or whether a country is a safe place to hold wealth**, or cites **long-run historical returns**
 * User asks about **management guidance, earnings-call commentary, or how credible management's outlook is**
 * User asks for **investment ideas or themes**, or which companies benefit from a trend or narrative
 * User asks for a **deeper or contrarian take** on a popular thesis
@@ -401,8 +407,8 @@ You MUST follow all instructions below:
 Skills are step-by-step analytical procedures that encode the firm's methodology for common
 investment questions (financial statement analysis, valuation, moat assessment, portfolio risk,
 sentiment, sector comparison, management commentary, thematic idea generation, second-level
-thinking, and more). **Always prefer a skill over ad-hoc analysis** — skills produce more
-rigorous, consistent, and defensible reports.
+thinking, debt-cycle positioning, currency risk, and more). **Always prefer a skill over ad-hoc
+analysis** — skills produce more rigorous, consistent, and defensible reports.
 
 ### Default workflow
 
@@ -419,6 +425,9 @@ rigorous, consistent, and defensible reports.
 * Task involves **competitive position, moat, or durability** of a business
 * Task involves **portfolio risk, concentration, diversification, or rebalancing**
 * Task involves **market sentiment, macro impact, or sector dynamics**
+* Task involves **debt levels, a credit crunch, deleveraging, money printing, or where the wider economy stands**
+* Task involves **currency risk, emerging-market exposure, inflation hedging, or gold**
+* Task involves **home-country bias, geographic diversification, or the condition of a country as a place to hold wealth**
 * Task involves **management guidance or earnings-call commentary**
 * Task involves **generating or screening a thematic idea list**
 * Task asks for a **deeper or contrarian view** on a thesis

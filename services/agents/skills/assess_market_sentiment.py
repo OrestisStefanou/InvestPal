@@ -147,6 +147,62 @@ Do not treat this as precise -- it is a temperature reading, not a thermostat.
 
 ---
 
+## THE BUBBLE TEST
+
+The temperature checklist above reads the mood of the market as a whole. This
+test is narrower and harder: it asks whether a *specific* market is in a
+bubble, using characteristics that can be measured rather than felt.
+
+Run it per market, not on "the market." Bubbles form in particular
+places -- a housing market, a credit segment, one sector, one asset class --
+while the rest of the economy looks unremarkable. Averages hide them.
+
+For each market under examination:
+
+1. **Are prices high relative to traditional measures?**
+2. **Are prices discounting further rapid appreciation from already high
+   levels?**
+3. **Is there broad bullish sentiment?**
+4. **Are purchases being financed by high leverage?**
+5. **Have buyers made unusually extended forward commitments** -- built
+   inventory, contracted future supply, pre-committed capital -- to speculate
+   or to protect against expected further price rises?
+6. **Have new participants entered**, buyers who were not previously in this
+   market?
+7. **Would stimulative policy inflate it further, and would tightening prick
+   it?**
+
+Most or all of these were present in each of the major historical bubbles.
+The count matters more than any single item: one or two is a strong market,
+most of them together is a bubble.
+
+### Two disciplines that make the difference
+
+**Do not rely on any single metric.** Aggregate debt-to-income, or even
+aggregate debt-service-to-income, is useful but insufficient. A given level of
+debt is far less dangerous when it is evenly distributed than when it is
+concentrated in a handful of entities. The averages conceal precisely the
+concentrations that break first. Where a market looks stretched, look at the
+individual large participants and their ability to service what they owe.
+
+**Map what is connected.** Identifying the bubble is only half the work. The
+question that determines the damage is: who holds claims against this market,
+who lent into it, which sectors depend on it, and what would happen to them
+when it corrects? Losses cascade through leveraged holders, so the second-order
+exposure is often larger than the first. A client's portfolio can be fully
+exposed to a bubble it holds nothing in.
+
+One further marker, worth watching on its own because it usually appears
+before anything else breaks: **an increasing share of borrowing going to
+service existing debt** rather than to fund new activity. That is
+arithmetically unsustainable wherever it appears.
+
+For the systemic version of this analysis -- where the whole economy sits in
+the long-term debt cycle and how policy makers are likely to respond -- use
+`locateDebtCycleStage`.
+
+---
+
 ## SUPPORTING EVIDENCE TO REVIEW
 
 Where possible, observe quantifiable indicators rather than relying on
@@ -241,10 +297,13 @@ truth into a permanent state of affairs.
 2. **Pendulum reading**: which side of the midpoint, and how far from it?
 3. **Stage assessment**: which of the three bull/bear stages?
 4. **Temperature score**: % of indicators in the heated column.
-5. **Key narratives in play**: silver bullets, "this time different" stories,
+5. **Bubble test**: for any market that looks stretched, how many of the seven
+   characteristics are present, and what is connected to it that would be
+   damaged if it corrected.
+6. **Key narratives in play**: silver bullets, "this time different" stories,
    capitulation memes -- name them.
-6. **Posture recommendation**: defensive / neutral / aggressive, with magnitude.
-7. **Specific actions**: e.g., trim aggressive growth names, raise cash, add
+7. **Posture recommendation**: defensive / neutral / aggressive, with magnitude.
+8. **Specific actions**: e.g., trim aggressive growth names, raise cash, add
    to high-quality value, etc.
 
 ---
@@ -281,4 +340,9 @@ Must include:
   late cycles. Flag it explicitly.
 * The market is not an accommodating machine -- it does not provide high
   returns just because someone needs them.
+* Run the bubble test on named markets, never on "the market" in general. A
+  bubble diagnosis with no specific market attached is a mood, not a finding.
+* Calling a bubble is a high bar. Expensive is not a bubble, and most
+  stretched markets never become one. Report the count of characteristics
+  present and let it speak, rather than reaching for the label.
 """
