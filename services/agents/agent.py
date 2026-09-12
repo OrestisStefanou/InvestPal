@@ -36,6 +36,7 @@ from services.agents.tools import (
     UserProfileToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
     add,
+    calculate_investment_future_value,
     create_agent_reminder,
     create_agent_workflow,
     create_user_conversation_note,
@@ -250,6 +251,7 @@ class InvestmentManagerAgent(Agent):
             subtract,
             multiply,
             divide,
+            calculate_investment_future_value,
         ]
         if settings.MARKET_DATA_MCP_SERVER_URL:
             market_data_tools = await mcp_client.get_tools(
@@ -395,6 +397,7 @@ class WorkflowExecutionAgent(Agent):
             subtract,
             multiply,
             divide,
+            calculate_investment_future_value,
         ]
         if settings.MARKET_DATA_MCP_SERVER_URL:
             market_data_tools = await mcp_client.get_tools(
