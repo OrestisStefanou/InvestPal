@@ -381,6 +381,27 @@ async def divide(a: float, b: float) -> float | str:
     return a / b
 
 
+class CalculateInvestmentFutureValueToolInput(BaseModel):
+    initial_investment: float = Field(description="Initial investment amount")
+    annual_return: float = Field(
+        description="Annual return percentage (10 means 10%)"
+    )
+    years: int = Field(description="Number of years")
+
+
+@tool(
+    "calculateInvestmentFutureValue",
+    args_schema=CalculateInvestmentFutureValueToolInput,
+    description="Calculate the future value of an investment compounded annually.",
+)
+async def calculate_investment_future_value(
+    initial_investment: float,
+    annual_return: float,
+    years: int,
+) -> float:
+    return initial_investment * (1 + annual_return / 100) ** years
+
+
 class CreateAgentWorkflowToolInput(BaseModel):
     name: str = Field(description="A short human-readable name for the workflow")
     description: str = Field(

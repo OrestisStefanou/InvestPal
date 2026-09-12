@@ -31,7 +31,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
 
 - Python 3.13+
 - API key for your chosen LLM provider (OpenAI, Google, or Anthropic)
-- A running [MarketDataMcpServer](https://github.com/OrestisStefanou/MarketDataMcpServer) instance
+- A running market data MCP server (the ecosystem runs an [OpenBB MCP server](https://github.com/OpenBB-finance/OpenBB) instance for this)
 
 ## Installation
 
@@ -68,7 +68,7 @@ InvestPal is an AI-powered investment advisor service. It exposes a REST API for
    USER_CONTEXT_MEMORY_MANAGER_LLM_MODEL=claude-haiku-4-5
 
    # MCP servers
-   MARKET_DATA_MCP_SERVER_URL=http://localhost:8100
+   MARKET_DATA_MCP_SERVER_URL=http://localhost:8082/mcp
    # ALPACA_MCP_SERVER_URL=http://localhost:8101   # optional
    # COINBASE_MCP_SERVER_URL=http://localhost:8102  # optional
 

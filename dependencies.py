@@ -1,4 +1,8 @@
+import asyncio
+from functools import lru_cache
+
 from fastapi import Depends
+from langchain.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from config import settings
@@ -55,11 +59,58 @@ from repos.workflow_results import WorkflowResultsTable
 from services.agent_workflows.runner import WorkflowRunner
 from services.agents.agent import WorkflowExecutionAgent
 
-def get_mcp_client():
+class CachingMultiServerMCPClient(MultiServerMCPClient):
+    """A client that resolves each server's tool list once per process.
+
+    `get_tools` is a full connect + `tools/list` round trip and it runs on every
+    agent construction, which means on every request. The market data server
+    alone now advertises ~153 tools, so paying for that per request is the
+    single largest avoidable cost in the request path.
+
+    Caching the result is safe because the returned tools are stateless:
+    langchain_mcp_adapters opens a fresh session per tool call, so nothing
+    request-scoped is captured in the tool objects and one resolved list can be
+    shared by every agent in the process. Only successful lookups are cached, so
+    a server that is down at startup is retried rather than remembered as empty.
+
+    Restart the process to pick up a changed tool surface on a server.
+    """
+
+    def __init__(self, connections):
+        super().__init__(connections)
+        self._tools_cache: dict[str | None, list[BaseTool]] = {}
+        self._tools_locks: dict[str | None, asyncio.Lock] = {}
+
+    async def get_tools(self, *, server_name: str | None = None) -> list[BaseTool]:
+        cached = self._tools_cache.get(server_name)
+        if cached is not None:
+            return list(cached)
+
+        # Creating the lock is synchronous, so on a single event loop the
+        # lookup and the setdefault below cannot interleave with another
+        # coroutine. The lock then collapses concurrent cold-cache requests into
+        # one round trip instead of one per request.
+        lock = self._tools_locks.setdefault(server_name, asyncio.Lock())
+        async with lock:
+            cached = self._tools_cache.get(server_name)
+            if cached is None:
+                cached = await super().get_tools(server_name=server_name)
+                self._tools_cache[server_name] = cached
+            # A copy: callers own their list and some of them extend it.
+            return list(cached)
+
+
+@lru_cache(maxsize=1)
+def get_mcp_client() -> MultiServerMCPClient:
     # Brokerage credentials are configured on the broker MCP servers themselves,
     # so nothing here is request-scoped. That is also why the cron-driven
     # /workflows/check-and-run endpoint can reach the broker tools at all: it
     # carries no headers to forward.
+    #
+    # Cached for the life of the process: FastAPI caches a dependency only
+    # within a single request, and the connection set is built purely from
+    # settings, so a new client per request bought nothing and threw away the
+    # resolved tool lists every time.
     connections = {
         settings.MARKET_DATA_MCP_SERVER_NAME: {
             "transport": "streamable_http",
@@ -79,9 +130,7 @@ def get_mcp_client():
             "url": settings.COINBASE_MCP_SERVER_URL,
         }
 
-    mcp_server_client = MultiServerMCPClient(connections)
-
-    return mcp_server_client
+    return CachingMultiServerMCPClient(connections)
 
 
 def get_session_service() -> SessionService:

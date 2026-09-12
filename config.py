@@ -29,16 +29,15 @@ class Settings(BaseSettings):
 
     # APP
     CONVERSATION_MESSAGES_LIMIT: int = 15
+    # Tools whose output is large enough to be worth pacing (see
+    # services/agents/middleware.py). Only InvestPal's own tools are named here.
+    # The market data server's tool names belong to whichever provider is
+    # configured, so they are supplied through the environment rather than
+    # hardcoded, and a provider swap stays a config change.
     TOKEN_INTENSIVE_TOOLS: list[str] = [
         "getSkill",
-        "getMarketNews",
-        "getStockFinancials",
-        "getInsiderTransactions",
-        "getCompanyKpiMetrics",
         "getUserConversationNotes",
         "getWorkflowResults",
-        "getCryptocurrencyNews",
-        "getCryptocurrencyDataById",
     ]
     
     INVESTMENT_MANAGER_LLM_PROVIDER: LLMProvider = LLMProvider.ANTHROPIC

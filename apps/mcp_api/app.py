@@ -530,6 +530,18 @@ async def divide(
     return a / b
 
 
+@mcp_app.tool(
+    name="calculateInvestmentFutureValue",
+    description="Calculate the future value of an investment compounded annually.",
+)
+async def calculate_investment_future_value(
+    initial_investment: Annotated[float, "The amount invested up front"],
+    annual_return: Annotated[float, "Expected annual return as a percentage, so 10 means 10%"],
+    years: Annotated[int, "Number of years to compound over"],
+) -> float:
+    return initial_investment * (1 + annual_return / 100) ** years
+
+
 @mcp_app.prompt
 def get_invstment_advisor_prompt() -> str:
     return INVESTMENT_ADVISOR_PROMPT
