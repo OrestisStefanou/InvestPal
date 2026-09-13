@@ -32,22 +32,28 @@ from services.agents.prompts import (
 from services.agents.tools import (
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
+    HoldingsToolsRuntimeContext,
+    TickerRecordsToolsRuntimeContext,
     UserConversationNotesToolsRuntimeContext,
     UserProfileToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
     add,
+    close_holding,
     create_agent_reminder,
     create_agent_workflow,
     create_user_conversation_note,
     create_user_profile_note,
     delete_agent_reminder,
     delete_agent_workflow,
+    delete_ticker_record,
     divide,
     get_agent_reminders,
     get_agent_workflows,
     get_current_datetime,
+    get_holdings,
     get_skill,
     get_skill_definitions,
+    get_ticker_records,
     get_user_conversation_notes,
     get_user_profile_notes,
     get_workflow_results,
@@ -57,6 +63,8 @@ from services.agents.tools import (
     subtract,
     update_agent_reminder,
     update_agent_workflow,
+    upsert_holding,
+    upsert_ticker_record,
 )
 
 # TODO: Create Agent ABC clas
@@ -177,6 +185,8 @@ class InvestmentManagerRuntimeContext(
     AgentReminderToolsRuntimeContext,
     AgentWorkflowToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
+    HoldingsToolsRuntimeContext,
+    TickerRecordsToolsRuntimeContext,
 ):
     pass
 
@@ -235,6 +245,12 @@ class InvestmentManagerAgent(Agent):
             get_current_datetime,
             get_user_conversation_notes,
             search_user_conversation_notes,
+            get_holdings,
+            upsert_holding,
+            close_holding,
+            get_ticker_records,
+            upsert_ticker_record,
+            delete_ticker_record,
             create_agent_reminder,
             get_agent_reminders,
             update_agent_reminder,
@@ -284,6 +300,8 @@ class UserContextMemoryManagerAgentResponse(BaseModel):
 class UserContextManagerRuntimeContext(
     UserProfileToolsRuntimeContext,
     UserConversationNotesToolsRuntimeContext,
+    HoldingsToolsRuntimeContext,
+    TickerRecordsToolsRuntimeContext,
 ):
     pass
 
@@ -305,6 +323,11 @@ class UserContextMemoryManagerAgent(Agent):
             get_user_conversation_notes,
             search_user_conversation_notes,
             create_user_conversation_note,
+            get_holdings,
+            upsert_holding,
+            close_holding,
+            get_ticker_records,
+            upsert_ticker_record,
         ]
         super().__init__(
             tools=tools,
@@ -340,6 +363,8 @@ class WorkflowExecutionPromptVars(TypedDict):
 class WorkflowExecutionAgentRuntimeContext(
     UserConversationNotesToolsRuntimeContext,
     WorkflowResultsToolRuntimeContext,
+    HoldingsToolsRuntimeContext,
+    TickerRecordsToolsRuntimeContext,
 ):
     pass
 
@@ -388,6 +413,8 @@ class WorkflowExecutionAgent(Agent):
             get_current_datetime,
             get_user_conversation_notes,
             search_user_conversation_notes,
+            get_holdings,
+            get_ticker_records,
             get_workflow_results,
             get_skill_definitions,
             get_skill,

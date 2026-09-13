@@ -12,11 +12,13 @@ For the standard HTTP REST API, see [rest_api.md](rest_api.md).
 
 The InvestPal MCP server is built with [FastMCP](https://github.com/jlowin/fastmcp) and exposes tools over the **Streamable HTTP** transport. Any MCP-compatible client can connect to it and call the tools described below.
 
-The server exposes two categories of tools and one prompt:
+The server exposes these categories of tools and one prompt:
 
 | Category | Tools |
 |---|---|
 | **User Profile** | `getUserProfileNotes`, `createUserProfileNote`, `markUserProfileNoteAsOutdated` |
+| **Holdings** | `getHoldings`, `upsertHolding`, `closeHolding` |
+| **Ticker Records** | `getTickerRecords`, `upsertTickerRecord`, `deleteTickerRecord` |
 | **Conversation Memory** | `getUserConversationNotes`, `searchUserConversationNotes`, `createUserConversationNote` |
 | **Reminders** | `createAgentReminder`, `getAgentReminders`, `updateAgentReminder`, `deleteAgentReminder` |
 | **Agent Workflows** | `createAgentWorkflow`, `getAgentWorkflows`, `updateAgentWorkflow`, `deleteAgentWorkflow`, `getWorkflowResults`, `storeWorkflowResult` |
@@ -216,13 +218,21 @@ result = await client.call_tool(
 
 ### `createUserProfileNote`
 
-Store a permanent fact about the user. This adds a note; it never replaces the existing ones.
+Store one durable fact about the client. This adds a note; it never replaces the existing ones.
+
+The test the agent is given: would this still be true, and still matter, in six months
+regardless of market prices? Age, risk tolerance, goals, horizon, knowledge level, profession,
+income, expenses, liquidity constraints and sector preferences pass. Holdings, share counts,
+prices, P&L, watchlist entries, entry triggers, research theses and session events do not:
+they belong in `upsertHolding`, `upsertTickerRecord` and `createUserConversationNote`
+respectively. The profile is injected into every session under a character budget, so content
+stored here that belongs elsewhere crowds out the facts that matter.
 
 **Parameters**
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `note` | string | yes | One self-contained fact, e.g. risk tolerance, horizon, goals or sector interests |
+| `note` | string | yes | One self-contained durable fact, e.g. risk tolerance, horizon, goals or sector interests |
 
 **Example call**
 
@@ -327,7 +337,10 @@ result = await client.call_tool(
 
 ### `createUserConversationNote`
 
-Store a conversation note. A date can hold any number of notes, so this adds a note rather than replacing what is already stored.
+Store what happened in a session. This is the home for anything dated: decisions taken and
+the reasoning behind them, analysis run and what it concluded, trades executed, advice given
+and follow-ups left open. A date can hold any number of notes, so this adds a note rather
+than replacing what is already stored.
 
 **Parameters**
 
@@ -360,6 +373,146 @@ await client.call_tool(
 ```
 
 **Returns**: The created [Conversation Note Object](#conversation-note-object). This operation is not idempotent — calling it twice with the same text stores two separate notes.
+
+---
+
+## Holdings Tools
+
+What the client owns, whatever the origin: broker positions, cash, fixed income and
+off-platform assets. Every row carries a `source` and an `as_of`.
+
+**The freshness contract.** A row whose `source` is a broker (`interactive_brokers`,
+`coinbase`, `alpaca`) is a *cache* of that broker's own record. When the broker's tools
+are reachable, call them and write the result back with `upsertHolding`; never prefer the
+stored row over a live broker. When they are not, the stored row is the best record there
+is, but every figure must be quoted with its `as_of` date rather than presented as current.
+Rows with `source = "manual"` came from the client and nothing can contradict them.
+
+Market prices, market values and P&L are never stored. Compute them from live quotes
+against the stored quantities.
+
+### `getHoldings`
+
+Return the client's positions.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `include_closed` | boolean | no | Include closed positions. Defaults to `false` |
+
+**Returns**: A list of Holding objects.
+
+---
+
+### `upsertHolding`
+
+Record or refresh one position. Identified by `name` plus `custodian`, so writing the same
+pair again updates that row rather than adding a second one. Only the fields passed are
+written, so refreshing a share count leaves the cost basis alone.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | What the position is: `"NVDA"`, `"Bank cash"`. Part of the identity |
+| `kind` | string \| null | on create | `cash`, `fixed_income`, `equity`, `etf`, `crypto`, `private_equity`, `other` |
+| `ticker` | string \| null | no | Exchange ticker, when it has one |
+| `quantity` | number \| null | no | Shares or units |
+| `cost_basis` | number \| null | no | Average cost per unit, in `currency` |
+| `amount` | number \| null | no | Total value, for holdings with no unit price. Not a market value |
+| `currency` | string \| null | no | ISO currency code |
+| `custodian` | string \| null | no | Who holds it. Part of the identity |
+| `source` | string \| null | on create | `manual`, `interactive_brokers`, `coinbase`, `alpaca` |
+| `as_of` | string \| null | on create | `YYYY-MM-DD`, the date the figures were true |
+| `detail` | string \| null | no | Rate, maturity, vesting, strike. Not theses or price targets |
+
+**Example call**
+
+```python
+await client.call_tool(
+    name="upsertHolding",
+    arguments={
+        "name": "ACME", "kind": "equity", "ticker": "ACME",
+        "quantity": 10, "cost_basis": 50.00, "currency": "USD",
+        "custodian": "Example Broker",
+        "source": "interactive_brokers", "as_of": "2026-01-15",
+    },
+)
+```
+
+**Returns**: The created or updated Holding object.
+
+---
+
+### `closeHolding`
+
+Mark a position closed once it is sold, matured or otherwise gone. It keeps its history and
+stops appearing in `getHoldings`.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `holding_id` | string | yes | The id of the holding to close |
+
+**Returns**: A confirmation string, or a message if no open holding has that id.
+
+---
+
+## Ticker Record Tools
+
+Why a name is interesting and what would make the agent act on it. This is the watchlist and
+the conviction record in one. Disjoint from holdings and linked by ticker: holdings answer
+*what and how much*, these answer *why, and at what price*.
+
+### `getTickerRecords`
+
+Return tracked names.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `status` | string \| null | no | Filter by `watching`, `held`, `exited` or `rejected`. Omit for all |
+
+**Returns**: A list of Ticker Record objects.
+
+---
+
+### `upsertTickerRecord`
+
+Record or update one name. Keyed by ticker and updated in place, so resetting an entry
+trigger edits the existing record rather than adding a second one. Only the fields passed
+are written.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `ticker` | string | yes | Exchange ticker, e.g. `LHX`, `ENR.DE`, `7011.T` |
+| `status` | string \| null | on create | `watching`, `held`, `exited`, `rejected` |
+| `thesis` | string \| null | no | Why the name is interesting |
+| `entry_trigger` | string \| null | no | The condition that would make it a buy, checkable against live data |
+| `falsifier` | string \| null | no | What would prove the thesis wrong |
+| `notes` | string \| null | no | Anything else durable the other fields do not hold |
+
+**Returns**: The created or updated Ticker Record object.
+
+---
+
+### `deleteTickerRecord`
+
+Permanently remove a record. Prefer setting `status` to `rejected` or `exited`: why a name
+was turned down is worth keeping. Use this only for a record created by mistake.
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `ticker` | string | yes | The ticker whose record should be deleted |
+
+**Returns**: A confirmation string, or a message if no record exists.
 
 ---
 

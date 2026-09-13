@@ -12,12 +12,16 @@ from pydantic import (
 
 from models.agent_reminder import AgentReminder
 from models.agent_workflow import AgentWorkflow, WorkflowResult, WorkflowStatus
+from models.holdings import Holding
+from models.ticker_records import TickerRecord
 from models.user_context import (
     UserConversationNote,
     UserConversationNoteSearchResult,
     UserProfileNote,
 )
 from services.agent_reminder import AgentReminderService
+from services.holdings import HoldingsService
+from services.ticker_records import TickerRecordsService
 from services.agent_workflows.results import WorkflowResultService
 from services.agent_workflows.workflow import AgentWorkflowService
 from services.agents.skills import (
@@ -56,6 +60,16 @@ class WorkflowResultsToolRuntimeContext:
     workflow_result_service: WorkflowResultService
 
 
+@dataclass
+class HoldingsToolsRuntimeContext:
+    holdings_service: HoldingsService
+
+
+@dataclass
+class TickerRecordsToolsRuntimeContext:
+    ticker_records_service: TickerRecordsService
+
+
 @tool("getUserProfileNotes")
 async def get_user_profile_notes(
     runtime: ToolRuntime[UserProfileToolsRuntimeContext],
@@ -68,9 +82,9 @@ async def get_user_profile_notes(
 class CreateUserProfileNoteToolInput(BaseModel):
     note: str = Field(
         description=(
-            "A permanent fact about the user's profile or preferences, such as risk "
-            "tolerance, investment horizon, goals or sector interests. Keep it to a "
-            "single self-contained fact."
+            "A single self-contained durable fact about the user, such as risk "
+            "tolerance, investment horizon, goals, expenses, liquidity constraints or "
+            "sector interests."
         )
     )
 
@@ -79,9 +93,19 @@ class CreateUserProfileNoteToolInput(BaseModel):
     "createUserProfileNote",
     args_schema=CreateUserProfileNoteToolInput,
     description=(
-        "Store a permanent fact about the user's profile. The profile is a set of notes, "
-        "so this adds a note rather than replacing the existing ones. When a fact stops "
-        "being true, mark the old note as outdated instead of editing it."
+        "Store one durable fact about the client as a new note. The test: would this "
+        "still be true, and still matter, in six months regardless of market prices? "
+        "Yes for age, risk tolerance, investment goal, horizon, knowledge level, "
+        "profession, income, expenses, liquidity constraints, sector interests, ethical "
+        "preferences, and standing policies the client has set for their own book. "
+        "NO for anything priced, dated or positional: never store holdings, share "
+        "counts, prices, P&L, portfolio values, watchlist entries, entry triggers, "
+        "research theses, or what happened in a session. Positions belong in holdings "
+        "(upsertHolding), convictions and price triggers belong in ticker records "
+        "(upsertTickerRecord), session events belong in conversation notes "
+        "(createUserConversationNote), and general valuation methodology belongs in the "
+        "skills, not here. Notes are append-only: when a fact stops being true, mark the "
+        "old note as outdated instead of editing it and add a replacement."
     ),
 )
 async def create_user_profile_note(
@@ -208,11 +232,14 @@ class CreateUserConversationNoteToolInput(BaseModel):
     "createUserConversationNote",
     args_schema=CreateUserConversationNoteToolInput,
     description=(
-        "Store a conversation note. Defaults to today's date. "
-        "Use this to capture conversation-specific context such as topics discussed, "
-        "questions asked, or recommendations given — information that is relevant to a particular "
-        "conversation but not a permanent part of the user's profile. "
-        "A date can hold any number of notes, so this adds a note rather than replacing existing ones."
+        "Store what happened in a session, by default against today's date. This is the "
+        "home for anything dated: decisions taken and the reasoning behind them, analysis "
+        "run and what it concluded, trades executed, advice given, questions asked, and "
+        "follow-ups left open. If it begins with 'on <date> we...' it belongs here and "
+        "not in a profile note. A date can hold any number of notes, so this adds a note "
+        "rather than replacing existing ones. Keep each note short and factual; the "
+        "durable conclusions it produced belong in the profile, holdings or ticker "
+        "records, and this note is the narrative record of how they were reached."
     ),
 )
 async def create_user_conversation_note(
@@ -225,6 +252,285 @@ async def create_user_conversation_note(
         note=note,
         date=date,
     )
+
+
+class GetHoldingsToolInput(BaseModel):
+    include_closed: bool = Field(
+        default=False, description="Include positions that have been closed"
+    )
+
+
+@tool(
+    "getHoldings",
+    args_schema=GetHoldingsToolInput,
+    description=(
+        "What the client owns: broker positions, cash, fixed income and anything "
+        "held off-platform. Read this before any portfolio review, allocation "
+        "question or position-sizing decision. Rows whose source is a broker are a "
+        "CACHE of that broker's own record: when the broker's tools are available, "
+        "call them and refresh with upsertHolding rather than trusting what is "
+        "stored here. When they are not available, this is the best record there "
+        "is, but every figure must be quoted with its as_of date rather than "
+        "presented as current. Market prices, market values and P&L are never "
+        "stored here; fetch those live."
+    ),
+)
+async def get_holdings(
+    runtime: ToolRuntime[HoldingsToolsRuntimeContext],
+    include_closed: bool = False,
+) -> list[Holding]:
+    holdings_service = runtime.context.holdings_service
+    return await holdings_service.get_holdings(include_closed=include_closed)
+
+
+class UpsertHoldingToolInput(BaseModel):
+    name: str = Field(
+        description=(
+            "What the position is: a ticker like 'NVDA', or a description like "
+            "'Bank cash'. Part of the holding's identity, so reuse it exactly when "
+            "refreshing."
+        )
+    )
+    kind: str | None = Field(
+        default=None,
+        description=(
+            "cash | fixed_income | equity | etf | crypto | private_equity | other. "
+            "Required when creating."
+        ),
+    )
+    ticker: str | None = Field(
+        default=None, description="Exchange ticker, when the holding has one"
+    )
+    quantity: float | None = Field(default=None, description="Shares or units held")
+    cost_basis: float | None = Field(
+        default=None, description="Average cost per unit, in `currency`"
+    )
+    amount: float | None = Field(
+        default=None,
+        description=(
+            "Total value, for holdings with no unit price such as a cash balance or "
+            "a bill's face value. Not a market value."
+        ),
+    )
+    currency: str | None = Field(
+        default=None, description="ISO currency code, e.g. 'EUR', 'USD'"
+    )
+    custodian: str | None = Field(
+        default=None,
+        description=(
+            "Who holds it: 'Interactive Brokers', 'Coinbase', 'Sophic', 'Bank', "
+            "'Carta'. Part of the holding's identity."
+        ),
+    )
+    source: str | None = Field(
+        default=None,
+        description=(
+            "manual | interactive_brokers | coinbase | alpaca. Required when "
+            "creating. Use the broker you actually read the figures from."
+        ),
+    )
+    as_of: str | None = Field(
+        default=None,
+        description=(
+            "YYYY-MM-DD, the date these figures were true. Required when creating, "
+            "and should be updated on every refresh."
+        ),
+    )
+    detail: str | None = Field(
+        default=None,
+        description=(
+            "Facts the columns do not carry: interest rate, maturity, vesting, "
+            "strike. Not theses or price targets."
+        ),
+    )
+
+
+@tool(
+    "upsertHolding",
+    args_schema=UpsertHoldingToolInput,
+    description=(
+        "Record or refresh one position. Identified by name plus custodian, so "
+        "writing the same pair again updates that row rather than adding a second "
+        "one. Only the fields you pass are written, so refreshing a share count "
+        "from a broker leaves the cost basis alone. Always set as_of to the date "
+        "the figures were true, and set source to the broker you read them from, "
+        "or 'manual' when the client told you. Use this after reading broker "
+        "positions so the record survives the next outage, and whenever the client "
+        "reports something no integration can see. Do not record prices, market "
+        "values or P&L; those are fetched live, and a stored copy goes stale and "
+        "then gets believed."
+    ),
+)
+async def upsert_holding(
+    runtime: ToolRuntime[HoldingsToolsRuntimeContext],
+    name: str,
+    kind: str | None = None,
+    ticker: str | None = None,
+    quantity: float | None = None,
+    cost_basis: float | None = None,
+    amount: float | None = None,
+    currency: str | None = None,
+    custodian: str | None = None,
+    source: str | None = None,
+    as_of: str | None = None,
+    detail: str | None = None,
+) -> Holding:
+    holdings_service = runtime.context.holdings_service
+    return await holdings_service.upsert_holding(
+        name=name,
+        kind=kind,
+        ticker=ticker,
+        quantity=quantity,
+        cost_basis=cost_basis,
+        amount=amount,
+        currency=currency,
+        custodian=custodian,
+        source=source,
+        as_of=as_of,
+        detail=detail,
+    )
+
+
+class CloseHoldingToolInput(BaseModel):
+    holding_id: str = Field(description="The id of the holding to close")
+
+
+@tool(
+    "closeHolding",
+    args_schema=CloseHoldingToolInput,
+    description=(
+        "Mark a position as closed once it is fully sold, matured or otherwise "
+        "gone. It keeps its cost basis and history and stops appearing in "
+        "getHoldings. Do not use this to correct a mistake; upsertHolding with the "
+        "right figures."
+    ),
+)
+async def close_holding(
+    runtime: ToolRuntime[HoldingsToolsRuntimeContext],
+    holding_id: str,
+) -> str:
+    holdings_service = runtime.context.holdings_service
+    closed = await holdings_service.close_holding(holding_id=holding_id)
+    if not closed:
+        return f"No open holding with id {holding_id}"
+    return f"Holding {holding_id} closed successfully"
+
+
+class GetTickerRecordsToolInput(BaseModel):
+    status: str | None = Field(
+        default=None,
+        description=(
+            "Filter by watching | held | exited | rejected. Omit to return everything."
+        ),
+    )
+
+
+@tool(
+    "getTickerRecords",
+    args_schema=GetTickerRecordsToolInput,
+    description=(
+        "The names being tracked and why: thesis, entry trigger, falsifier and "
+        "status. This is the watchlist and the conviction record in one. Read it "
+        "before screening a new idea (to check overlap with what is already "
+        "tracked) and during a portfolio review (to check whether any entry trigger "
+        "has fired). Holdings answer what is owned and how much; these answer why, "
+        "and at what price to act."
+    ),
+)
+async def get_ticker_records(
+    runtime: ToolRuntime[TickerRecordsToolsRuntimeContext],
+    status: str | None = None,
+) -> list[TickerRecord]:
+    ticker_records_service = runtime.context.ticker_records_service
+    return await ticker_records_service.get_ticker_records(status=status)
+
+
+class UpsertTickerRecordToolInput(BaseModel):
+    ticker: str = Field(
+        description="Exchange ticker, e.g. 'LHX', 'ENR.DE', '7011.T'"
+    )
+    status: str | None = Field(
+        default=None,
+        description=(
+            "watching | held | exited | rejected. Required when creating a new record."
+        ),
+    )
+    thesis: str | None = Field(
+        default=None,
+        description="Why this name is interesting: the business and the structural case",
+    )
+    entry_trigger: str | None = Field(
+        default=None,
+        description=(
+            "The condition that would make this a buy, checkable against live data, "
+            "e.g. 'limit $238,22 or below'"
+        ),
+    )
+    falsifier: str | None = Field(
+        default=None,
+        description="What would prove the thesis wrong and take this off the list",
+    )
+    notes: str | None = Field(
+        default=None,
+        description="Anything else durable about the name the other fields do not hold",
+    )
+
+
+@tool(
+    "upsertTickerRecord",
+    args_schema=UpsertTickerRecordToolInput,
+    description=(
+        "Record or update why a name is interesting. Keyed by ticker and updated in "
+        "place, so resetting an entry trigger edits the existing record rather than "
+        "adding a second one. Only the fields you pass are written, so moving a name "
+        "to 'held' leaves its thesis intact. Use this whenever a name is added to "
+        "the watchlist, a thesis or trigger changes, a position is opened or closed, "
+        "or a candidate is screened and rejected. Record the reasoning for a change "
+        "in a conversation note; this record holds only the current state."
+    ),
+)
+async def upsert_ticker_record(
+    runtime: ToolRuntime[TickerRecordsToolsRuntimeContext],
+    ticker: str,
+    status: str | None = None,
+    thesis: str | None = None,
+    entry_trigger: str | None = None,
+    falsifier: str | None = None,
+    notes: str | None = None,
+) -> TickerRecord:
+    ticker_records_service = runtime.context.ticker_records_service
+    return await ticker_records_service.upsert_ticker_record(
+        ticker=ticker,
+        status=status,
+        thesis=thesis,
+        entry_trigger=entry_trigger,
+        falsifier=falsifier,
+        notes=notes,
+    )
+
+
+class DeleteTickerRecordToolInput(BaseModel):
+    ticker: str = Field(description="The ticker whose record should be deleted")
+
+
+@tool(
+    "deleteTickerRecord",
+    args_schema=DeleteTickerRecordToolInput,
+    description=(
+        "Permanently remove a ticker record. Prefer setting status to 'rejected' or "
+        "'exited' instead: why a name was turned down is worth keeping, and stops it "
+        "being re-screened from scratch. Use this only for a record created by mistake."
+    ),
+)
+async def delete_ticker_record(
+    runtime: ToolRuntime[TickerRecordsToolsRuntimeContext],
+    ticker: str,
+) -> str:
+    ticker_records_service = runtime.context.ticker_records_service
+    deleted = await ticker_records_service.delete_ticker_record(ticker=ticker)
+    if not deleted:
+        return f"No ticker record found for {ticker}"
+    return f"Ticker record {ticker} deleted successfully"
 
 
 class CreateAgentReminderToolInput(BaseModel):

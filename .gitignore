@@ -11,3 +11,7 @@ investpal.db.sync.lock
 investpal.db.pre-sync-*.bak
 investpal.db.pre-sync-*.bak-wal
 investpal.db.adopt-source-*
+
+# One-off local migration seeded with the client's real holdings.
+# Never commit: these repos are public.
+scripts/migrate_profile_notes.py

@@ -22,6 +22,8 @@ from models.agent_workflow import (
     WorkflowResult,
     WorkflowStatus,
 )
+from models.holdings import Holding
+from models.ticker_records import TickerRecord
 from models.user_context import (
     UserConversationNote,
     UserConversationNoteSearchResult,
@@ -53,10 +55,14 @@ from repos.embeddings import get_embedder
 from repos.user_conversation_note_embeddings import (
     UserConversationNoteEmbeddingsTable,
 )
+from services.holdings import HoldingsService
+from services.ticker_records import TickerRecordsService
 from services.user_context import (
     UserConversationNotesService,
     UserProfileService,
 )
+from repos.holdings import HoldingsTable
+from repos.ticker_records import TickerRecordsTable
 from repos.user_conversation_notes import UserConversationNotesTable
 from repos.user_profile_notes import UserProfileNotesTable
 from repos.db import init_db
@@ -166,13 +172,47 @@ def get_workflow_result_service(
     return TursoWorkflowResultService(table=table, workflows_table=workflows_table)
 
 
+def get_holdings_table() -> HoldingsTable:
+    return HoldingsTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_holdings_service(
+    table: HoldingsTable = Depends(get_holdings_table),
+) -> HoldingsService:
+    return HoldingsService(table=table)
+
+
+def get_ticker_records_table() -> TickerRecordsTable:
+    return TickerRecordsTable(db_path=settings.TURSO_DB_PATH)
+
+
+def get_ticker_records_service(
+    table: TickerRecordsTable = Depends(get_ticker_records_table),
+) -> TickerRecordsService:
+    return TickerRecordsService(table=table)
+
+
 mcp_app = FastMCP("InvestPal MCP Server", lifespan=db_lifespan)
 mcp_app.add_middleware(LoggingMiddleware())
 
 
 @mcp_app.tool(
     name="createUserProfileNote",
-    description="Create a new user profile note.",
+    description=(
+        "Store one durable fact about the client as a new note. The test: would this "
+        "still be true, and still matter, in six months regardless of market prices? "
+        "Yes for age, risk tolerance, investment goal, horizon, knowledge level, "
+        "profession, income, expenses, liquidity constraints, sector interests, ethical "
+        "preferences, and standing policies the client has set for their own book. "
+        "NO for anything priced, dated or positional: never store holdings, share "
+        "counts, prices, P&L, portfolio values, watchlist entries, entry triggers, "
+        "research theses, or what happened in a session. Positions belong in holdings "
+        "(upsertHolding), convictions and price triggers belong in ticker records "
+        "(upsertTickerRecord), session events belong in conversation notes "
+        "(createUserConversationNote), and general valuation methodology belongs in the "
+        "skills, not here. Notes are append-only: when a fact stops being true call "
+        "markUserProfileNoteAsOutdated and add a replacement."
+    ),
 )
 async def create_user_profile_note(
     note: Annotated[str, "The content of the note"],
@@ -268,9 +308,14 @@ async def search_user_conversation_notes(
 @mcp_app.tool(
     name="createUserConversationNote",
     description=(
-        "Store a conversation note, by default against today's date. A date can hold any "
-        "number of notes, so this adds a note rather than replacing existing ones. "
-        "Keep notes short and concise."
+        "Store what happened in a session, by default against today's date. This is the "
+        "home for anything dated: decisions taken and the reasoning behind them, analysis "
+        "run and what it concluded, trades executed, advice given, questions asked, and "
+        "follow-ups left open. If it begins with 'on <date> we...' it belongs here and "
+        "not in a profile note. A date can hold any number of notes, so this adds a note "
+        "rather than replacing existing ones. Keep each note short and factual; the "
+        "durable conclusions it produced belong in the profile, holdings or ticker "
+        "records, and this note is the narrative record of how they were reached."
     ),
 )
 async def create_user_conversation_note(
@@ -287,6 +332,194 @@ async def create_user_conversation_note(
         note=note,
         date=date,
     )
+
+
+@mcp_app.tool(
+    name="getHoldings",
+    description=(
+        "What the client owns: broker positions, cash, fixed income and anything "
+        "held off-platform. Read this before any portfolio review, allocation "
+        "question or position-sizing decision. Rows whose source is a broker are a "
+        "CACHE of that broker's own record: when the broker's tools are available, "
+        "call them and refresh with upsertHolding rather than trusting what is "
+        "stored here. When they are not available, this is the best record there is, "
+        "but every figure must be quoted with its as_of date rather than presented "
+        "as current. Market prices, market values and P&L are never stored here; "
+        "fetch those live."
+    ),
+)
+async def get_holdings(
+    include_closed: Annotated[
+        bool, "Include positions that have been closed. Defaults to False."
+    ] = False,
+    holdings_service: HoldingsService = Depends(get_holdings_service),
+) -> list[Holding]:
+    return await holdings_service.get_holdings(include_closed=include_closed)
+
+
+@mcp_app.tool(
+    name="upsertHolding",
+    description=(
+        "Record or refresh one position. Identified by name plus custodian, so "
+        "writing the same pair again updates that row rather than adding a second "
+        "one. Only the fields you pass are written, so refreshing a share count "
+        "from a broker leaves the cost basis alone. Always set as_of to the date "
+        "the figures were true, and set source to the broker you read them from, "
+        "or 'manual' when the client told you. Use this after reading broker "
+        "positions so the record survives the next outage, and whenever the client "
+        "reports something no integration can see. Do not record prices, market "
+        "values or P&L; those are fetched live, and a stored copy goes stale and "
+        "then gets believed."
+    ),
+)
+async def upsert_holding(
+    name: Annotated[
+        str,
+        "What the position is: a ticker like 'NVDA', or a description like 'Bank cash'. Part of the holding's identity, so reuse it exactly when refreshing.",
+    ],
+    kind: Annotated[
+        str | None,
+        "cash | fixed_income | equity | etf | crypto | private_equity | other. Required when creating.",
+    ] = None,
+    ticker: Annotated[str | None, "Exchange ticker, when the holding has one"] = None,
+    quantity: Annotated[float | None, "Shares or units held"] = None,
+    cost_basis: Annotated[float | None, "Average cost per unit, in `currency`"] = None,
+    amount: Annotated[
+        float | None,
+        "Total value, for holdings with no unit price such as a cash balance or a bill's face value. Not a market value.",
+    ] = None,
+    currency: Annotated[str | None, "ISO currency code, e.g. 'EUR', 'USD'"] = None,
+    custodian: Annotated[
+        str | None,
+        "Who holds it: 'Interactive Brokers', 'Coinbase', 'Sophic', 'Bank', 'Carta'. Part of the holding's identity.",
+    ] = None,
+    source: Annotated[
+        str | None,
+        "manual | interactive_brokers | coinbase | alpaca. Required when creating. Use the broker you actually read the figures from.",
+    ] = None,
+    as_of: Annotated[
+        str | None,
+        "YYYY-MM-DD, the date these figures were true. Required when creating, and should be updated on every refresh.",
+    ] = None,
+    detail: Annotated[
+        str | None,
+        "Facts the columns do not carry: interest rate, maturity, vesting, strike. Not theses or price targets.",
+    ] = None,
+    holdings_service: HoldingsService = Depends(get_holdings_service),
+) -> Holding:
+    return await holdings_service.upsert_holding(
+        name=name,
+        kind=kind,
+        ticker=ticker,
+        quantity=quantity,
+        cost_basis=cost_basis,
+        amount=amount,
+        currency=currency,
+        custodian=custodian,
+        source=source,
+        as_of=as_of,
+        detail=detail,
+    )
+
+
+@mcp_app.tool(
+    name="closeHolding",
+    description=(
+        "Mark a position as closed once it is fully sold, matured or otherwise gone. "
+        "It keeps its cost basis and history and stops appearing in getHoldings. "
+        "Do not use this to correct a mistake; upsertHolding with the right figures."
+    ),
+)
+async def close_holding(
+    holding_id: Annotated[str, "The id of the holding to close"],
+    holdings_service: HoldingsService = Depends(get_holdings_service),
+) -> str:
+    closed = await holdings_service.close_holding(holding_id=holding_id)
+    if not closed:
+        return f"No open holding with id {holding_id}"
+    return f"Holding {holding_id} closed successfully"
+
+
+@mcp_app.tool(
+    name="getTickerRecords",
+    description=(
+        "The names being tracked and why: thesis, entry trigger, falsifier and "
+        "status. This is the watchlist and the conviction record in one. Read it "
+        "before screening a new idea (to check overlap with what is already tracked) "
+        "and during a portfolio review (to check whether any entry trigger has "
+        "fired). Holdings answer what is owned and how much; these answer why, and "
+        "at what price to act."
+    ),
+)
+async def get_ticker_records(
+    status: Annotated[
+        str | None,
+        "Filter by watching | held | exited | rejected. Omit to return everything.",
+    ] = None,
+    ticker_records_service: TickerRecordsService = Depends(get_ticker_records_service),
+) -> list[TickerRecord]:
+    return await ticker_records_service.get_ticker_records(status=status)
+
+
+@mcp_app.tool(
+    name="upsertTickerRecord",
+    description=(
+        "Record or update why a name is interesting. Keyed by ticker and updated in "
+        "place, so resetting an entry trigger edits the existing record rather than "
+        "adding a second one. Only the fields you pass are written, so moving a name "
+        "to 'held' leaves its thesis intact. Use this whenever a name is added to "
+        "the watchlist, a thesis or trigger changes, a position is opened or closed, "
+        "or a candidate is screened and rejected. Record the reasoning for a change "
+        "in a conversation note; this record holds only the current state."
+    ),
+)
+async def upsert_ticker_record(
+    ticker: Annotated[str, "Exchange ticker, e.g. 'LHX', 'ENR.DE', '7011.T'"],
+    status: Annotated[
+        str | None,
+        "watching | held | exited | rejected. Required when creating a new record.",
+    ] = None,
+    thesis: Annotated[
+        str | None, "Why this name is interesting: the business and the structural case"
+    ] = None,
+    entry_trigger: Annotated[
+        str | None,
+        "The condition that would make this a buy, checkable against live data, e.g. 'limit $238,22 or below'",
+    ] = None,
+    falsifier: Annotated[
+        str | None, "What would prove the thesis wrong and take this off the list"
+    ] = None,
+    notes: Annotated[
+        str | None, "Anything else durable about the name the other fields do not hold"
+    ] = None,
+    ticker_records_service: TickerRecordsService = Depends(get_ticker_records_service),
+) -> TickerRecord:
+    return await ticker_records_service.upsert_ticker_record(
+        ticker=ticker,
+        status=status,
+        thesis=thesis,
+        entry_trigger=entry_trigger,
+        falsifier=falsifier,
+        notes=notes,
+    )
+
+
+@mcp_app.tool(
+    name="deleteTickerRecord",
+    description=(
+        "Permanently remove a ticker record. Prefer setting status to 'rejected' or "
+        "'exited' instead: why a name was turned down is worth keeping, and stops it "
+        "being re-screened from scratch. Use this only for a record created by mistake."
+    ),
+)
+async def delete_ticker_record(
+    ticker: Annotated[str, "The ticker whose record should be deleted"],
+    ticker_records_service: TickerRecordsService = Depends(get_ticker_records_service),
+) -> str:
+    deleted = await ticker_records_service.delete_ticker_record(ticker=ticker)
+    if not deleted:
+        return f"No ticker record found for {ticker}"
+    return f"Ticker record {ticker} deleted successfully"
 
 
 @mcp_app.tool(
