@@ -45,6 +45,8 @@ APP_TABLES = [
     "user_profile_notes",
     "user_conversation_notes",
     "user_conversation_note_embeddings",
+    "holdings",
+    "ticker_records",
     "agent_reminders",
     "agent_workflows",
     "workflow_results",

@@ -70,8 +70,67 @@ CREATE TABLE IF NOT EXISTS session_messages (
     created_at TEXT
 );
 
+-- What the client owns, whatever the origin. Holds positions no API can reach
+-- (T-bills on a broker with no MCP server, bank cash, private equity) alongside
+-- positions read from a connected broker, because an account may never be
+-- connected and a connected one goes dark -- a portfolio review with the IB
+-- gateway down still needs last-known share counts.
+--
+-- `source` and `as_of` are what make storing broker data safe rather than a
+-- repeat of the free-text snapshot notes this table replaced: a row whose source
+-- is a broker is a CACHE, refreshed from that broker whenever it is reachable and
+-- quoted only with its as_of date when it is not. No prices, market values or
+-- P&L live here; those are always fetched live.
+--
+-- One row per position per custodian: refreshing updates in place, it never
+-- appends. Closing is the nullable closed_at soft delete, so an exited position
+-- keeps its cost basis history.
+CREATE TABLE IF NOT EXISTS holdings (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    ticker TEXT,
+    quantity REAL,
+    cost_basis REAL,
+    amount REAL,
+    currency TEXT,
+    custodian TEXT,
+    source TEXT NOT NULL,
+    as_of TEXT NOT NULL,
+    detail TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    closed_at TEXT
+);
+
+-- Why a name is interesting and what would make us act on it. Disjoint from
+-- holdings and linked to it by ticker: holdings answers "what and how much",
+-- this answers "why, and at what price would I act". A held name has a row in
+-- both.
+--
+-- Keyed by ticker and updated in place on purpose. The free-text profile notes
+-- this replaces were append-only, so every trigger reset spawned a new note and
+-- retired the old one -- one name accumulated twenty rows, and a single
+-- watchlist add was written three times in one day.
+CREATE TABLE IF NOT EXISTS ticker_records (
+    ticker TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    thesis TEXT,
+    entry_trigger TEXT,
+    falsifier TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_agent_workflows_due
     ON agent_workflows (status, next_run_at);
+
+CREATE INDEX IF NOT EXISTS idx_holdings_open
+    ON holdings (closed_at, custodian);
+
+CREATE INDEX IF NOT EXISTS idx_ticker_records_status
+    ON ticker_records (status);
 
 CREATE INDEX IF NOT EXISTS idx_session_messages_session
     ON session_messages (session_id, id);

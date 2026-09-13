@@ -39,6 +39,24 @@ The single most important defensive concept. It is the gap between price paid
 and intrinsic value -- the room you have to be wrong about value, business
 trajectory, or macro environment and still come out whole.
 
+### What You Measure Against
+
+A margin of safety is only as good as its denominator, and the denominator must
+be intrinsic value. An analyst price target is NOT intrinsic value. It is a
+consensus sentiment figure that embeds the same growth assumptions you are
+trying to test, so a "margin of safety" measured against it tells you only that
+you disagree with the crowd about price, not that the business is cheap.
+
+* NEVER report a margin of safety computed against an analyst price target as a
+  valuation. Label it for what it is: a sentiment check.
+* ALWAYS run `calculate_intrinsic_value` alongside it before calling anything
+  cheap, and quote the margin against the triangulated intrinsic value.
+* A wide MoS against a price target combined with a price far above intrinsic
+  value is the classic false positive. When the two disagree, intrinsic value
+  wins and the position does not clear.
+* Check the denominator before trusting any margin-of-safety number. The
+  arithmetic being right does not make the anchor right.
+
 ### How to Quantify
 
 For non-franchise businesses (Case A and B in the G&D framework):
@@ -249,6 +267,15 @@ portfolio against each:
   the opposite of what the cycle rewards.
 * **Action bias**. The desire to "do something" leads to overtrading. When
   there is no compelling action, the right move is none.
+* **Scoring a financing from the headline**. Do not mark a capital raise as
+  dilution or added leverage until you have read what the proceeds are for.
+  Two specific tells:
+  - A registration statement with NO AMOUNT GIVEN is a routine universal or
+    omnibus SHELF -- housekeeping, not an announced raise. It must not be
+    reported as dilution until proven otherwise.
+  - Junior subordinated notes are HYBRIDS, not senior debt. They typically
+    carry around 50% rating-agency equity credit, so the headline size
+    overstates the leverage actually added.
 
 ---
 

@@ -14,6 +14,10 @@ from services.agents.middleware import (
 )
 from services.agent_service import InvestmentManagerAgentService
 from repos.embeddings import get_embedder
+from repos.holdings import HoldingsTable
+from repos.ticker_records import TickerRecordsTable
+from services.holdings import HoldingsService
+from services.ticker_records import TickerRecordsService
 from repos.user_conversation_note_embeddings import (
     UserConversationNoteEmbeddingsTable,
 )
@@ -110,6 +114,14 @@ def get_agent_reminder_service() -> AgentReminderService:
     return TursoAgentReminderService(table=table)
 
 
+def get_holdings_service() -> HoldingsService:
+    return HoldingsService(table=HoldingsTable())
+
+
+def get_ticker_records_service() -> TickerRecordsService:
+    return TickerRecordsService(table=TickerRecordsTable())
+
+
 async def get_investment_manager_agent(
     mcp_client: MultiServerMCPClient = Depends(get_mcp_client),
 ) -> InvestmentManagerAgent:
@@ -160,6 +172,8 @@ async def get_workflow_runner(
     user_profile_service: UserProfileService = Depends(get_user_profile_service),
     user_conversation_notes_service: UserConversationNotesService = Depends(get_user_conversation_notes_service),
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
+    holdings_service: HoldingsService = Depends(get_holdings_service),
+    ticker_records_service: TickerRecordsService = Depends(get_ticker_records_service),
     notifier: WorkflowNotifier = Depends(get_workflow_notifier),
 ) -> WorkflowRunner:
     agent = await WorkflowExecutionAgent.create(
@@ -177,6 +191,8 @@ async def get_workflow_runner(
         user_profile_service=user_profile_service,
         user_conversation_notes_service=user_conversation_notes_service,
         agent_reminder_service=agent_reminder_service,
+        holdings_service=holdings_service,
+        ticker_records_service=ticker_records_service,
         notifier=notifier,
     )
 
@@ -189,6 +205,8 @@ def get_investment_manager_agent_service(
     agent_reminder_service: AgentReminderService = Depends(get_agent_reminder_service),
     agent_workflow_service: AgentWorkflowService = Depends(get_agent_workflow_service),
     workflow_result_service: WorkflowResultService = Depends(get_workflow_result_service),
+    holdings_service: HoldingsService = Depends(get_holdings_service),
+    ticker_records_service: TickerRecordsService = Depends(get_ticker_records_service),
 ) -> InvestmentManagerAgentService:
     return InvestmentManagerAgentService(
         investment_manager_agent=investment_manager_agent,
@@ -198,6 +216,8 @@ def get_investment_manager_agent_service(
         agent_reminder_service=agent_reminder_service,
         agent_workflow_service=agent_workflow_service,
         workflow_result_service=workflow_result_service,
+        holdings_service=holdings_service,
+        ticker_records_service=ticker_records_service,
     )
 
 

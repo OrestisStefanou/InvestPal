@@ -25,6 +25,11 @@ class UserProfileNotesTable:
         query = f"SELECT id, note, created_at, outdated FROM {self._table_name}"
         if not include_outdated:
             query += " WHERE outdated = 0"
+        # Without this the rows come back in arbitrary storage order, and the
+        # SessionStart hook -- which injects only the first notes that fit its
+        # character budget -- silently picks whichever ones the file happens to
+        # hold first rather than the oldest, most-established facts.
+        query += " ORDER BY created_at"
 
         with connect(self._db_path) as conn:
             cursor = conn.cursor()

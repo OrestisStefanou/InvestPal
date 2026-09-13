@@ -11,6 +11,8 @@ from services.user_context import (
     UserProfileService,
 )
 from services.agent_reminder import AgentReminderService
+from services.holdings import HoldingsService
+from services.ticker_records import TickerRecordsService
 from services.agent_workflows.workflow import AgentWorkflowService
 from services.agent_workflows.results import WorkflowResultService
 from services.agents.agent import (
@@ -59,6 +61,8 @@ class InvestmentManagerAgentService(TextAgentService):
         agent_reminder_service: AgentReminderService,
         agent_workflow_service: AgentWorkflowService,
         workflow_result_service: WorkflowResultService,
+        holdings_service: HoldingsService,
+        ticker_records_service: TickerRecordsService,
     ):
         """
         Initializes the InvestmentManagerAgentService.
@@ -69,6 +73,8 @@ class InvestmentManagerAgentService(TextAgentService):
             user_profile_service: Service to retrieve and store the user's profile notes.
             user_conversation_notes_service: Service to retrieve and store conversation notes.
             agent_reminder_service: Service to manage agent reminders.
+            holdings_service: Service to read and refresh what the client owns.
+            ticker_records_service: Service to read and update tracked names.
         """
         self._investment_manager_agent = investment_manager_agent
         self._user_context_memory_manager_agent = user_context_memory_manager_agent
@@ -77,6 +83,8 @@ class InvestmentManagerAgentService(TextAgentService):
         self._agent_reminder_service = agent_reminder_service
         self._agent_workflow_service = agent_workflow_service
         self._workflow_result_service = workflow_result_service
+        self._holdings_service = holdings_service
+        self._ticker_records_service = ticker_records_service
     
     async def generate_agent_text_response(
         self,
@@ -101,6 +109,8 @@ class InvestmentManagerAgentService(TextAgentService):
                 agent_reminder_service=self._agent_reminder_service,
                 agent_workflow_service=self._agent_workflow_service,
                 workflow_result_service=self._workflow_result_service,
+                holdings_service=self._holdings_service,
+                ticker_records_service=self._ticker_records_service,
             ),
             system_prompt_placeholder_values=InvestmentManagerPromptVars(
                 client_profile=client_profile,
@@ -131,6 +141,8 @@ class InvestmentManagerAgentService(TextAgentService):
                 runtime_context=UserContextManagerRuntimeContext(
                     user_profile_service=self._user_profile_service,
                     user_conversation_notes_service=self._user_conversation_notes_service,
+                    holdings_service=self._holdings_service,
+                    ticker_records_service=self._ticker_records_service,
                 ),
             )
         except Exception as e:

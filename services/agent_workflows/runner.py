@@ -12,6 +12,8 @@ from services.agents.agent import (
     WorkflowExecutionAgentRuntimeContext,
 )
 from services.agent_reminder import AgentReminderService
+from services.holdings import HoldingsService
+from services.ticker_records import TickerRecordsService
 from services.user_context import (
     UserConversationNotesService,
     UserProfileService,
@@ -29,6 +31,8 @@ class WorkflowRunner:
         user_profile_service: UserProfileService,
         user_conversation_notes_service: UserConversationNotesService,
         agent_reminder_service: AgentReminderService,
+        holdings_service: HoldingsService,
+        ticker_records_service: TickerRecordsService,
         notifier: WorkflowNotifier,
     ):
         self._agent = workflow_execution_agent
@@ -37,6 +41,8 @@ class WorkflowRunner:
         self._user_profile_service = user_profile_service
         self._user_conversation_notes_service = user_conversation_notes_service
         self._agent_reminder_service = agent_reminder_service
+        self._holdings_service = holdings_service
+        self._ticker_records_service = ticker_records_service
         self._notifier = notifier
 
     async def run_due_workflows(self) -> None:
@@ -66,6 +72,8 @@ class WorkflowRunner:
         runtime_context = WorkflowExecutionAgentRuntimeContext(
             workflow_result_service=self._workflow_result_service,
             user_conversation_notes_service=self._user_conversation_notes_service,
+            holdings_service=self._holdings_service,
+            ticker_records_service=self._ticker_records_service,
         )
 
         agent_response = await self._agent.generate_response(
